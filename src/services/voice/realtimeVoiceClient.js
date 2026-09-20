@@ -38,6 +38,7 @@ export class RealtimeVoiceClient {
     this.onTranscriptTurn = onTranscriptTurn || (() => {});
     this.onCandidateVolume = onCandidateVolume || (() => {});
     this.onAIVolume = onAIVolume || (() => {});
+    this.onQuestionChange = onQuestionChange || (() => {});
     this.onError = onError || (() => {});
 
     this.state = VoiceState.DISCONNECTED;
@@ -49,6 +50,37 @@ export class RealtimeVoiceClient {
     this.isMuted = false;
     this._bargeInThreshold = 0.25;
     this._speakingFrames = 0;
+    this.currentQuestionIndex = 0;
+    this.totalQuestions = 5;
+    this.questions = [];
+  }
+
+  _buildCurriculum() {
+    const role = this.sessionData.role || 'Software Engineer';
+    const topic = this.sessionData.topic || 'System Design & Algorithms';
+
+    return [
+      {
+        stage: 'Architecture & System Design',
+        question: `Welcome to your technical mock interview for the ${role} position. To start with Question 1 of 5: In ${topic}, what core system architecture would you design for high-throughput production workloads, and which components would you prioritize?`
+      },
+      {
+        stage: 'Algorithmic & Technical Depth',
+        question: `Moving into Question 2 of 5 on algorithmic depth: What specific data structures and computational complexity trade-offs would you implement to guarantee minimal latency and prevent bottlenecks?`
+      },
+      {
+        stage: 'Scalability & Concurrency',
+        question: `Now for Question 3 of 5 on scalability: How would you architect this solution to handle horizontal scaling, caching strategies, and backpressure when user traffic surges tenfold?`
+      },
+      {
+        stage: 'Fault Tolerance & Resilience',
+        question: `For Question 4 of 5 on reliability: What are the primary failure modes in this distributed design, and how would you implement automated circuit breaking, data replication, and graceful degradation?`
+      },
+      {
+        stage: 'Observability & Production Readiness',
+        question: `To conclude our technical questions with Question 5 of 5: How would you monitor this system in production—specifically defining your SLIs, SLOs, and strategies for detecting subtle performance degradations?`
+      }
+    ];
   }
 
   _setState(newState) {
@@ -58,6 +90,10 @@ export class RealtimeVoiceClient {
 
   async connect() {
     this._setState(VoiceState.CONNECTING);
+    this.questions = this._buildCurriculum();
+    this.currentQuestionIndex = 0;
+    this.totalQuestions = this.questions.length;
+    this.onQuestionChange(1, this.totalQuestions, this.questions[0].stage);
 
     // Setup audio playback interruption callback
     this.audioPlayback.onInterrupted = () => {
@@ -212,14 +248,14 @@ export class RealtimeVoiceClient {
   }
 
   async _initSimulatedVoiceSession() {
-    console.log('[RealtimeVoice] Initialized simulated voice session');
+    console.log('[RealtimeVoice] Initialized simulated 5-question voice session');
     this._setState(VoiceState.READY);
 
-    // Initial interviewer greeting
+    // Initial Question 1 of 5
     setTimeout(() => {
-      const greeting = `Welcome! I will be conducting your technical interview for the ${this.sessionData.role} role. Let us begin with your experience in ${this.sessionData.topic}. Could you walk me through your high-level approach?`;
-      this._recordTurn('ai', greeting);
-      this._speakSimulated(greeting);
+      const q1 = this.questions[0].question;
+      this._recordTurn('ai', q1);
+      this._speakSimulated(q1);
     }, 600);
   }
 
@@ -257,20 +293,39 @@ export class RealtimeVoiceClient {
     if (!text || !text.trim()) return;
     this._recordTurn('candidate', text.trim());
 
-    // In simulated mode, generate next AI response
+    // In simulated mode, advance to next question
     if (this.sessionData.mode === 'simulated') {
       this._setState(VoiceState.THINKING);
+      this.currentQuestionIndex++;
+      const nextIdx = this.currentQuestionIndex;
+
       setTimeout(() => {
-        const nextQuestions = [
-          'That is a solid foundation. How would you handle scale and backpressure under peak traffic in that architecture?',
-          'Understood. How would you monitor model drift and data distribution shift once deployed in production?',
-          'Interesting tradeoff. What are the key failure modes and how would you implement automated circuit breaking or rollback?'
-        ];
-        const nextQ = nextQuestions[Math.floor(Math.random() * nextQuestions.length)];
-        this._recordTurn('ai', nextQ);
-        this._speakSimulated(nextQ);
-      }, 1200);
+        if (nextIdx < this.totalQuestions) {
+          const nextItem = this.questions[nextIdx];
+          this.onQuestionChange(nextIdx + 1, this.totalQuestions, nextItem.stage);
+
+          const acks = [
+            "Good point on that implementation.",
+            "That's a sound architectural trade-off.",
+            "Understood, that addresses the scaling bottleneck.",
+            "Solid analysis of the recovery pattern."
+          ];
+          const ack = acks[(nextIdx - 1) % acks.length];
+          const speech = `${ack} Let's proceed to Question ${nextIdx + 1} of ${this.totalQuestions}: ${nextItem.question}`;
+          this._recordTurn('ai', speech);
+          this._speakSimulated(speech);
+        } else {
+          this.onQuestionChange(this.totalQuestions, this.totalQuestions, 'Interview Completed');
+          const wrapUp = `Excellent work! You have successfully completed all 5 technical interview questions for the ${this.sessionData.role} role. Please click 'End Interview & View Report' below to review your comprehensive 5-axis score report.`;
+          this._recordTurn('ai', wrapUp);
+          this._speakSimulated(wrapUp);
+        }
+      }, 1000);
     }
+  }
+
+  skipToNextQuestion() {
+    this.recordCandidateSpeech("[Candidate advanced to next question]");
   }
 
   setMute(muted) {
