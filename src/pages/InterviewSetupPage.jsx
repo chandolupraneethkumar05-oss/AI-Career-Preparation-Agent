@@ -15,8 +15,7 @@ import {
   Shield,
   Briefcase,
   Sparkles,
-  Users,
-  Radio
+  Users
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -225,35 +224,7 @@ export default function InterviewSetupPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-            {/* Real-Time Voice Interview (Gemini Live) */}
-            <div
-              onClick={() => setInterviewMode('realtime_voice')}
-              className={`
-                p-4 rounded-md border cursor-pointer transition-all flex flex-col justify-between relative overflow-hidden
-                ${interviewMode === 'realtime_voice'
-                  ? 'bg-[#FFFDF9] border-[#1A365D] text-[#1F1B16] shadow-sm ring-2 ring-[#1A365D]'
-                  : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                }
-              `}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <Radio className="w-4 h-4 text-[#1A365D]" />
-                    <span className="text-sm font-serif font-bold text-[#1F1B16]">Real-Time Voice</span>
-                  </div>
-                  {interviewMode === 'realtime_voice' && <CheckCircle2 className="w-4 h-4 text-[#1A365D]" />}
-                </div>
-                <p className="text-xs text-[#70685E] leading-relaxed mt-2">
-                  Bidirectional audio streaming via Google Gemini Live API. Speak aloud naturally with sub-second latency and instant barge-in.
-                </p>
-              </div>
-              <div className="mt-3 pt-2 border-t border-[#E5E0D5] flex items-center justify-between">
-                <Badge variant="navy" size="xs">GEMINI LIVE API</Badge>
-                <span className="text-[10px] font-bold text-[#1A365D] uppercase tracking-wider">Sub-Second</span>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
 
             {/* Text Interview */}
             <div

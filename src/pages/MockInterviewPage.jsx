@@ -26,14 +26,12 @@ import RecordingControls from '../components/video/RecordingControls';
 import InterviewProcessingModal from '../components/video/InterviewProcessingModal';
 import AiInterviewerAvatar from '../components/video/AiInterviewerAvatar';
 import CodeDisputationSandbox from '../components/CodeDisputationSandbox';
-import RealtimeVoiceChamber from '../components/voice/RealtimeVoiceChamber';
 import { getCompanyPlaybook } from '../data/companyPlaybooks';
 import { getInterviewerPersona } from '../data/interviewerPersonas';
 import { useFaceToFaceDialogue } from '../hooks/useFaceToFaceDialogue';
 import { useInterview } from '../context/InterviewContext';
 import { useAuth } from '../context/AuthContext';
 import { interviewApi } from '../services/interviewApi';
-import { evaluateAnswer } from '../utils/evaluator';
 
 export default function MockInterviewPage() {
   const navigate = useNavigate();
@@ -52,7 +50,6 @@ export default function MockInterviewPage() {
   const { addXP } = useAuth();
 
   const isFaceToFaceMode = setup.interviewMode === 'face_to_face';
-  const isRealtimeVoiceMode = setup.interviewMode === 'realtime_voice';
   const isVideoMode = setup.interviewMode === 'video' || isFaceToFaceMode;
   const activePlaybook = getCompanyPlaybook(session.companyPlaybook || setup.companyPlaybook || 'general');
   const activePersona = getInterviewerPersona(session.interviewerPersona || setup.interviewerPersona || 'julian');
@@ -555,95 +552,6 @@ export default function MockInterviewPage() {
     }
   };
 
-  const handleRealtimeVoiceComplete = async (turns = [], clientQuestions = []) => {
-    try {
-      // 1. Resolve questions list
-      let questionsList = [];
-      if (clientQuestions && clientQuestions.length > 0) {
-        questionsList = clientQuestions.map((q, idx) => ({
-          id: `voice_q_${idx + 1}`,
-          question: q.question,
-          category: q.stage || 'System Design & Algorithms',
-          difficulty: setup.difficulty || 'Intermediate',
-          idealKeywords: ['architecture', 'scalability', 'performance', 'distributed', 'resilience', 'throughput', 'caching', 'latency', 'tradeoff']
-        }));
-      } else {
-        const aiTurns = turns.filter(t => t.speaker === 'ai' && !t.text.includes('Excellent work! You have successfully completed'));
-        questionsList = aiTurns.map((t, idx) => ({
-          id: `voice_q_${idx + 1}`,
-          question: t.text,
-          category: `Stage ${idx + 1} Technical Assessment`,
-          difficulty: setup.difficulty || 'Intermediate',
-          idealKeywords: ['architecture', 'scalability', 'performance', 'distributed', 'resilience', 'throughput', 'caching', 'latency', 'tradeoff']
-        }));
-      }
-
-      if (questionsList.length === 0) {
-        questionsList = [
-          {
-            id: 'voice_q_1',
-            question: `In ${setup.interviewType || 'System Design'}, what core architecture and trade-offs would you implement for ${setup.targetRole || 'Software Engineer'}?`,
-            category: 'Architecture & System Design',
-            difficulty: setup.difficulty || 'Intermediate',
-            idealKeywords: ['architecture', 'scalability', 'performance']
-          }
-        ];
-      }
-
-      // 2. Segment candidate turns according to question intervals
-      const candidateAnswers = [];
-      let currentSegment = [];
-
-      for (const turn of turns) {
-        if (turn.speaker === 'ai') {
-          if (currentSegment.length > 0) {
-            candidateAnswers.push(currentSegment.join(' '));
-            currentSegment = [];
-          }
-        } else if (turn.speaker === 'candidate') {
-          if (turn.text && turn.text.trim()) {
-            currentSegment.push(turn.text.trim());
-          }
-        }
-      }
-      if (currentSegment.length > 0) {
-        candidateAnswers.push(currentSegment.join(' '));
-      }
-
-      // 3. Dynamically evaluate each question-answer pair
-      const evaluatedAnswers = questionsList.map((qObj, idx) => {
-        const candidateSpeech = candidateAnswers[idx] ||
-          (idx === 0 && candidateAnswers.length === 1 ? candidateAnswers[0] : null) ||
-          "[Candidate provided verbal answer during live voice round]";
-
-        const evaluation = evaluateAnswer(
-          qObj,
-          candidateSpeech,
-          setup.targetRole || 'Software Engineer',
-          setup.interviewType || 'Technical',
-          setup.difficulty || 'Intermediate'
-        );
-
-        return {
-          questionId: qObj.id,
-          question: qObj.question,
-          category: qObj.category,
-          difficulty: qObj.difficulty,
-          answerText: candidateSpeech,
-          evaluation,
-          hintsUsed: 0
-        };
-      });
-
-      // 4. Conclude session and calculate genuine report aggregates
-      await completeInterview(evaluatedAnswers, questionsList);
-    } catch (err) {
-      console.warn('[MockInterviewPage] Error in handleRealtimeVoiceComplete:', err);
-    }
-
-    navigate('/interview-feedback');
-  };
-
   // Final processing pipeline executed inside InterviewProcessingModal
   const handleProcessRecordingPipeline = async () => {
     // 0. Flush in-flight MediaRecorder data and finalize the single continuous container
@@ -735,21 +643,6 @@ export default function MockInterviewPage() {
             <span>Aligning syllabus with local RAG and pedagogical corpus...</span>
           </div>
         </GlassCard>
-      </div>
-    );
-  }
-
-  if (isRealtimeVoiceMode) {
-    return (
-      <div className="max-w-5xl mx-auto space-y-6 pb-16 font-sans text-[#1F1B16]">
-        <RealtimeVoiceChamber
-          session={session}
-          setup={setup}
-          onCancel={() => navigate('/interview-setup')}
-          onCompleteInterview={(turns, clientQuestions) => {
-            handleRealtimeVoiceComplete(turns, clientQuestions);
-          }}
-        />
       </div>
     );
   }

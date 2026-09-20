@@ -22,14 +22,7 @@ The **AI Career Preparation Agent** resolves these challenges through an **auton
 
 ## ✨ Key Platform Capabilities
 
-### 1. Real-Time Bidirectional AI Voice Interviewing (Gemini Live API)
-- **Sub-Second Latency WebSocket Streaming:** Direct browser-to-Gemini Live API full-duplex WebSocket connection (`gemini-2.0-flash-exp` / Live API) streaming linear 16-bit PCM audio (16kHz uplink, 24kHz downlink) with true conversational back-and-forth.
-- **Natural Conversational Interruption (Barge-In):** Local speech energy detection and Web Audio API queue management instantly halts active audio playback (`player.interrupt()`) when the candidate begins speaking, replicating real-life interview dynamics without awkward turn delays.
-- **Secure Ephemeral Token Architecture:** Backend provisioning (`POST /api/realtime-voice/session`) issues time-bounded, single-use access tokens via Google Cloud REST endpoint, ensuring permanent zero-leakage of production API keys to client browsers.
-- **Interactive Chamber Visualization:** Glassmorphic interview chamber featuring an organic glowing orb visualizer responding dynamically to Gemini's vocal intensity, a real-time candidate decibel microphone meter, instantaneous barge-in indicators, and live closed-caption streaming.
-- **Graceful Fallback Simulation:** Production-grade degradation layer automatically switches to intelligent simulated voice interaction with synthesized audio and scripted prompts when running in environments without live API credentials.
-
-### 2. Multi-Turn Generative Interview Engine
+### 1. Multi-Turn Generative Interview Engine
 - **Context-Grounded Question Synthesis:** Generates dynamic, non-repetitive interview questions tailored to the candidate's target role, extracted resume skills, active skill gaps, and verified curriculum nodes.
 - **5-Axis Formative Evaluation:** Evaluates every candidate response across five core hiring axes (0–100):
   - *Technical Accuracy:* Correctness, conceptual depth, and domain precision.
@@ -40,7 +33,7 @@ The **AI Career Preparation Agent** resolves these challenges through an **auton
 - **Dynamic Difficulty Adaptation:** Adaptively scales pacing turn-by-turn—escalating to senior architectural trade-offs on high scores ($\ge 85$), probing practical depth on intermediate scores ($50–84$), and providing foundational reinforcement when gaps are identified ($< 50$).
 - **Anti-Repetition Engine:** Cross-session memory ensures consecutive mock interviews for the same role and candidate never repeat questions.
 
-### 3. Remote Multi-Tier Secure Sandbox Code Execution
+### 2. Remote Multi-Tier Secure Sandbox Code Execution
 - **Multi-Tier Isolation Architecture:**
   - *Docker Sandbox (`DockerSandboxExecutor`):* Containerized execution with `--read-only` root filesystem, dropped capabilities (`ALL`), unprivileged user (`1000:1000`), network isolation (`none`), and memory limits (256MB).
   - *Firecracker Micro-VM (`FirecrackerSandboxExecutor`):* Hypervisor-level hardware virtualization utilizing Linux KVM for multi-tenant kernel boundary security.
@@ -49,42 +42,42 @@ The **AI Career Preparation Agent** resolves these challenges through an **auton
 - **Zero Server-Side `exec()` / `eval()`:** Untrusted user code is strictly prohibited from executing within the FastAPI server process, guaranteeing immunity against remote code execution (RCE) vulnerabilities.
 - **Live Terminal & Telemetry Drawer:** Embedded terminal in Skill Arena displaying standard output, standard error, execution time in milliseconds, memory consumption, exit codes, and test pass/fail breakdowns.
 
-### 4. Deterministic ATS Resume Scanner
+### 3. Deterministic ATS Resume Scanner
 - **Multi-Format Document Extraction:** Hardened parser supporting PDF (PyMuPDF `fitz`), DOCX (`python-docx`), TXT, and Markdown files.
 - **Security & Upload Hardening:** Validates file magic signatures (`%PDF`, `PK\x03\x04`), rejects binaries (`.exe`, `.zip`), enforces a 10MB upload limit, and alerts users if a non-extractable scanned image PDF is uploaded.
 - **Canonical Skill Taxonomy:** Regex word-boundary taxonomy normalizing hundreds of technical aliases (`sklearn` $\rightarrow$ `Scikit-learn`, `k8s` $\rightarrow$ `Kubernetes`, `tf` $\rightarrow$ `TensorFlow`, `postgres` $\rightarrow$ `PostgreSQL`).
 - **Transparent 5-Tier Rubric (0–100):** Evaluates Skill Match (40 pts), Target-Role Alignment (25 pts), Projects & Quantifiable Metrics (15 pts), Completeness (10 pts), and Keyword Density (10 pts).
 - **Closed-Loop Career Sync:** Missing core skills automatically seed the `skill_gaps` table as High-Priority items, award +35 XP, update calendar streaks, and trigger real-time Next-Best-Action recalculation.
 
-### 5. Competency Radar & Autonomous Skill Gap Analyzer
+### 4. Competency Radar & Autonomous Skill Gap Analyzer
 - **Zero-Dependency SVG Competency Radar:** Renders an interactive 6-axis visualization (Technical Knowledge, Problem Solving, Communication, Confidence, Relevance, System Design).
 - **Multi-Source Evidence Aggregation:** Seamlessly aggregates evidence from ATS audits, Skill Arena challenges, and generative interview evaluations.
 - **Autonomous Next-Best-Action (NBA):** Generates transparent, explainable recommendations directing candidates to high-yield actions (e.g., targeted algorithmic drills, behavioral framing exercises, or architectural deep-dives).
 
-### 6. Retrieval-Augmented Generation (RAG) Architecture
+### 5. Retrieval-Augmented Generation (RAG) Architecture
 - **Curated Knowledge Base:** 18 domain-specific curriculum modules covering Machine Learning, MLOps, System Design, Python Internals, Behavioral (STAR), SQL, and ATS Optimization.
 - **Sub-Millisecond Vector Retrieval:** Local TF-IDF and cosine similarity search (`scikit-learn` vectorization) ensuring grounded technical context with zero external API costs or rate limits.
 - **Dynamic Context Re-Ranking:** Automatically re-ranks retrieved chunks based on candidate target role (+15% boost) and active skill gaps (+25% boost).
 - **Hallucination Guard:** Rigorous similarity thresholds reject out-of-scope queries with transparent, pedagogical fallbacks instead of fabricating answers.
 
-### 7. Hands-on Skill Arena & Conceptual Drills
+### 6. Hands-on Skill Arena & Conceptual Drills
 - **Four Technical Practice Modes:**
   1. *Coding Challenges:* Pattern-based algorithmic problems executed and graded inside the secure sandbox with hidden test cases.
   2. *Debug Challenges:* Production code snippets containing intentional bugs (e.g., mutable default arguments, PyTorch gradient leakage).
   3. *Technical MCQs:* Conceptual questions exploring critical engineering distinctions and edge cases.
   4. *Predict Output:* Safe execution tracing evaluating language runtime mechanics.
 
-### 8. Multilingual AI Feedback Engine
+### 7. Multilingual AI Feedback Engine
 - **Multilingual Support:** Fully configurable feedback delivery in **English**, **Telugu (తెలుగు)**, and **Hindi (हिन्दी)**.
 - **Technical Term Preservation:** Critical engineering terminology (e.g., *Transformer*, *ROC-AUC*, *STAR Method*, *Latency*, *Docker*) remains intact in English for authenticity.
 - **Score Invariance:** Evaluation scores and rubrics remain strictly objective and identical across all languages.
 
-### 9. Peer Interview Experiences & Community Knowledge Base
+### 8. Peer Interview Experiences & Community Knowledge Base
 - **Candidate-Contributed Archives:** Real-world interview logs, question topics, difficulty ratings, and preparation tips.
 - **Automated PII Sanitization:** Deterministic pre-flight regex scanner detects and redacts personal names, phone numbers, emails, bearer tokens, and sensitive URLs before storage.
 - **Moderation Workflow:** Multi-stage moderation pipeline (`PENDING`, `APPROVED`, `FLAGGED`, `REJECTED`) feeding approved questions back into the live RAG knowledge base.
 
-### 10. Progress Analytics & Automated Retention Scheduling
+### 9. Progress Analytics & Automated Retention Scheduling
 - **Weekly AI Career Reports:** Automated 7-day synthesis comparing week-over-week velocity ($+N$ interviews, $+N$ solved drills, $+N$ XP earned).
 - **Weekly Goals & 30-Day Streak Recovery:** Set weekly targets and protect habits with a single streak recovery allowance per 30-day rolling window.
 - **Proactive Background Scheduler:** Asynchronous asyncio worker periodically evaluates student practice recency and dispatches responsive HTML reminder emails with anti-spam suppression if already active today.
@@ -151,7 +144,6 @@ flowchart TD
 | Layer | Technologies | Purpose |
 |---|---|---|
 | **Frontend Framework** | React 19, Vite 8 | Ultra-responsive SPA with rapid Hot Module Replacement |
-| **Real-Time Voice Engine** | Google Gemini Live API, Web Audio API | Full-duplex bidirectional PCM audio streaming, sub-second latency, barge-in |
 | **Code Sandbox Isolation** | Subprocess Jail, Docker, Firecracker | Isolated code execution, memory limits (256MB), timeout kill (3s), secret scrubbing |
 | **Styling & Theming** | Tailwind CSS v4, Lucide Icons | Glassmorphic aesthetics across 6 configurable color palettes |
 | **Data Visualizations** | Custom SVG Components | Zero-dependency, accessible radar charts, score rings, and timelines |
@@ -183,7 +175,6 @@ AI-Career-Preparation-Agent/
 │   │   │   │   ├── interviews.py    # Generative AI interview session controller
 │   │   │   │   ├── profile.py       # Candidate profile and target roles
 │   │   │   │   ├── progress.py      # Gamification and level progression
-│   │   │   │   ├── realtime_voice.py# Real-time Gemini Live voice session controller
 │   │   │   │   ├── recommendations.py # Autonomous Next-Best-Action generator
 │   │   │   │   ├── skill_arena.py   # Hands-on coding challenges & grading
 │   │   │   │   ├── skills.py        # 6-axis skill taxonomy and radar data
@@ -199,7 +190,6 @@ AI-Career-Preparation-Agent/
 │   │   ├── schemas/                 # Pydantic request/response schemas
 │   │   ├── services/
 │   │   │   ├── ai/                  # RAG knowledge base, embeddings, prompt builder
-│   │   │   │   └── voice/           # Gemini Live API token & transcript orchestrator
 │   │   │   ├── interview_engine.py  # 5-axis generative interview orchestrator
 │   │   │   ├── pii_detection_service.py # Pre-flight regex PII scrubber
 │   │   │   ├── resume_analysis_service.py # ATS scoring & keyword analysis
@@ -211,13 +201,10 @@ AI-Career-Preparation-Agent/
 │   └── requirements.txt             # Python backend dependencies
 ├── src/
 │   ├── components/                  # Reusable UI components (Sidebar, Navbar, Cards)
-│   │   └── voice/                   # RealtimeVoiceChamber & glowing orb visualizer
 │   ├── context/                     # Global state (AuthContext, ThemeContext, InterviewContext)
 │   ├── pages/                       # Route views (Dashboard, ATS, MockInterview, SkillArena, etc.)
 │   ├── services/                    # API client modules interfacing with FastAPI backend
-│   │   ├── executionApi.js          # Sandbox code execution client
-│   │   ├── realtimeVoiceApi.js      # Ephemeral session & transcript client
-│   │   └── voice/                   # Web Audio API PCM capture, playback & WebSocket client
+│   │   └── executionApi.js          # Sandbox code execution client
 │   ├── utils/                       # Storage adapters, date formatters, and telemetry helpers
 │   ├── App.jsx                      # Client router configuration and layout bindings
 │   └── main.jsx                     # Vite/React DOM entrypoint
@@ -227,7 +214,6 @@ AI-Career-Preparation-Agent/
 │   ├── test_phase17_experiences.py         # PII scanner, moderation, and RAG attribution tests
 │   ├── test_phase18_career_journey.py      # 14-milestone lifecycle & readiness band tests
 │   ├── test_phases_19_to_22.py             # Reports, goals, feedback, and security probes
-│   ├── test_realtime_voice.py              # Gemini Live token provisioning & transcript tests
 │   └── test_secure_sandbox.py              # Isolated execution, timeouts & secret scrubbing tests
 ├── .env.example                     # Root environment configuration template
 ├── package.json                     # Frontend Node dependencies and build scripts
@@ -345,7 +331,7 @@ The repository includes a comprehensive automated test suite covering all critic
 ```bash
 pytest tests/ -v
 ```
-*Expected Output:* **36 passed** across Realtime Gemini Live voice streaming, Multi-tier sandbox code execution, Multilingual localization, Community experiences, Career journey lifecycles, Weekly reports, and Security probes.
+*Expected Output:* **33 passed** across Multi-tier sandbox code execution, Multilingual localization, Community experiences, Career journey lifecycles, Weekly reports, and Security probes.
 
 ### Run Generative Interview Engine Test
 ```bash
@@ -368,7 +354,6 @@ npm run lint
 ## 🛡️ Security, Privacy & Integrity
 
 - **Isolated Sandbox Execution:** Untrusted user code is executed in isolated sandboxes (Docker / Process jail) with memory limits (256MB), hard process timeouts (3s), and complete stripping of server environment secrets. Zero `exec()` or `eval()` runs within the server process.
-- **Ephemeral Voice Tokens:** Ephemeral single-use authentication tokens are minted server-side for Gemini Live API WebSocket sessions, ensuring production keys never touch the browser.
 - **Deterministic PII Scrubbing:** All user-contributed content (such as peer interview submissions) is filtered through an automated PII detector before storage, redacting phone numbers, emails, and sensitive keys.
 - **In-Memory Document Parsing:** Raw resumes uploaded for ATS evaluation are processed strictly in volatile memory. Full unencrypted document texts are never persisted to disk or emitted to logs.
 - **Tenant Isolation:** Multi-tenant access controls ensure candidates can only inspect, query, or delete their own sessions, recordings, and diagnostic records.
@@ -383,7 +368,6 @@ npm run lint
 
 ## 🗺️ Project Roadmap & Capabilities
 
-- [x] **Full-Duplex Real-Time AI Voice Streaming:** Sub-second latency conversational voice interviews with Gemini Live API, bidirectional PCM streaming (16kHz in, 24kHz out), and instant conversational barge-in.
 - [x] **Sandboxed Code Execution Engine:** Remote multi-tier sandbox architecture (Docker, Firecracker micro-VM detection, Process jail) with resource limits, secret scrubbing, and hidden test case evaluation.
 - [x] **Deterministic ATS Resume Parser:** Multi-format document parser (PDF/DOCX/TXT) with 5-tier rubric scoring and skill gap synchronization.
 - [x] **Multilingual AI Feedback Engine:** Preserves technical terminology in English while delivering feedback in Telugu and Hindi.

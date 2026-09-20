@@ -415,8 +415,8 @@ export function InterviewProvider({ children }) {
     }
   };
 
-  const completeInterview = async (customAnswers = null, customQuestions = null) => {
-    const answers = (customAnswers && customAnswers.length > 0) ? customAnswers : session.answers;
+  const completeInterview = async () => {
+    const answers = session.answers;
     if (!answers || answers.length === 0) return null;
 
     let totalTech = 0;
@@ -615,8 +615,7 @@ export function InterviewProvider({ children }) {
 
     setSession(prev => ({
       ...prev,
-      questions: (customQuestions && customQuestions.length > 0) ? customQuestions : prev.questions,
-      answers: answers,
+      answers,
       isFinished: true,
       summaryResult
     }));
