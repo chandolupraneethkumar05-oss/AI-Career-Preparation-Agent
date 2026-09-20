@@ -53,9 +53,16 @@ class SkillArenaEvaluationResponse(BaseModel):
     expected_answer_or_approach: str
     xp_earned: int
     streak: int = 1
-    feedback: str
+    feedback: str = ""
     next_recommended_skill: Optional[str] = None
     rag_context: Optional[str] = None
+    execution_status: Optional[str] = None
+    execution_time_ms: Optional[float] = None
+    stdout: Optional[str] = None
+    stderr: Optional[str] = None
+    tests_passed: Optional[int] = None
+    total_tests: Optional[int] = None
+    executor_type: Optional[str] = None
 
 
 class SkillArenaAttemptResponse(BaseModel):

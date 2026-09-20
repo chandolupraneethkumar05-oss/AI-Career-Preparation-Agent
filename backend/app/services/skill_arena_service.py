@@ -249,6 +249,14 @@ def evaluate_submission(
     concepts_detected = []
     feedback = ""
 
+    exec_status = None
+    exec_time_ms = None
+    exec_stdout = None
+    exec_stderr = None
+    tests_passed = None
+    tests_total = None
+    exec_type = None
+
     # -------------------------------------------------------------------------
     # MODE 1: TECHNICAL MCQ
     # -------------------------------------------------------------------------
@@ -385,6 +393,56 @@ def evaluate_submission(
             feedback = f"Structured practice evaluation: {score}/100. Check expected approach below."
 
     # -------------------------------------------------------------------------
+    # SANDBOX EXECUTION (FOR CHALLENGES WITH SERVER-SIDE TEST CASES)
+    # -------------------------------------------------------------------------
+    test_cases_data = challenge.get("test_cases", [])
+    if test_cases_data and mode in ("coding", "debug"):
+        try:
+            from .sandbox.sandbox_manager import default_sandbox_manager
+            from .sandbox.models import TestCase, ExecutionLimits
+
+            tcs = [
+                TestCase(
+                    input_data=tc["input_data"],
+                    expected_output=tc["expected_output"],
+                    is_hidden=tc.get("is_hidden", True),
+                    description=tc.get("description")
+                )
+                for tc in test_cases_data
+            ]
+            job = default_sandbox_manager.create_job(
+                user_id=user_id,
+                code=raw_answer,
+                challenge_id=challenge["id"],
+                language="python"
+            )
+            job.limits = ExecutionLimits(cpu_timeout_seconds=3.0, memory_limit_mb=256)
+            job_res = default_sandbox_manager.run_job(job=job, test_cases=tcs)
+            exec_status = job_res.status.value
+            exec_time_ms = job_res.execution_time_ms
+            exec_stdout = job_res.stdout
+            exec_stderr = job_res.stderr
+            tests_passed = job_res.passed_tests
+            tests_total = job_res.total_tests
+            exec_type = job_res.executor_type
+
+            if tests_total and tests_total > 0:
+                pass_ratio = tests_passed / tests_total
+                score = int(round(pass_ratio * 100))
+                correctness = (tests_passed == tests_total)
+                technical_depth = min(100, int(score * 1.05))
+                if correctness:
+                    strengths.append(f"Passed all {tests_total}/{tests_total} server-side test cases ({exec_time_ms}ms).")
+                    feedback = f"All {tests_total} test cases passed! Execution verified in {exec_time_ms}ms via {exec_type} sandbox."
+                else:
+                    mistakes.append(f"Passed {tests_passed}/{tests_total} test cases. Execution status: {exec_status}.")
+                    if job_res.stderr:
+                        mistakes.append(f"Stderr: {job_res.stderr[:200]}")
+                    feedback = f"Sandbox test evaluation: {tests_passed}/{tests_total} tests passed ({score}/100)."
+        except Exception as exc:
+            logger.warning(f"Sandbox execution failed, retaining structural score: {exc}")
+
+    # -------------------------------------------------------------------------
     # OPTIONAL RAG RETRIEVAL FOR LEARNING CONTEXT
     # -------------------------------------------------------------------------
     rag_context_text = None
@@ -495,7 +553,14 @@ def evaluate_submission(
         streak=user.streak if user else 1,
         feedback=feedback,
         next_recommended_skill=next_rec,
-        rag_context=rag_context_text
+        rag_context=rag_context_text,
+        execution_status=exec_status,
+        execution_time_ms=exec_time_ms,
+        stdout=exec_stdout,
+        stderr=exec_stderr,
+        tests_passed=tests_passed,
+        total_tests=tests_total,
+        executor_type=exec_type
     )
 
 

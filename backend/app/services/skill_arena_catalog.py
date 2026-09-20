@@ -59,6 +59,38 @@ SKILL_ARENA_CATALOG: List[Dict[str, Any]] = [
             "required_patterns": ["def find_second_largest", "for", "return"],
             "concepts": ["Linear traversal", "Edge case handling (None)", "Duplicate handling"]
         },
+        "test_cases": [
+            {
+                "input_data": "find_second_largest([10, 5, 20, 20, 8])",
+                "expected_output": "10",
+                "is_hidden": False,
+                "description": "Standard list with duplicates"
+            },
+            {
+                "input_data": "find_second_largest([5, 5, 5])",
+                "expected_output": "None",
+                "is_hidden": False,
+                "description": "All identical elements"
+            },
+            {
+                "input_data": "find_second_largest([1])",
+                "expected_output": "None",
+                "is_hidden": True,
+                "description": "Single element"
+            },
+            {
+                "input_data": "find_second_largest([-10, -20, -5, -30])",
+                "expected_output": "-10",
+                "is_hidden": True,
+                "description": "Negative integers"
+            },
+            {
+                "input_data": "find_second_largest([100, 200])",
+                "expected_output": "100",
+                "is_hidden": True,
+                "description": "Two distinct elements"
+            }
+        ],
         "estimated_minutes": 8,
         "career_relevance": "Fundamental algorithmic efficiency expected in technical screenings for Software and ML Engineers.",
         "target_roles": ["Machine Learning Engineer", "Software Engineer", "Data Scientist", "Full Stack Web Developer"]
@@ -104,6 +136,20 @@ SKILL_ARENA_CATALOG: List[Dict[str, Any]] = [
             "required_patterns": ["is none", "items = []", "items.append"],
             "concepts": ["Default argument evaluation time", "Sentinel None pattern"]
         },
+        "test_cases": [
+            {
+                "input_data": "append_item(1); print(append_item(2))",
+                "expected_output": "[2]",
+                "is_hidden": False,
+                "description": "Verify independent call does not retain state"
+            },
+            {
+                "input_data": "print(append_item(99, [10]))",
+                "expected_output": "[10, 99]",
+                "is_hidden": True,
+                "description": "Explicit items argument supplied"
+            }
+        ],
         "estimated_minutes": 5,
         "career_relevance": "Classic Python interview question testing deep understanding of Python memory model.",
         "target_roles": ["Machine Learning Engineer", "Data Scientist", "Software Engineer"]

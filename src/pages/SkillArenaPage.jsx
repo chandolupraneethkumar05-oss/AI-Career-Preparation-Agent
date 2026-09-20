@@ -18,7 +18,10 @@ import {
   ShieldCheck,
   History,
   TrendingUp,
-  Award
+  Award,
+  Terminal,
+  Play,
+  Cpu
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -26,6 +29,7 @@ import Badge from '../components/Badge';
 import { useAuth } from '../context/AuthContext';
 import { skillArenaApi } from '../services/skillArenaApi';
 import { skillApi } from '../services/skillApi';
+import { executionApi } from '../services/executionApi';
 
 const PRACTICE_MODES = [
   {
@@ -74,6 +78,8 @@ export default function SkillArenaPage() {
   const [showHint, setShowHint] = useState(false);
   const [isLoadingChallenge, setIsLoadingChallenge] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTestingCode, setIsTestingCode] = useState(false);
+  const [sandboxRunResult, setSandboxRunResult] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
 
   // Skill Profile & Career Focus State
@@ -109,6 +115,7 @@ export default function SkillArenaPage() {
   const fetchChallenge = (modeFilter = null) => {
     setIsLoadingChallenge(true);
     setEvaluationResult(null);
+    setSandboxRunResult(null);
     setShowHint(false);
     setUserAnswer('');
     setSelectedOption(null);
@@ -150,6 +157,30 @@ export default function SkillArenaPage() {
   const handleModeChange = (modeId) => {
     setSelectedMode(modeId);
     fetchChallenge(modeId);
+  };
+
+  const handleRunCode = async () => {
+    if (!userAnswer || !userAnswer.trim()) return;
+    setIsTestingCode(true);
+    setSandboxRunResult(null);
+    try {
+      const res = await executionApi.submitJob({
+        code: userAnswer,
+        challenge_id: activeChallenge?.id,
+        language: 'python'
+      });
+      setSandboxRunResult(res);
+    } catch (err) {
+      setSandboxRunResult({
+        status: 'SANDBOX_ERROR',
+        stderr: err?.message || 'Execution request failed',
+        stdout: '',
+        execution_time_ms: 0,
+        executor_type: 'unknown'
+      });
+    } finally {
+      setIsTestingCode(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -476,6 +507,50 @@ export default function SkillArenaPage() {
                       <span>Keywords & syntax patterns analyzed deterministically</span>
                       <span>{userAnswer.split(/\s+/).filter(Boolean).length} words</span>
                     </div>
+
+                    {/* Interactive Sandbox Test Runner Output */}
+                    {sandboxRunResult && (
+                      <div className="mt-3 p-3.5 rounded-md bg-[#1B2A4A] text-[#F8F6F0] font-mono text-xs space-y-2 border border-[#BAC7D5]">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                          <div className="flex items-center gap-2">
+                            <Terminal className="w-4 h-4 text-[#8FA8BF]" />
+                            <span className="font-bold text-white">Sandbox Output</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              sandboxRunResult.status === 'PASSED'
+                                ? 'bg-emerald-800/80 text-emerald-200'
+                                : 'bg-rose-800/80 text-rose-200'
+                            }`}>
+                              {sandboxRunResult.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-[11px] text-[#8FA8BF]">
+                            {sandboxRunResult.executor_type && (
+                              <span className="flex items-center gap-1">
+                                <Cpu className="w-3 h-3" />
+                                {sandboxRunResult.executor_type}
+                              </span>
+                            )}
+                            {sandboxRunResult.execution_time_ms !== undefined && (
+                              <span>{sandboxRunResult.execution_time_ms} ms</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {sandboxRunResult.stdout && (
+                          <div className="whitespace-pre-wrap text-emerald-300">
+                            {sandboxRunResult.stdout}
+                          </div>
+                        )}
+                        {sandboxRunResult.stderr && (
+                          <div className="whitespace-pre-wrap text-rose-300">
+                            {sandboxRunResult.stderr}
+                          </div>
+                        )}
+                        {!sandboxRunResult.stdout && !sandboxRunResult.stderr && (
+                          <div className="text-gray-400 italic">No standard output emitted.</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -487,11 +562,23 @@ export default function SkillArenaPage() {
                       onClick={() => {
                         setUserAnswer(activeChallenge.initial_code || '');
                         setSelectedOption(null);
+                        setSandboxRunResult(null);
                       }}
                       className="px-4 py-2 rounded-md text-xs font-semibold text-[#70685E] hover:text-[#1F1B16] hover:bg-[#FAF8F3] border border-transparent hover:border-[#E5E0D5] transition-colors cursor-pointer"
                     >
                       Reset
                     </button>
+                    {(activeChallenge.mode === 'coding' || activeChallenge.mode === 'debug') && (
+                      <button
+                        type="button"
+                        disabled={isTestingCode || !userAnswer.trim()}
+                        onClick={handleRunCode}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-semibold text-[#1A365D] bg-[#EAEFF5] hover:bg-[#D9E2EC] border border-[#BAC7D5] transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-[#1A365D]" />
+                        {isTestingCode ? 'Running Sandbox...' : 'Run in Sandbox'}
+                      </button>
+                    )}
                     <GradientButton
                       size="sm"
                       variant="primary"
@@ -540,6 +627,35 @@ export default function SkillArenaPage() {
                         <div className="text-[10px] uppercase tracking-wider font-mono">Evidence Logged</div>
                       </div>
                     </div>
+
+                    {/* Isolated Sandbox Execution Telemetry */}
+                    {evaluationResult.execution_status && (
+                      <div className="p-3.5 rounded-md bg-[#FAF8F3] border border-[#BAC7D5] text-xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 font-serif font-bold text-[#1A365D]">
+                            <Cpu className="w-4 h-4" />
+                            Isolated Sandbox Telemetry
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] font-mono text-[10px] uppercase font-bold">
+                              {evaluationResult.executor_type || 'Sandbox'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-sm font-mono text-[10px] uppercase font-bold ${
+                              evaluationResult.execution_status === 'PASSED'
+                                ? 'bg-[#EBF4EE] text-[#235E3B] border border-[#CDE5D4]'
+                                : 'bg-[#FDF2E9] text-[#9A421A] border border-[#F0C9B3]'
+                            }`}>
+                              {evaluationResult.execution_status}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono pt-1 text-[#554E44]">
+                          <div>Tests Passed: <strong className="text-[#1F1B16]">{evaluationResult.tests_passed ?? 0} / {evaluationResult.total_tests ?? 0}</strong></div>
+                          <div>Runtime: <strong className="text-[#1F1B16]">{evaluationResult.execution_time_ms ? `${evaluationResult.execution_time_ms} ms` : '< 1 ms'}</strong></div>
+                          <div>Limits: <strong className="text-[#1F1B16]">256MB / 3.0s</strong></div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Strengths & Mistakes */}
                     {evaluationResult.strengths && evaluationResult.strengths.length > 0 && (

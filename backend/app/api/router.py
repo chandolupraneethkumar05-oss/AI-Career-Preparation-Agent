@@ -21,6 +21,8 @@ from .routes.career_journey import router as career_journey_router
 from .routes.weekly_reports import router as weekly_reports_router
 from .routes.goals import router as goals_router
 from .routes.feedback import router as feedback_router
+from .routes.execution import router as execution_router
+from .routes.realtime_voice import router as realtime_voice_router
 
 api_router = APIRouter(prefix="/api")
 
@@ -39,6 +41,8 @@ api_router.include_router(career_journey_router)
 api_router.include_router(weekly_reports_router)
 api_router.include_router(goals_router)
 api_router.include_router(feedback_router)
+api_router.include_router(execution_router)
+api_router.include_router(realtime_voice_router, prefix="/realtime-voice", tags=["Realtime Voice"])
 
 # Register existing proactive reminder & resume parsing endpoints
 api_router.include_router(reminders_router)

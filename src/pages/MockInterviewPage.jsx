@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bot,
   Mic,
-  MicOff,
   Send,
   ArrowRight,
   Sparkles,
-  CheckCircle2,
-  AlertCircle,
   Clock,
   Lightbulb,
   Zap,
@@ -30,6 +26,7 @@ import RecordingControls from '../components/video/RecordingControls';
 import InterviewProcessingModal from '../components/video/InterviewProcessingModal';
 import AiInterviewerAvatar from '../components/video/AiInterviewerAvatar';
 import CodeDisputationSandbox from '../components/CodeDisputationSandbox';
+import RealtimeVoiceChamber from '../components/voice/RealtimeVoiceChamber';
 import { getCompanyPlaybook } from '../data/companyPlaybooks';
 import { getInterviewerPersona } from '../data/interviewerPersonas';
 import { useFaceToFaceDialogue } from '../hooks/useFaceToFaceDialogue';
@@ -54,6 +51,7 @@ export default function MockInterviewPage() {
   const { addXP } = useAuth();
 
   const isFaceToFaceMode = setup.interviewMode === 'face_to_face';
+  const isRealtimeVoiceMode = setup.interviewMode === 'realtime_voice';
   const isVideoMode = setup.interviewMode === 'video' || isFaceToFaceMode;
   const activePlaybook = getCompanyPlaybook(session.companyPlaybook || setup.companyPlaybook || 'general');
   const activePersona = getInterviewerPersona(session.interviewerPersona || setup.interviewerPersona || 'julian');
@@ -76,7 +74,6 @@ export default function MockInterviewPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingQuickAnswer, setIsGeneratingQuickAnswer] = useState(false);
   const [quickAnswerError, setQuickAnswerError] = useState(null);
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [activeNudge, setActiveNudge] = useState(null);
 
   // Per-Question Overall Timer (180 seconds / 3 minutes per question)
@@ -557,6 +554,21 @@ export default function MockInterviewPage() {
     }
   };
 
+  const handleRealtimeVoiceComplete = async (turns) => {
+    const candidateAnswers = (turns || [])
+      .filter(t => t.speaker === 'candidate')
+      .map(t => t.text)
+      .join('\n\n');
+
+    try {
+      if (candidateAnswers) {
+        await submitCurrentAnswer(candidateAnswers.slice(0, 1000));
+      }
+      completeInterview(session.id || session.sessionId);
+    } catch (_) {}
+    navigate('/interview-feedback');
+  };
+
   // Final processing pipeline executed inside InterviewProcessingModal
   const handleProcessRecordingPipeline = async () => {
     // 0. Flush in-flight MediaRecorder data and finalize the single continuous container
@@ -648,6 +660,21 @@ export default function MockInterviewPage() {
             <span>Aligning syllabus with local RAG and pedagogical corpus...</span>
           </div>
         </GlassCard>
+      </div>
+    );
+  }
+
+  if (isRealtimeVoiceMode) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6 pb-16 font-sans text-[#1F1B16]">
+        <RealtimeVoiceChamber
+          session={session}
+          setup={setup}
+          onCancel={() => navigate('/interview-setup')}
+          onCompleteInterview={(turns) => {
+            handleRealtimeVoiceComplete(turns);
+          }}
+        />
       </div>
     );
   }
