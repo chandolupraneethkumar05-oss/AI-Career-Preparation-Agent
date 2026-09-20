@@ -48,6 +48,29 @@ export default function RecordingReview({
   // Resolve media source URL: prioritize local in-memory blob, then streaming URL, then session stream
   const [mediaSrc, setMediaSrc] = useState(null);
   const [hasPlaybackError, setHasPlaybackError] = useState(false);
+  const blobUrlRef = useRef(null);
+  const prevBlobRef = useRef(null);
+
+  // Resolves stream URL ensuring Vite proxy compatibility without hardcoded host mismatch
+  const resolveStreamUrl = (rawUrl, sid, uid) => {
+    let url = rawUrl;
+    if (!url && sid) {
+      url = `/api/interviews/${encodeURIComponent(sid)}/recording/stream`;
+    }
+    if (!url) return null;
+
+    // Convert localhost:8000/api/ or 127.0.0.1:8000/api/ to relative /api/ for Vite proxy
+    if (url.includes(':8000/api/')) {
+      url = '/api/' + url.split(':8000/api/')[1];
+    } else if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('blob:')) {
+      url = url.startsWith('/') ? url : `/${url}`;
+    }
+
+    if (!url.includes('user_id=') && uid) {
+      url += `${url.includes('?') ? '&' : '?'}user_id=${encodeURIComponent(uid)}`;
+    }
+    return url;
+  };
 
   // Compute fallback duration from segments if available
   const estimatedDuration = React.useMemo(() => {
@@ -57,34 +80,36 @@ export default function RecordingReview({
     return 60;
   }, [segments]);
 
+  // Clean up blob URL strictly when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     setHasPlaybackError(false);
 
-    // 1. High priority: in-memory blob from active session (instant, no buffering)
+    // 1. High priority: in-memory blob from active session (instant, no server round-trip)
     if (recordedBlob && recordedBlob.size > 0) {
-      const url = URL.createObjectURL(recordedBlob);
-      setMediaSrc(url);
-      return () => URL.revokeObjectURL(url);
-    }
-
-    // 2. Secondary: streamUrl from API response
-    if (streamUrl) {
-      let resolved = streamUrl;
-      // If relative URL like /api/interviews/..., ensure full host or Vite proxy compatibility
-      if (!resolved.startsWith('http://') && !resolved.startsWith('https://') && !resolved.startsWith('blob:')) {
-        const base = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api').replace(/\/api\/?$/, '');
-        resolved = `${base}${resolved.startsWith('/') ? '' : '/'}${resolved}`;
+      if (prevBlobRef.current !== recordedBlob) {
+        if (blobUrlRef.current) {
+          URL.revokeObjectURL(blobUrlRef.current);
+        }
+        blobUrlRef.current = URL.createObjectURL(recordedBlob);
+        prevBlobRef.current = recordedBlob;
       }
-      if (!resolved.includes('user_id=') && userId) {
-        resolved += `${resolved.includes('?') ? '&' : '?'}user_id=${encodeURIComponent(userId)}`;
-      }
-      setMediaSrc(resolved);
+      setMediaSrc(blobUrlRef.current);
       return;
     }
 
-    // 3. Fallback: construct standard streaming URL
-    if (sessionId) {
-      setMediaSrc(interviewApi.getRecordingStreamUrl(sessionId, userId));
+    // 2. Secondary: streamUrl from API response or sessionId fallback
+    const targetUrl = resolveStreamUrl(streamUrl, sessionId, userId);
+    if (targetUrl) {
+      setMediaSrc(targetUrl);
     }
   }, [streamUrl, recordedBlob, sessionId, userId]);
 
@@ -126,7 +151,28 @@ export default function RecordingReview({
   };
 
   const handleVideoError = (e) => {
-    console.warn('[RecordingReview] HTML5 Video playback error:', e);
+    const videoElem = videoRef.current;
+    // If the error was merely an aborted fetch (code 1) due to re-render or reload, do not treat as fatal
+    if (videoElem?.error?.code === 1) {
+      return;
+    }
+
+    console.warn('[RecordingReview] HTML5 Video playback notice:', e, videoElem?.error);
+
+    // If currently on an in-memory blob URL, seamlessly fall back to backend stream URL!
+    if (mediaSrc && mediaSrc.startsWith('blob:')) {
+      const fallbackUrl = resolveStreamUrl(streamUrl, sessionId, userId);
+      if (fallbackUrl && fallbackUrl !== mediaSrc) {
+        console.info('[RecordingReview] In-memory blob load issue; falling back to backend stream:', fallbackUrl);
+        setMediaSrc(fallbackUrl);
+        setHasPlaybackError(false);
+        if (videoRef.current) {
+          videoRef.current.load();
+        }
+        return;
+      }
+    }
+
     setHasPlaybackError(true);
     setIsPlaying(false);
   };
@@ -264,6 +310,7 @@ export default function RecordingReview({
               onEnded={() => setIsPlaying(false)}
               className="w-full h-full object-contain bg-black cursor-pointer"
               playsInline
+              crossOrigin="anonymous"
               preload="metadata"
             />
           ) : (
@@ -288,10 +335,18 @@ export default function RecordingReview({
                   type="button"
                   onClick={() => {
                     setHasPlaybackError(false);
-                    if (videoRef.current) {
-                      videoRef.current.load();
-                      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+                    const serverStreamUrl = resolveStreamUrl(streamUrl, sessionId, userId);
+                    if (serverStreamUrl) {
+                      setMediaSrc(serverStreamUrl);
                     }
+                    setTimeout(() => {
+                      if (videoRef.current) {
+                        videoRef.current.load();
+                        videoRef.current.play().then(() => setIsPlaying(true)).catch((err) => {
+                          console.warn('[RecordingReview] Retry play notice:', err);
+                        });
+                      }
+                    }, 50);
                   }}
                   className="px-3 py-1.5 rounded-md bg-[#1B2A4A] hover:bg-[#142038] text-white text-xs font-bold transition-colors cursor-pointer"
                 >

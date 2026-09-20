@@ -458,7 +458,8 @@ export const interviewApi = {
    * Generates secure streaming video URL with tenant isolation query param.
    */
   getRecordingStreamUrl(sessionId, userId = 'user-001') {
-    return `${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording/stream?user_id=${encodeURIComponent(userId)}`;
+    const base = API_BASE_URL.includes(':8000/api') ? '/api' : API_BASE_URL;
+    return `${base}/interviews/${encodeURIComponent(sessionId)}/recording/stream?user_id=${encodeURIComponent(userId)}`;
   },
 
   /**
