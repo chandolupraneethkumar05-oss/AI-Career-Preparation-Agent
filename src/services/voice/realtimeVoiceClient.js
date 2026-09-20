@@ -133,21 +133,47 @@ export class RealtimeVoiceClient {
     }
   }
 
+  interrupt() {
+    console.log('[RealtimeVoice] Interrupting AI speech');
+    if (this._speechTimer) {
+      clearTimeout(this._speechTimer);
+      this._speechTimer = null;
+    }
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (_) {}
+    }
+    this.audioPlayback.interrupt();
+    this.onAIVolume(0);
+
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      try {
+        this.socket.send(JSON.stringify({ clientContent: { turnComplete: true } }));
+      } catch (_) {}
+    }
+
+    this._setState(VoiceState.INTERRUPTED);
+    setTimeout(() => {
+      if (this.state === VoiceState.INTERRUPTED) {
+        this._setState(VoiceState.LISTENING);
+      }
+    }, 350);
+  }
+
   _handleOutgoingAudio(base64Chunk, volume) {
+    const isAISpeaking =
+      this.state === VoiceState.AI_SPEAKING ||
+      this.audioPlayback.isPlaying ||
+      ('speechSynthesis' in window && window.speechSynthesis.speaking);
+
     // Client-side barge-in detection: if candidate speaks while AI is talking, interrupt AI immediately
-    if (this.audioPlayback.isPlaying && volume > this._bargeInThreshold) {
+    if (isAISpeaking && volume > 0.08) {
       this._speakingFrames++;
       if (this._speakingFrames >= 2) {
         console.log('[RealtimeVoice] Candidate speech detected during AI playback -> Triggering barge-in');
-        this.audioPlayback.interrupt();
+        this.interrupt();
         this._speakingFrames = 0;
-
-        // If connected to Gemini Live, send client content cancellation
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-          try {
-            this.socket.send(JSON.stringify({ clientContent: { turnComplete: true } }));
-          } catch (_) {}
-        }
       }
     } else {
       this._speakingFrames = 0;
@@ -253,7 +279,9 @@ export class RealtimeVoiceClient {
     this._setState(VoiceState.READY);
 
     // Initial Question 1 of 5
-    setTimeout(() => {
+    if (this._speechTimer) clearTimeout(this._speechTimer);
+    this._speechTimer = setTimeout(() => {
+      if (this.state === VoiceState.ENDED) return;
       const q1 = this.questions[0].question;
       this._recordTurn('ai', q1);
       this._speakSimulated(q1);
@@ -262,17 +290,27 @@ export class RealtimeVoiceClient {
 
   _speakSimulated(text) {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+      } catch (_) {}
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.05;
       utterance.pitch = 1.0;
       utterance.onstart = () => {
         this._setState(VoiceState.AI_SPEAKING);
-        this.onAIVolume(0.6);
+        this.onAIVolume(0.65);
       };
       utterance.onend = () => {
-        this._setState(VoiceState.LISTENING);
-        this.onAIVolume(0);
+        if (this.state === VoiceState.AI_SPEAKING) {
+          this._setState(VoiceState.LISTENING);
+          this.onAIVolume(0);
+        }
+      };
+      utterance.onerror = () => {
+        if (this.state === VoiceState.AI_SPEAKING) {
+          this._setState(VoiceState.LISTENING);
+          this.onAIVolume(0);
+        }
       };
       window.speechSynthesis.speak(utterance);
     } else {
@@ -300,7 +338,9 @@ export class RealtimeVoiceClient {
       this.currentQuestionIndex++;
       const nextIdx = this.currentQuestionIndex;
 
-      setTimeout(() => {
+      if (this._speechTimer) clearTimeout(this._speechTimer);
+      this._speechTimer = setTimeout(() => {
+        if (this.state === VoiceState.ENDED) return;
         if (nextIdx < this.totalQuestions) {
           const nextItem = this.questions[nextIdx];
           this.onQuestionChange(nextIdx + 1, this.totalQuestions, nextItem.stage);
@@ -332,13 +372,14 @@ export class RealtimeVoiceClient {
   setMute(muted) {
     this.isMuted = muted;
     this.audioCapture.setMuted(muted);
+    if (muted) {
+      this.onCandidateVolume(0);
+    }
   }
 
   disconnect() {
     this._setState(VoiceState.ENDED);
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    this.interrupt();
     this.audioCapture.stop();
     this.audioPlayback.stop();
     if (this.socket) {

@@ -90,6 +90,14 @@ export class AudioCapture {
 
   setMuted(muted) {
     this.isMuted = muted;
+    if (this.mediaStream) {
+      this.mediaStream.getAudioTracks().forEach((track) => {
+        track.enabled = !muted;
+      });
+    }
+    if (muted && this.onVolumeChange) {
+      this.onVolumeChange(0);
+    }
   }
 
   stop() {

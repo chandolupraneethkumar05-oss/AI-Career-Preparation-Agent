@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic,
   MicOff,
@@ -10,7 +10,9 @@ import {
   Send,
   CheckCircle2,
   ChevronRight,
-  Layers
+  Layers,
+  Square,
+  Play
 } from 'lucide-react';
 import Badge from '../Badge';
 import GradientButton from '../GradientButton';
@@ -27,6 +29,7 @@ export default function RealtimeVoiceChamber({
   const [voiceState, setVoiceState] = useState(VoiceState.CONNECTING);
   const [candidateVol, setCandidateVol] = useState(0);
   const [aiVol, setAiVol] = useState(0);
+  const [isMicActive, setIsMicActive] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [interruptedFlash, setInterruptedFlash] = useState(false);
   const [turns, setTurns] = useState([]);
@@ -41,8 +44,12 @@ export default function RealtimeVoiceChamber({
   });
   const [manualInput, setManualInput] = useState('');
   const [liveSpeechTranscript, setLiveSpeechTranscript] = useState('');
+  const [silenceCountdown, setSilenceCountdown] = useState(null);
+
   const recognitionRef = useRef(null);
+  const isRecognitionRunningRef = useRef(false);
   const speechSilenceTimerRef = useRef(null);
+  const speechCountdownIntervalRef = useRef(null);
 
   const transcriptScrollRef = useRef(null);
   const clientRef = useRef(null);
@@ -110,6 +117,54 @@ export default function RealtimeVoiceChamber({
     };
   }, [setup, session]);
 
+  // Submit candidate answer (from speech or text)
+  const submitCandidateAnswer = useCallback((customText) => {
+    if (speechSilenceTimerRef.current) {
+      clearTimeout(speechSilenceTimerRef.current);
+      speechSilenceTimerRef.current = null;
+    }
+    if (speechCountdownIntervalRef.current) {
+      clearInterval(speechCountdownIntervalRef.current);
+      speechCountdownIntervalRef.current = null;
+    }
+    setSilenceCountdown(null);
+
+    const answer = (typeof customText === 'string' ? customText : (liveSpeechTranscript || manualInput)).trim();
+    if (!answer) return;
+
+    // Temporarily pause speech recognition while AI evaluates & speaks
+    if (recognitionRef.current && isRecognitionRunningRef.current) {
+      try {
+        recognitionRef.current.abort();
+        isRecognitionRunningRef.current = false;
+      } catch (_) {}
+    }
+
+    if (clientRef.current) {
+      clientRef.current.recordCandidateSpeech(answer);
+    }
+
+    setLiveSpeechTranscript('');
+    setManualInput('');
+  }, [liveSpeechTranscript, manualInput]);
+
+  // Safe Recognition Helpers
+  const startRecognition = useCallback(() => {
+    if (!recognitionRef.current || isRecognitionRunningRef.current) return;
+    try {
+      recognitionRef.current.start();
+      isRecognitionRunningRef.current = true;
+    } catch (_) {}
+  }, []);
+
+  const stopRecognition = useCallback(() => {
+    if (!recognitionRef.current || !isRecognitionRunningRef.current) return;
+    try {
+      recognitionRef.current.abort();
+      isRecognitionRunningRef.current = false;
+    } catch (_) {}
+  }, []);
+
   // Web Speech Recognition for Real-Time Speech-to-Text
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -121,60 +176,98 @@ export default function RealtimeVoiceChamber({
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
+      recognition.onstart = () => {
+        isRecognitionRunningRef.current = true;
+      };
+
       recognition.onresult = (event) => {
-        let currentInterim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const res = event.results[i];
-          if (res.isFinal) {
-            const finalText = res[0].transcript.trim();
-            if (finalText && clientRef.current) {
-              setLiveSpeechTranscript('');
-              clientRef.current.recordCandidateSpeech(finalText);
-            }
-          } else {
-            currentInterim += res[0].transcript;
-          }
+        // If AI is currently speaking and user speaks, trigger barge-in interrupt immediately
+        if (voiceState === VoiceState.AI_SPEAKING && clientRef.current) {
+          console.log('[RealtimeVoiceChamber] User speech detected during AI talk -> Triggering interrupt');
+          clientRef.current.interrupt();
+          return;
         }
-        if (currentInterim) {
-          setLiveSpeechTranscript(currentInterim);
-          if (speechSilenceTimerRef.current) {
-            clearTimeout(speechSilenceTimerRef.current);
-          }
-          speechSilenceTimerRef.current = setTimeout(() => {
-            if (currentInterim.trim() && clientRef.current) {
-              clientRef.current.recordCandidateSpeech(currentInterim.trim());
-              setLiveSpeechTranscript('');
+
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript + ' ';
+        }
+        fullTranscript = fullTranscript.trim();
+
+        if (fullTranscript) {
+          setLiveSpeechTranscript(fullTranscript);
+
+          // Reset silence countdown timer
+          if (speechSilenceTimerRef.current) clearTimeout(speechSilenceTimerRef.current);
+          if (speechCountdownIntervalRef.current) clearInterval(speechCountdownIntervalRef.current);
+
+          setSilenceCountdown(2);
+          let seconds = 2;
+          speechCountdownIntervalRef.current = setInterval(() => {
+            seconds -= 1;
+            if (seconds > 0) {
+              setSilenceCountdown(seconds);
+            } else {
+              clearInterval(speechCountdownIntervalRef.current);
+              setSilenceCountdown(null);
             }
-          }, 2200);
+          }, 1000);
+
+          speechSilenceTimerRef.current = setTimeout(() => {
+            if (fullTranscript) {
+              submitCandidateAnswer(fullTranscript);
+            }
+          }, 2400);
         }
       };
 
-      recognition.onerror = () => {};
+      recognition.onerror = (e) => {
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+          console.warn('[SpeechRecognition] Error:', e.error);
+        }
+      };
+
       recognition.onend = () => {
-        if (voiceState !== VoiceState.ENDED && !isMuted) {
+        isRecognitionRunningRef.current = false;
+        // Only restart if mic is active, unmuted, not ended, and in listening state
+        if (isMicActive && !isMuted && voiceState === VoiceState.LISTENING) {
           try {
             recognition.start();
+            isRecognitionRunningRef.current = true;
           } catch (_) {}
         }
       };
 
       recognitionRef.current = recognition;
-      try {
-        recognition.start();
-      } catch (_) {}
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[SpeechRecognition] Initialization failed:', err);
+    }
 
     return () => {
-      if (speechSilenceTimerRef.current) {
-        clearTimeout(speechSilenceTimerRef.current);
-      }
+      if (speechSilenceTimerRef.current) clearTimeout(speechSilenceTimerRef.current);
+      if (speechCountdownIntervalRef.current) clearInterval(speechCountdownIntervalRef.current);
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.stop();
+          recognitionRef.current.abort();
+          isRecognitionRunningRef.current = false;
         } catch (_) {}
       }
     };
-  }, [voiceState, isMuted]);
+  }, [voiceState, isMicActive, isMuted, submitCandidateAnswer]);
+
+  // Synchronize Recognition Lifecycle with Voice State
+  useEffect(() => {
+    if (voiceState === VoiceState.LISTENING && isMicActive && !isMuted) {
+      startRecognition();
+    } else if (
+      voiceState === VoiceState.AI_SPEAKING ||
+      voiceState === VoiceState.THINKING ||
+      voiceState === VoiceState.ENDED ||
+      voiceState === VoiceState.ERROR
+    ) {
+      stopRecognition();
+    }
+  }, [voiceState, isMicActive, isMuted, startRecognition, stopRecognition]);
 
   useEffect(() => {
     if (transcriptScrollRef.current) {
@@ -182,23 +275,49 @@ export default function RealtimeVoiceChamber({
     }
   }, [turns]);
 
-  const toggleMute = () => {
+  // User Actions
+  const handleInterrupt = () => {
     if (clientRef.current) {
-      const nextMuted = !isMuted;
-      setIsMuted(nextMuted);
-      clientRef.current.setMute(nextMuted);
+      clientRef.current.interrupt();
     }
   };
 
-  const handleSubmitAnswer = (e) => {
-    if (e) e.preventDefault();
-    const text = manualInput.trim() || liveSpeechTranscript.trim();
-    if (!text) return;
+  const toggleMicActive = () => {
+    const nextState = !isMicActive;
+    setIsMicActive(nextState);
+
     if (clientRef.current) {
-      clientRef.current.recordCandidateSpeech(text);
+      clientRef.current.setMute(!nextState || isMuted);
     }
-    setManualInput('');
-    setLiveSpeechTranscript('');
+
+    if (!nextState) {
+      if (speechSilenceTimerRef.current) clearTimeout(speechSilenceTimerRef.current);
+      if (speechCountdownIntervalRef.current) clearInterval(speechCountdownIntervalRef.current);
+      setSilenceCountdown(null);
+      stopRecognition();
+    } else {
+      if (voiceState === VoiceState.LISTENING && !isMuted) {
+        startRecognition();
+      }
+    }
+  };
+
+  const toggleMute = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    if (clientRef.current) {
+      clientRef.current.setMute(nextMuted || !isMicActive);
+    }
+    if (nextMuted) {
+      stopRecognition();
+    } else if (isMicActive && voiceState === VoiceState.LISTENING) {
+      startRecognition();
+    }
+  };
+
+  const handleManualFormSubmit = (e) => {
+    if (e) e.preventDefault();
+    submitCandidateAnswer();
   };
 
   const handleSkipQuestion = () => {
@@ -207,12 +326,14 @@ export default function RealtimeVoiceChamber({
     }
     setManualInput('');
     setLiveSpeechTranscript('');
+    setSilenceCountdown(null);
   };
 
   const handleEndInterview = async () => {
     if (clientRef.current) {
       clientRef.current.disconnect();
     }
+    stopRecognition();
     setVoiceState(VoiceState.ENDED);
     if (onCompleteInterview) {
       onCompleteInterview(turns);
@@ -334,8 +455,8 @@ export default function RealtimeVoiceChamber({
         </div>
       )}
 
-      {/* Central Visualizer */}
-      <div className="py-6 flex flex-col items-center justify-center space-y-5">
+      {/* Central Visualizer & Core Interactive Voice Hub */}
+      <div className="py-6 flex flex-col items-center justify-center space-y-4">
         <div className="relative flex items-center justify-center">
           <div
             className="absolute rounded-full transition-all duration-150 ease-out pointer-events-none"
@@ -374,33 +495,91 @@ export default function RealtimeVoiceChamber({
           </div>
         </div>
 
-        <div className="flex flex-col items-center space-y-1.5">
-          <div className="text-xs text-[#70685E] font-medium flex items-center gap-1.5">
-            <Mic className="w-3.5 h-3.5 text-[#1A365D]" />
-            <span>Candidate Microphone Level (Speak naturally or interrupt anytime)</span>
+        {/* Instant Interrupt Button (Available whenever AI is speaking) */}
+        {voiceState === VoiceState.AI_SPEAKING && (
+          <button
+            type="button"
+            onClick={handleInterrupt}
+            className="px-4 py-2 rounded-full bg-[#EA580C] hover:bg-[#C2410C] text-white text-xs font-bold flex items-center gap-2 shadow-md transition-all animate-pulse cursor-pointer"
+            title="Interrupt AI and begin speaking immediately"
+          >
+            <Zap className="w-4 h-4 fill-amber-200 text-amber-200" />
+            <span>Interrupt AI (Stop Speaking)</span>
+          </button>
+        )}
+
+        {/* Candidate Mic Controls & Level Bar */}
+        <div className="flex flex-col items-center space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-[#70685E] font-medium flex items-center gap-1.5">
+              <Mic className={`w-3.5 h-3.5 ${isMicActive && !isMuted ? 'text-[#1A365D]' : 'text-[#70685E]'}`} />
+              <span>
+                {!isMicActive
+                  ? 'Microphone is Stopped'
+                  : isMuted
+                  ? 'Microphone is Muted'
+                  : 'Microphone Active (Speak naturally)'}
+              </span>
+            </div>
+
+            {/* Quick Stop/Start Mic Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleMicActive}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
+                isMicActive
+                  ? 'bg-[#FAF8F3] hover:bg-[#F2EFE9] border-[#BAC7D5] text-[#1A365D]'
+                  : 'bg-[#FDF2E9] hover:bg-[#FBE5D6] border-[#F0C9B3] text-[#9A421A]'
+              }`}
+            >
+              {isMicActive ? (
+                <>
+                  <Square className="w-3 h-3 fill-[#1A365D] text-[#1A365D]" />
+                  <span>Stop Mic</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3 fill-[#9A421A] text-[#9A421A]" />
+                  <span>Start Mic</span>
+                </>
+              )}
+            </button>
           </div>
+
           <div className="w-48 h-2 bg-[#E5E0D5] rounded-full overflow-hidden p-0.5">
             <div
               className="h-full bg-[#1A365D] rounded-full transition-all duration-75"
-              style={{ width: `${Math.max(4, candidateVol * 100)}%` }}
+              style={{ width: `${isMicActive && !isMuted ? Math.max(4, candidateVol * 100) : 0}%` }}
             />
           </div>
         </div>
 
-        {/* Live Detected Speech Chip */}
+        {/* Live Detected Speech Chip with "Done Speaking" Action */}
         {liveSpeechTranscript && (
-          <div className="max-w-xl w-full p-2.5 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] text-xs text-[#1A365D] flex items-center justify-between gap-3 animate-fade-in">
-            <div className="flex items-center gap-2 truncate">
-              <Mic className="w-3.5 h-3.5 text-[#1A365D] animate-pulse shrink-0" />
-              <span className="font-semibold shrink-0">Hearing you:</span>
-              <span className="italic truncate">"{liveSpeechTranscript}"</span>
+          <div className="max-w-xl w-full p-3 rounded-lg bg-[#EBF4EE] border border-[#CDE5D4] text-xs text-[#1F1B16] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-xs">
+            <div className="flex items-start gap-2.5 overflow-hidden">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#235E3B] animate-ping mt-1 shrink-0" />
+              <div className="truncate">
+                <div className="text-[11px] font-bold text-[#235E3B] uppercase tracking-wider flex items-center gap-1.5">
+                  <span>Transcribed Answer</span>
+                  {silenceCountdown !== null && (
+                    <span className="font-mono text-[#70685E] font-normal">
+                      (Auto-submitting in {silenceCountdown}s)
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#1F1B16] italic line-clamp-2 mt-0.5">
+                  "{liveSpeechTranscript}"
+                </p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={() => handleSubmitAnswer()}
-              className="px-2.5 py-1 rounded bg-[#1A365D] text-white text-[10px] font-bold hover:bg-[#132845] transition-colors shrink-0 cursor-pointer"
+              onClick={() => submitCandidateAnswer()}
+              className="px-3.5 py-1.5 rounded-md bg-[#235E3B] hover:bg-[#1B4D2E] text-white text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer shadow-xs self-end sm:self-center"
             >
-              Submit Speech
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Done Speaking</span>
             </button>
           </div>
         )}
@@ -418,7 +597,7 @@ export default function RealtimeVoiceChamber({
         >
           {turns.length === 0 ? (
             <div className="text-center py-6 text-[#70685E] italic">
-              Connecting to voice interviewer... Your spoken dialogue and AI questions will appear here in real time.
+              Connecting to voice interviewer... Spoken dialogue and AI questions will stream here in real time.
             </div>
           ) : (
             turns.map((t, idx) => (
@@ -446,12 +625,12 @@ export default function RealtimeVoiceChamber({
         {/* Candidate Interactive Response Bar (Speak or Type to Advance) */}
         {!isInterviewCompleted && (
           <div className="pt-2">
-            <form onSubmit={handleSubmitAnswer} className="flex items-center gap-2">
+            <form onSubmit={handleManualFormSubmit} className="flex items-center gap-2">
               <input
                 type="text"
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
-                placeholder="Speak into microphone or type your response here..."
+                placeholder={isMicActive ? "Speak into microphone or type your response here..." : "Type your response here (or click Start Mic)..."}
                 className="flex-1 px-3.5 py-2 rounded-md bg-[#FFFDF9] border border-[#BAC7D5] text-xs text-[#1F1B16] focus:outline-none focus:border-[#1A365D] shadow-inner"
               />
               <button
@@ -476,19 +655,34 @@ export default function RealtimeVoiceChamber({
       </div>
 
       {/* Footer Controls */}
-      <div className="flex items-center justify-between gap-4 pt-4 border-t border-[#E5E0D5] mt-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[#E5E0D5] mt-4">
         <div className="flex items-center gap-2">
+          {/* Dedicated Stop/Start Mic Button */}
+          <button
+            type="button"
+            onClick={toggleMicActive}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
+              isMicActive
+                ? 'bg-[#FFFDF9] hover:bg-[#FAF8F3] border-[#E5E0D5] text-[#1F1B16]'
+                : 'bg-[#FDF2E9] border-[#F0C9B3] text-[#9A421A]'
+            }`}
+          >
+            {isMicActive ? <Square className="w-3.5 h-3.5 fill-[#1F1B16]" /> : <Play className="w-3.5 h-3.5 fill-[#9A421A]" />}
+            <span>{isMicActive ? 'Stop Mic' : 'Start Mic'}</span>
+          </button>
+
+          {/* Mute Toggle */}
           <button
             type="button"
             onClick={toggleMute}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
               isMuted
                 ? 'bg-[#FDF2E9] border-[#F0C9B3] text-[#9A421A]'
                 : 'bg-[#FFFDF9] hover:bg-[#FAF8F3] border-[#E5E0D5] text-[#1F1B16]'
             }`}
           >
-            {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            <span>{isMuted ? 'Muted' : 'Mute Mic'}</span>
+            {isMuted ? <MicOff className="w-4 h-4 text-[#9A421A]" /> : <Mic className="w-4 h-4 text-[#70685E]" />}
+            <span>{isMuted ? 'Muted' : 'Mute'}</span>
           </button>
         </div>
 
