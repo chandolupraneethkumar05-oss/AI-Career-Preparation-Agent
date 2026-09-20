@@ -1,7 +1,6 @@
 """
 Email Service & Notification Dispatcher Abstraction
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 """
 
 import os
@@ -146,10 +145,10 @@ class BaseEmailService(ABC):
           <tr>
             <td style="padding: 20px 32px; background: #0F1026; border-top: 1px solid rgba(124, 58, 237, 0.15); text-align: center;">
               <p style="margin: 0 0 6px; font-size: 12px; color: #94A3B8;">
-                AI Career Preparation Agent • Department of AIML (MLOPS)
+                AI Career Preparation Agent
               </p>
               <p style="margin: 0; font-size: 11px; color: #64748B;">
-                Vignan University • Student Project: Chandolu Praneeth Kumar (241FA18483)
+                Automated Career Preparation & Daily Practice Platform
               </p>
             </td>
           </tr>
@@ -251,7 +250,7 @@ class SMTPEmailService(BaseEmailService):
         self.port = int(os.getenv("SMTP_PORT", "587"))
         self.user = os.getenv("SMTP_USER", "").strip()
         self.password = os.getenv("SMTP_PASSWORD", "").strip()
-        self.sender = os.getenv("SMTP_FROM", "career-agent@vignan.ac.in").strip()
+        self.sender = os.getenv("SMTP_FROM", "noreply@career-agent.dev").strip()
 
     def send_email(
         self,

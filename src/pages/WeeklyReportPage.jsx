@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -135,7 +135,7 @@ export default function WeeklyReportPage() {
             Weekly AI Career Report
           </h1>
           <p className="text-xs sm:text-sm text-[#70685E] mt-0.5">
-            Objective performance synthesis, verified skill progression, and next week priorities for <strong className="text-[#1F1B16]">{user?.name || 'Chandolu Praneeth Kumar'}</strong>.
+            Objective performance synthesis, verified skill progression, and next week priorities for <strong className="text-[#1F1B16]">{user?.name || 'Candidate'}</strong>.
           </p>
         </div>
 

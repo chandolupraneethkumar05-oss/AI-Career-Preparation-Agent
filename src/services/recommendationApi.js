@@ -1,7 +1,6 @@
 /**
  * Autonomous Recommendations API Client
- * AI Career Preparation Agent — Academic IDP Project
- * Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+ * AI Career Preparation Agent
  */
 
 import { fetchWithTimeout, DEFAULT_TIMEOUT_MS } from '../utils/fetchWithTimeout';

@@ -1,6 +1,6 @@
 """
 Pydantic Schemas for Recommendations & Next-Best-Action
-AI Career Preparation Agent — Academic IDP Project
+AI Career Preparation Agent
 """
 
 from typing import Optional, List

@@ -1,8 +1,6 @@
 """
 Weekly AI Career Report Service
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483)
-Vignan University — Department of AIML (MLOPS)
+AI Career Preparation Agent
 """
 
 import json

@@ -1,7 +1,6 @@
 """
 Test Suite for Phase 17 — Real Interview Experiences & Question Knowledge Base
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483)
+AI Career Preparation Agent
 """
 
 import os
@@ -51,12 +50,12 @@ class TestPhase17InterviewExperiences(unittest.TestCase):
         # Ensure test users exist
         u1 = self.db.query(User).filter(User.id == "user-001").first()
         if not u1:
-            u1 = User(id="user-001", email="praneeth.chandolu@vignan.ac.in", name="Chandolu Praneeth Kumar")
+            u1 = User(id="user-001", email="candidate@example.com", name="Candidate")
             self.db.add(u1)
 
         u2 = self.db.query(User).filter(User.id == "user-002").first()
         if not u2:
-            u2 = User(id="user-002", email="other.user@vignan.ac.in", name="Other Candidate")
+            u2 = User(id="user-002", email="other.user@example.com", name="Other Candidate")
             self.db.add(u2)
 
         self.db.commit()

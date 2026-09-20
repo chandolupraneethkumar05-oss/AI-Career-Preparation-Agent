@@ -1,7 +1,6 @@
 """
 Curated RAG Knowledge Base for Career Preparation
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Contains high-yield, structured technical and career knowledge chunks
 spanning all 18 primary curriculum categories.
@@ -20,7 +19,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Interview Lifecycle",
         "difficulty": "Beginner",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer", "Frontend Developer", "DevOps & Cloud Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "A standard engineering interview process consists of four stages: (1) ATS Resume Screening, "
             "(2) Technical Screening / Coding Assessment, (3) Deep-Dive Technical & Architectural Rounds, and "
@@ -37,7 +36,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Technical Round Dynamics",
         "difficulty": "Intermediate",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "When encountering an unfamiliar technical question or ambiguous problem statement, never guess or remain silent. "
             "First, articulate what you know: restate the core problem and verify input/output constraints. "
@@ -57,7 +56,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Conflict Resolution",
         "difficulty": "Intermediate",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer", "Frontend Developer", "DevOps & Cloud Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "When interviewers ask 'Tell me about a time you disagreed with a colleague or lead', they evaluate empathy, "
             "objectivity, and commitment to project goals. High-scoring responses follow a 4-step narrative: "
@@ -74,7 +73,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Handling Failure",
         "difficulty": "Advanced",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "DevOps & Cloud Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Questions about past failures evaluate accountability, blameless root-cause analysis, and systematic prevention. "
             "Select a genuine technical error (e.g., an unhandled memory leak, bad schema migration, or model training data leakage). "
@@ -94,7 +93,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "STAR Method Architecture",
         "difficulty": "Beginner",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer", "Frontend Developer", "DevOps & Cloud Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "The STAR framework ensures structured, concise answers in behavioral rounds: "
             "• Situation (15%): Set the business or academic context, team environment, and timeline. "
@@ -110,7 +109,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Quantifying Impact",
         "difficulty": "Intermediate",
         "applicable_roles": ["Machine Learning Engineer", "Data Scientist", "Software Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Vague results like 'the project was successful and the team liked it' receive low rubric scores. "
             "Anchor your STAR results in at least one of four quantitative dimensions: "
@@ -131,7 +130,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Memory & GIL",
         "difficulty": "Advanced",
         "applicable_roles": ["Machine Learning Engineer", "Software Engineer", "Data Scientist", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "In CPython, memory is managed via reference counting supplemented by a generational cyclic garbage collector. "
             "The Global Interpreter Lock (GIL) is a mutex synchronizing execution so only one native thread executes Python bytecode at a time, "
@@ -147,7 +146,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Core Language Features",
         "difficulty": "Intermediate",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Decorators in Python are higher-order functions that wrap callable objects to extend behavior without modifying original source code "
             "(used extensively for logging, caching with functools.lru_cache, and authentication guards). "
@@ -167,7 +166,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Joins & Subqueries",
         "difficulty": "Beginner",
         "applicable_roles": ["Data Scientist", "Data Analytics", "Software Engineer", "Machine Learning Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "SQL JOINs combine rows from two or more tables based on a related column: "
             "• INNER JOIN: Returns records with matching values in both tables. "
@@ -185,7 +184,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Window Functions & Performance",
         "difficulty": "Advanced",
         "applicable_roles": ["Data Scientist", "Data Analytics", "Machine Learning Engineer", "Software Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Window functions perform calculations across a set of table rows related to the current row without collapsing rows like GROUP BY. "
             "Common functions include ROW_NUMBER(), RANK(), DENSE_RANK(), and LAG()/LEAD() over an OVER(PARTITION BY ... ORDER BY ...) clause. "
@@ -206,7 +205,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Complexity & Hash Maps",
         "difficulty": "Beginner",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "AI Engineer", "Frontend Developer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Hash tables offer average-case O(1) time complexity for insert, lookup, and delete operations via hash functions mapping keys to buckets. "
             "However, worst-case performance degrades to O(N) during severe hash collision clustering (resolved via separate chaining or open addressing). "
@@ -221,7 +220,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Graphs & Trees",
         "difficulty": "Intermediate",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Breadth-First Search (BFS) uses a FIFO queue and visits vertices layer by layer; it guarantees finding the shortest path "
             "in unweighted graphs with O(V + E) time and O(V) space. "
@@ -241,7 +240,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Overfitting & Regularization",
         "difficulty": "Beginner",
         "applicable_roles": ["Machine Learning Engineer", "Data Scientist", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Overfitting occurs when a statistical model memorizes noise and sample-specific idiosyncrasies of training data, "
             "leading to low training error but poor generalization error on unseen validation datasets (high variance). "
@@ -257,7 +256,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Model Evaluation Metrics",
         "difficulty": "Intermediate",
         "applicable_roles": ["Machine Learning Engineer", "Data Scientist", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Accuracy is misleading on class-imbalanced datasets (e.g. 99% negative fraud). "
             "• Precision (TP / (TP + FP)): Measures how many predicted positives were truly positive (critical when false alarms are expensive, e.g. spam filters). "
@@ -277,7 +276,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Backpropagation & Activations",
         "difficulty": "Intermediate",
         "applicable_roles": ["Machine Learning Engineer", "AI Engineer", "Data Scientist"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Backpropagation calculates the gradient of the loss function with respect to every weight in a deep neural network "
             "using the mathematical chain rule of calculus, enabling gradient descent updates. "
@@ -294,7 +293,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Transformers & Attention",
         "difficulty": "Advanced",
         "applicable_roles": ["AI Engineer", "Machine Learning Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Transformers replaced recurrent architectures by dispensing with recurrence and processing sequences in parallel via Self-Attention. "
             "The scaled dot-product attention formula: Attention(Q, K, V) = softmax(Q * K^T / sqrt(d_k)) * V. "
@@ -315,7 +314,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Containerization & Serving",
         "difficulty": "Intermediate",
         "applicable_roles": ["Machine Learning Engineer", "DevOps & Cloud Engineer", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "MLOps bridges the gap between experimental Jupyter prototypes and production reliability. "
             "Containerization using Docker packages the trained weights, Python runtime, CUDA GPU drivers, and REST endpoints (FastAPI/Triton) "
@@ -331,7 +330,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Monitoring & Drift",
         "difficulty": "Advanced",
         "applicable_roles": ["Machine Learning Engineer", "Data Scientist"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Models in production inevitably degrade due to two primary forms of distribution shifts: "
             "(1) Data Drift / Covariate Shift: P(X) changes while P(Y|X) remains constant (e.g., user input demographics shift, but classification boundaries remain identical). Detected via statistical tests like Kolmogorov-Smirnov (KS) or Population Stability Index (PSI). "
@@ -351,7 +350,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Feature Engineering",
         "difficulty": "Beginner",
         "applicable_roles": ["Data Scientist", "Machine Learning Engineer", "Data Analytics"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Feature engineering often yields greater accuracy improvements than algorithmic tuning. Core techniques include: "
             "• Imputation: Replacing missing values using median (robust to outliers) or predictive KNN/MICE. "
@@ -367,7 +366,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "A/B Testing & Statistics",
         "difficulty": "Intermediate",
         "applicable_roles": ["Data Scientist", "Data Analytics"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "A/B testing is randomized controlled experimentation used to validate whether a new feature or algorithm produces statistically significant impact. "
             "Key steps: (1) Formulate Null Hypothesis H0 (no difference) vs Alternative H1, "
@@ -387,7 +386,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "EDA & KPI Formulation",
         "difficulty": "Beginner",
         "applicable_roles": ["Data Analytics", "Data Scientist"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Exploratory Data Analysis (EDA) is the disciplined process of summarizing main data characteristics, detecting anomalies, "
             "and testing hypotheses using summary statistics and visualizations (histograms, box plots, scatter matrices). "
@@ -407,7 +406,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "RAG Architecture",
         "difficulty": "Intermediate",
         "applicable_roles": ["AI Engineer", "Machine Learning Engineer", "Software Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Retrieval-Augmented Generation (RAG) mitigates LLM hallucination and knowledge cutoff limitations by dynamically injecting "
             "relevant enterprise/domain documents into the context window at inference time. "
@@ -424,7 +423,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Prompt Engineering & Guardrails",
         "difficulty": "Intermediate",
         "applicable_roles": ["AI Engineer", "Software Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Production LLM applications require structured, disciplined prompt engineering patterns: "
             "• Role & Persona Setting: Defines model expertise and authoritative domain scope. "
@@ -445,7 +444,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "SOLID Principles",
         "difficulty": "Intermediate",
         "applicable_roles": ["Software Engineer", "Frontend Developer", "Machine Learning Engineer", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "The SOLID principles govern object-oriented design for decoupled, scalable systems: "
             "• S - Single Responsibility Principle: A class/module should have one, and only one, reason to change. "
@@ -462,7 +461,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "REST API Design",
         "difficulty": "Beginner",
         "applicable_roles": ["Software Engineer", "Frontend Developer", "AI Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "REST (Representational State Transfer) architectures adhere to 6 guiding constraints: client-server separation, "
             "statelessness, cacheability, uniform interface, layered system, and code-on-demand. "
@@ -482,7 +481,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Google XYZ Formula",
         "difficulty": "Beginner",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer", "Frontend Developer", "DevOps & Cloud Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Weak resume bullet points list passive job duties (e.g. 'Responsible for writing Python scripts for ML'). "
             "High-impact technical resumes format every accomplishment using Google's XYZ formula: "
@@ -502,7 +501,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "ATS Formatting Rules",
         "difficulty": "Beginner",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer", "Frontend Developer", "DevOps & Cloud Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Applicant Tracking Systems (ATS) parse resumes into structured entity trees before human recruiters review them. "
             "To maximize ATS parse accuracy: (1) Use single-column layouts; multi-column or floating text boxes frequently scramble reading order. "
@@ -523,7 +522,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Technical Communication",
         "difficulty": "Intermediate",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "AI Engineer", "Frontend Developer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "During live technical coding rounds, silence is detrimental. Interviewers evaluate how you collaborate as a future peer. "
             "Practice 'Thinking Out Loud': (1) Verbalize your understanding and restate constraints, "
@@ -543,12 +542,12 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Elevator Pitch",
         "difficulty": "Beginner",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer", "Frontend Developer", "DevOps & Cloud Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "'Tell me about yourself' sets the psychological tone of the interview. Keep it concise (90 to 120 seconds) "
             "using the Present-Past-Future structure: "
-            "• Present (30s): State who you are right now (e.g. 'I am an AIML undergraduate specializing in MLOps and deep learning systems at Vignan University'). "
-            "• Past (45s): Highlight 1-2 major technical achievements or internships demonstrating hands-on technical execution. "
+            "• Present (30s): State who you are right now (e.g. 'I am an engineer specializing in scalable systems and machine learning'). "
+            "• Past (45s): Highlight 1-2 major technical achievements or projects demonstrating hands-on technical execution. "
             "• Future (30s): Connect your trajectory to why this specific role and company is the natural next step in your career."
         )
     },
@@ -563,7 +562,7 @@ KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
         "topic": "Career Strategy & Portfolio",
         "difficulty": "Beginner",
         "applicable_roles": ["Software Engineer", "Machine Learning Engineer", "Data Scientist", "AI Engineer", "Frontend Developer", "DevOps & Cloud Engineer"],
-        "source": "Vignan University IDP AI Career Knowledge Base",
+        "source": "AI Career Knowledge Base",
         "content": (
             "Generic tutorial projects (like Titanic survival or simple to-do lists) fail to differentiate candidates. "
             "To stand out in technical recruiting: (1) Build and deploy end-to-end applications solving real operational problems with live URLs. "

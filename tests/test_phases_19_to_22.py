@@ -4,9 +4,6 @@ Comprehensive Automated Test Suite for Phases 19–22:
 - Phase 20: Weekly Goals & Streak Recovery
 - Phase 21: Product Feedback
 - Phase 22: Security Headers, Health Probes, and Upload Hardening
-
-Academic IDP Project — Student: Chandolu Praneeth Kumar (241FA18483)
-Vignan University — Department of AIML (MLOPS)
 """
 
 import os
@@ -37,8 +34,8 @@ class TestPhases19To22(unittest.TestCase):
         if not u:
             u = User(
                 id="user-001",
-                email="praneeth.chandolu@vignan.ac.in",
-                name="Chandolu Praneeth Kumar",
+                email="candidate@example.com",
+                name="Candidate",
                 role="AIML Engineer",
                 target_role="Machine Learning Engineer",
                 xp=100,
@@ -190,7 +187,7 @@ class TestPhases19To22(unittest.TestCase):
 
         res_api = self.client.get("/api/health")
         self.assertEqual(res_api.status_code, 200)
-        self.assertEqual(res_api.json()["student"], "Chandolu Praneeth Kumar")
+        self.assertEqual(res_api.json()["service"], "AI Career Preparation Agent API")
 
     def test_api_readiness_probe(self):
         """Tests /api/ready database responsiveness probe."""

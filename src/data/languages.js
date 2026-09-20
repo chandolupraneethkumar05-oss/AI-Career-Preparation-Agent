@@ -1,7 +1,6 @@
 /**
  * Supported Languages Registry for Multilingual AI Feedback
- * AI Career Preparation Agent — Academic IDP Project
- * Candidate: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+ * AI Career Preparation Agent
  */
 
 export const SUPPORTED_FEEDBACK_LANGUAGES = [

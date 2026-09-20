@@ -1,7 +1,5 @@
 """
 Interview Experience & Question Repository Routes
-Phase 17 — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483)
 """
 
 import logging

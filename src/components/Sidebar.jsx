@@ -153,7 +153,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             <div className="flex items-center justify-between gap-2 p-1.5 rounded-md bg-[#F2EFE9] border border-[#E5E0D5]">
               <div className="truncate flex-1 min-w-0">
                 <p className="text-xs font-semibold text-[#1F1B16] truncate">
-                  {user?.name || 'Praneeth Kumar'}
+                  {user?.name || 'Candidate'}
                 </p>
                 <p className="text-[10px] text-[#70685E] truncate">
                   {user?.targetRole || 'ML Engineer'}

@@ -100,7 +100,7 @@ export default function DashboardPage() {
     : (session.summaryResult?.scores?.overall || 79);
 
   // User details
-  const firstName = user?.name ? user.name.split(' ')[0] : 'Praneeth';
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Candidate';
   const userRole = user?.targetRole || user?.role || 'Machine Learning Engineer';
 
   // Daily Habits checklist
@@ -196,7 +196,7 @@ export default function DashboardPage() {
               Your Preparation Dashboard
             </h1>
             <p className="text-xs sm:text-sm text-[#3B352E] mt-0.5">
-              Practice progress for <strong className="font-semibold text-[#1F1B16]">{user?.name || 'Chandolu Praneeth Kumar'}</strong>.
+              Practice progress for <strong className="font-semibold text-[#1F1B16]">{user?.name || 'Candidate'}</strong>.
             </p>
           </div>
 

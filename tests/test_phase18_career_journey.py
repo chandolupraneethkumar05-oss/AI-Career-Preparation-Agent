@@ -1,7 +1,6 @@
-﻿"""
+"""
 Automated Test Suite for Phase 18 - Career Journey & Career Readiness Foundation
-AI Career Preparation Agent - Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) - Vignan University
+AI Career Preparation Agent
 """
 
 import os
@@ -56,8 +55,8 @@ class TestPhase18CareerJourney(unittest.TestCase):
         if not u:
             u = User(
                 id="user-001",
-                email="praneeth.chandolu@vignan.ac.in",
-                name="Chandolu Praneeth Kumar",
+                email="candidate@example.com",
+                name="Candidate",
                 role="AIML Engineer",
                 target_role="Machine Learning Engineer",
                 xp=1450,
@@ -99,7 +98,7 @@ class TestPhase18CareerJourney(unittest.TestCase):
 
         fresh_user = User(
             id=new_uid,
-            email="fresh.candidate@vignan.ac.in",
+            email="fresh.candidate@example.com",
             name="Fresh Candidate",
             role="AIML Student",
             target_role="Machine Learning Engineer",
@@ -147,7 +146,7 @@ class TestPhase18CareerJourney(unittest.TestCase):
 
         u = User(
             id=test_uid,
-            email="trans.candidate@vignan.ac.in",
+            email="trans.candidate@example.com",
             name="Transition Candidate",
             role="AIML Engineer",
             target_role="Machine Learning Engineer"

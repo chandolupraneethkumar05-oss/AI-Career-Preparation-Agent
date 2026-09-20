@@ -3,8 +3,7 @@ Resume ATS Analysis & Scoring Engine
 Coordinates text extraction, section parsing, canonical skill extraction,
 explainable ATS-style scoring, strengths/weaknesses synthesis, and Skill Gap synchronization.
 
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 """
 
 import re
@@ -285,7 +284,7 @@ class ResumeAnalysisService:
             if not user:
                 user = User(
                     id=user_id,
-                    email=f"{user_id}@vignan.ac.in",
+                    email=f"{user_id}@example.com",
                     name="Candidate",
                     target_role=target_role or "Machine Learning Engineer"
                 )

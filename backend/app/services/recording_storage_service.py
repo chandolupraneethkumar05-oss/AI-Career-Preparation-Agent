@@ -1,7 +1,6 @@
 """
 Recording Storage Service
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Safe, user-isolated storage abstraction for mock interview recordings.
 Stores metadata in SQLite while saving binary media to user-scoped filesystem paths.

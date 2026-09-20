@@ -1,7 +1,6 @@
 """
 PII Detection Service
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483)
+AI Career Preparation Agent
 
 Deterministic scanner for Personal Identifiable Information (PII) and confidential credentials.
 Scans interview submissions before persistence to protect candidate privacy and institutional integrity.

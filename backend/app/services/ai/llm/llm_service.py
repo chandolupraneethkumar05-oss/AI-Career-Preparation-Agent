@@ -1,7 +1,6 @@
 """
 LLM Service Abstraction & Grounded Implementations
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Provides clean provider abstraction:
 - BaseLLMService (ABC)
@@ -122,7 +121,7 @@ class LocalGroundedLLMService(BaseLLMService):
         # Case 1: Insufficient Grounded Knowledge
         if not retrieved_chunks:
             answer = (
-                f"I searched our Vignan University career preparation curriculum for \"{query}\", "
+                f"I searched our career preparation curriculum for \"{query}\", "
                 f"but found no verified grounded documentation matching this specific topic. "
                 f"To maintain academic integrity and prevent inaccurate answers, I do not generate ungrounded technical facts. "
                 f"Please consult standard documentation or ask about supported topics like Machine Learning, Python, SQL, MLOps, "

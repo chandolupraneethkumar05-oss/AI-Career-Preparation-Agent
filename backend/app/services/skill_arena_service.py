@@ -1,7 +1,6 @@
 """
 Skill Arena Service: Career-Aware Practice & Safe Structured Evaluation
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Orchestrates:
 1. Career-aware challenge selection based on target role & unified skill gaps.

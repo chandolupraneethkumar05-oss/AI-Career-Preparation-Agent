@@ -1,7 +1,6 @@
 """
 AI Career Intelligence Orchestrator
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Coordinates:
 User State -> Career Context Builder -> RAG Vector Retrieval -> Grounded LLM -> Structured Response

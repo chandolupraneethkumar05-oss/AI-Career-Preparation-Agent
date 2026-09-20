@@ -1,7 +1,6 @@
 """
 Background Proactive Scheduler
 Asynchronous evaluation loop running during the FastAPI application lifecycle.
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
 """
 
 import asyncio

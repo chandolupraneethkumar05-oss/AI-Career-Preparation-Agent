@@ -1,7 +1,6 @@
 """
 Embedding Service Abstraction & Local Implementation
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Provides a clean provider abstraction for text embeddings:
 - BaseEmbeddingService (ABC)

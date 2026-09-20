@@ -1,7 +1,6 @@
 /**
  * Frontend API client for Proactive Daily Practice Reminders
- * AI Career Preparation Agent — Academic IDP Project
- * Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+ * AI Career Preparation Agent
  */
 
 import { storageService } from '../utils/storage/storageService';
@@ -145,7 +144,7 @@ export const reminderApi = {
         delivered: false,
         email_sent: false,
         deliveryMode: 'development_fallback',
-        recipient: payload.email || 'candidate@vignan.ac.in',
+        recipient: payload.email || 'candidate@example.com',
         subject: `⚡ AI Career Coach: Practice pending for ${payload.targetRole || 'Engineering'}`,
         bodyPreview: `Hello ${payload.candidateName || 'Candidate'},\n\nYour AI Career Coach detected your daily practice is pending.\nA 10-minute conceptual challenge is ready to keep your skills sharp.\n\nMode: Local Fallback Simulation`,
         htmlContent: '',

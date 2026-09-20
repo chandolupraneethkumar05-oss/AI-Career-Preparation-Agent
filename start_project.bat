@@ -2,7 +2,7 @@
 title AI Career Preparation Agent Launcher
 echo ============================================================
 echo  Starting AI Career Preparation Agent
-echo  Candidate: Chandolu Praneeth Kumar (241FA18483)
+echo  Environment: Local Full-Stack Development
 echo ============================================================
 echo.
 echo [1/2] Starting FastAPI Backend on http://127.0.0.1:8000 ...

@@ -1,7 +1,6 @@
 """
 Transcription Service Abstraction
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Provides speech-to-text transcription interface.
 Consolidates candidate audio verbal answers with transcript validation and NLP normalization.

@@ -1,7 +1,6 @@
 """
 Skill & Competency Gap Service
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 Department of AIML (MLOPS)
 """
 

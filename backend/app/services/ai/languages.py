@@ -1,7 +1,6 @@
 """
 Language Registry & Constants for Multilingual AI Feedback
-AI Career Preparation Agent — Academic IDP Project
-Candidate: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Defines supported feedback languages, native display labels, validation utilities,
 and preserved technical terminology for high-accuracy localization.

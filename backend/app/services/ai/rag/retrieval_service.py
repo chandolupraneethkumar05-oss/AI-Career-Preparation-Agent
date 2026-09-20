@@ -1,7 +1,6 @@
 """
 RAG Context-Aware Retrieval Service
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Retrieves relevant career knowledge chunks using vector similarity
 and conditions ranking on candidate target role, skill gaps, and experience level.

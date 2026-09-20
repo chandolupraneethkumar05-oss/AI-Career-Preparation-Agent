@@ -1,7 +1,5 @@
 """
 Pydantic Schemas for User Product Feedback
-Academic IDP Project — Student: Chandolu Praneeth Kumar (241FA18483)
-Vignan University — Department of AIML (MLOPS)
 """
 
 from enum import Enum

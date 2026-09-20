@@ -1,7 +1,6 @@
 """
 Skills & Competency Gap Routes
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483)
+AI Career Preparation Agent
 """
 
 from typing import List

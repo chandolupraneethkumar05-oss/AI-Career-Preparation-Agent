@@ -1,7 +1,6 @@
 /**
  * Real Interview Experiences & Question Knowledge Base
- * Phase 17 — AI Career Preparation Agent
- * Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+ * AI Career Preparation Agent
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';

@@ -1,7 +1,6 @@
 /**
  * Profile & Settings API Client
- * AI Career Preparation Agent — Academic IDP Project
- * Candidate: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+ * AI Career Preparation Agent
  */
 
 const BACKEND_BASE_URL = 'http://127.0.0.1:8000';

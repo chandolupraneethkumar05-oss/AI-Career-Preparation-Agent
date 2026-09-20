@@ -109,7 +109,7 @@ export default function ATSScannerPage() {
     try {
       const targetRole = user?.targetRole || 'Machine Learning Engineer';
       const userId = user?.id || 'user-001';
-      const candidateName = user?.name || 'Chandolu Praneeth Kumar';
+      const candidateName = user?.name || 'Candidate';
 
       let analysisResult = null;
       const sampleText = `

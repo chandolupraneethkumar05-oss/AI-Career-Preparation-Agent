@@ -1,7 +1,5 @@
 """
 SQLAlchemy ORM Models for AI Career Preparation Agent
-Academic IDP Project — Student: Chandolu Praneeth Kumar (241FA18483)
-Vignan University — Department of AIML (MLOPS)
 """
 
 import json
@@ -76,7 +74,7 @@ class Profile(Base):
     bio = Column(Text, default="AI & Machine Learning candidate passionate about building scalable production pipelines.")
     target_company = Column(String(128), default="Tech / AI Enterprise")
     experience_level = Column(String(64), default="Student / Entry Level")
-    resume_headline = Column(String(256), default="B.Tech AIML Student at Vignan University")
+    resume_headline = Column(String(256), default="Machine Learning & Software Engineer")
     github_url = Column(String(256), default="")
     linkedin_url = Column(String(256), default="")
     feedback_language = Column(String(16), default="en", nullable=False)
@@ -592,7 +590,7 @@ class ReminderPreference(Base):
     time = Column(String(16), default="19:00")
     preferred_time = Column(String(16), default="19:00")
     method = Column(String(32), default="email")
-    email = Column(String(128), default="praneeth.chandolu@vignan.ac.in")
+    email = Column(String(128), default="candidate@example.com")
     timezone = Column(String(64), default="Asia/Kolkata")
     frequency = Column(String(32), default="daily")
     target_role = Column(String(64), default="Machine Learning Engineer")
@@ -728,8 +726,6 @@ class ResumeAnalysis(Base):
 class InterviewExperience(Base):
     """
     Candidate-contributed real interview experience.
-    Phase 17 — Real Interview Experiences / Interview Question Knowledge Base.
-    Academic IDP Project — Student: Chandolu Praneeth Kumar (241FA18483)
     """
     __tablename__ = "interview_experiences"
 
@@ -895,12 +891,12 @@ def seed_initial_data(db):
     existing_user = db.query(User).filter(User.id == DEFAULT_USER_ID).first()
 
     if not existing_user:
-        # Create default candidate account for Chandolu Praneeth Kumar
+        # Create default candidate account
         default_user = User(
             id=DEFAULT_USER_ID,
-            email="praneeth.chandolu@vignan.ac.in",
-            name="Chandolu Praneeth Kumar",
-            role="AIML Engineer",
+            email="candidate@example.com",
+            name="Candidate",
+            role="AI/ML Engineer",
             target_role="Machine Learning Engineer",
             xp=0,
             level=1,
@@ -913,10 +909,10 @@ def seed_initial_data(db):
         # Create corresponding profile
         default_profile = Profile(
             user_id=DEFAULT_USER_ID,
-            bio="B.Tech 3rd Year AIML student at Vignan University specializing in MLOps, LLMs, and autonomous agent systems.",
-            target_company="Google / Leading AI Labs",
-            experience_level="Student / Entry Level",
-            resume_headline="Aspiring Machine Learning Engineer (AIML | MLOps)"
+            bio="Software and Machine Learning Engineer specializing in full-stack AI applications, LLMs, and autonomous agent systems.",
+            target_company="Leading Technology Companies",
+            experience_level="Entry to Mid Level",
+            resume_headline="Machine Learning & Software Engineer"
         )
         db.add(default_profile)
 
@@ -927,8 +923,8 @@ def seed_initial_data(db):
             time="19:00",
             preferred_time="19:00",
             method="email",
-            email="praneeth.chandolu@vignan.ac.in",
-            timezone="Asia/Kolkata",
+            email="candidate@example.com",
+            timezone="UTC",
             frequency="daily",
             target_role="Machine Learning Engineer"
         )

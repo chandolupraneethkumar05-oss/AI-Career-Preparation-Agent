@@ -1,7 +1,6 @@
 """
 Multilingual AI Feedback Localization Service
-AI Career Preparation Agent — Academic IDP Project
-Candidate: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Localizes structured mock interview evaluation reports into Telugu (te) and Hindi (hi)
 while strictly preserving standard English technical terms (Python, SQL, STAR, etc.).

@@ -1,12 +1,5 @@
 # AI Career Preparation Agent — FastAPI + SQLite Backend
 
-**Academic IDP Project Details:**
-- **Student:** Chandolu Praneeth Kumar
-- **Registration Number:** `241FA18483`
-- **Department:** Artificial Intelligence & Machine Learning (AIML)
-- **Course:** MLOPS (3rd Year — I Semester)
-- **Institution:** Vignan University
-
 ---
 
 ## 🏛️ Architecture Overview

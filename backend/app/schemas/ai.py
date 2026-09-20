@@ -1,7 +1,6 @@
 """
 Pydantic Schemas for RAG + LLM Career Intelligence System
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 """
 
 from typing import Optional, List, Dict, Any

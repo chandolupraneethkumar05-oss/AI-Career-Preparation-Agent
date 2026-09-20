@@ -1,7 +1,5 @@
 """
 Pydantic Schemas for AI Career Preparation Agent Backend
-Student: Chandolu Praneeth Kumar (241FA18483)
-Vignan University — AIML (MLOPS)
 """
 
 from pydantic import BaseModel, Field
@@ -12,7 +10,7 @@ class ReminderPreferences(BaseModel):
     enabled: bool = Field(default=False, description="Whether proactive reminders are active")
     time: str = Field(default="19:00", description="Preferred notification time in HH:MM format")
     method: str = Field(default="email", description="Notification method: email or browser_sim")
-    email: str = Field(default="praneeth.chandolu@vignan.ac.in", description="Recipient email address")
+    email: str = Field(default="candidate@example.com", description="Recipient email address")
     frequency: str = Field(default="daily", description="Frequency: daily or weekdays")
     targetRole: str = Field(default="Machine Learning Engineer", description="User target career role")
 
@@ -20,7 +18,7 @@ class ReminderPreferences(BaseModel):
 class ReminderTestRequest(BaseModel):
     email: Optional[str] = None
     targetRole: Optional[str] = "Machine Learning Engineer"
-    candidateName: Optional[str] = "Chandolu Praneeth Kumar"
+    candidateName: Optional[str] = "Candidate"
     currentStreak: Optional[int] = 0
     weakSkill: Optional[str] = None
 
@@ -50,8 +48,5 @@ class ActivityLogItem(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     service: str
-    student: str
-    regNo: str
-    university: str
     version: str
     schedulerActive: bool

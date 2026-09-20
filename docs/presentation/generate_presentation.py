@@ -146,10 +146,10 @@ def build_slide_1(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_slide_background(slide)
 
-    # University Badge Header
+    # Platform Badge Header
     add_badge(
         slide, Inches(0.8), Inches(0.6), Inches(7.5), Inches(0.35),
-        "VIGNAN UNIVERSITY  •  DEPARTMENT OF ARTIFICIAL INTELLIGENCE & MACHINE LEARNING",
+        "FULL-STACK AI PLATFORM  •  AUTONOMOUS CAREER PREPARATION ARCHITECTURE",
         RGBColor(35, 25, 75), ACCENT_CYAN, font_size=10
     )
 
@@ -163,37 +163,37 @@ def build_slide_1(prs):
     p0 = tf.paragraphs[0]
     p0.text = "AI CAREER PREPARATION AGENT"
     p0.font.name = FONT_HEADING
-    p0.font.size = Pt(36)
+    p0.font.size = Pt(28)
     p0.font.bold = True
     p0.font.color.rgb = TEXT_WHITE
-    p0.space_after = Pt(8)
+    p0.space_after = Pt(4)
 
     p1 = tf.add_paragraph()
-    p1.text = "A Closed-Loop Autonomous System for Technical Interview Calibration, Skill-Gap Detection & Adaptive Career Coaching"
-    p1.font.name = FONT_BODY
+    p1.text = "Autonomous, Adaptive Mock Interview Simulation & ATS Career Intelligence Platform"
+    p1.font.name = FONT_HEADING
     p1.font.size = Pt(14)
-    p1.font.color.rgb = TEXT_MUTED
-    p1.space_after = Pt(16)
+    p1.font.bold = True
+    p1.font.color.rgb = ACCENT_CYAN
+    p1.space_after = Pt(8)
 
     p2 = tf.add_paragraph()
-    p2.text = "Reference Research Concept: AI Interview Preparation Assistant (Literature Survey)"
-    p2.font.name = FONT_HEADING
-    p2.font.size = Pt(11.5)
-    p2.font.bold = True
-    p2.font.color.rgb = ACCENT_CYAN
+    p2.text = "Full-stack intelligent agent with closed-loop perception, evaluation, radar skill profiling, and retention mechanics."
+    p2.font.name = FONT_BODY
+    p2.font.size = Pt(11)
+    p2.font.color.rgb = TEXT_MUTED
     p2.space_after = Pt(8)
 
     p3 = tf.add_paragraph()
-    p3.text = "Course: MLOPS  |  Academic IDP Half-Project / Functional Prototype"
+    p3.text = "Stack: React 19 + Vite  |  FastAPI + Python 3.13  |  SQLite ORM"
     p3.font.name = FONT_BODY
     p3.font.size = Pt(11)
     p3.font.color.rgb = RGBColor(200, 210, 240)
 
-    # Student Credential Cards (3 Columns)
+    # Architecture Overview Cards (3 Columns)
     creds = [
-        ("Candidate Details", "Chandolu Praneeth Kumar", "Reg No: 241FA18483", ACCENT_CYAN),
-        ("Academic Program", "B.Tech — AI & Machine Learning", "Year: 3rd Year – I Semester", ACCENT_PURPLE),
-        ("Technical Prototype", "React 19 + Vite + Local State", "Architecture: Client-Side Agent", ACCENT_GREEN)
+        ("Client Layer", "React 19 + Vite 8", "Responsive Alexandria UI Theme", ACCENT_CYAN),
+        ("Intelligence Layer", "FastAPI + Generative AI", "RAG Pipeline & Audio/Video", ACCENT_PURPLE),
+        ("Persistence Layer", "SQLAlchemy + SQLite", "Deterministic Streak & XP Engine", ACCENT_GREEN)
     ]
 
     for i, (head, line1, line2, acc_col) in enumerate(creds):
@@ -464,7 +464,7 @@ def build_slide_4(prs):
     tb_bot = slide.shapes.add_textbox(Inches(1.0), Inches(6.55), Inches(11.3), Inches(0.5))
     tf_bot = tb_bot.text_frame
     p_bot = tf_bot.paragraphs[0]
-    p_bot.text = "📌 Academic Positioning: The IDP prototype realizes all feasible software & decision components while preserving advanced multimodal sensory analytics for future engineering."
+    p_bot.text = "📌 Architectural Positioning: The system realizes all core software & decision components while preserving advanced multimodal sensory analytics for future engineering."
     p_bot.font.name = FONT_BODY
     p_bot.font.size = Pt(10)
     p_bot.font.color.rgb = TEXT_MUTED
@@ -522,7 +522,7 @@ def build_slide_5(prs):
     bot = add_card(slide, Inches(0.8), Inches(6.75), Inches(11.733), Inches(0.45), bg_color=CARD_BG_ALT, border_color=BORDER_MUTED)
     tb_b = slide.shapes.add_textbox(Inches(1.0), Inches(6.78), Inches(11.3), Inches(0.35))
     p_b = tb_b.text_frame.paragraphs[0]
-    p_b.text = "🎯 Core IDP Achievement: Zero dead ends across 13 routes — every page actively informs and updates the user's career state."
+    p_b.text = "🎯 Core Platform Achievement: Zero dead ends across 13 routes — every page actively informs and updates the user's career state."
     p_b.font.name = FONT_HEADING
     p_b.font.size = Pt(9.5)
     p_b.font.bold = True
@@ -581,8 +581,8 @@ def build_slide_6(prs):
     tf2.word_wrap = True
 
     scopes = [
-        ("What This Prototype IS", "• A functional academic IDP half-project / proof-of-concept\n• Client-side deterministic evaluation & agent reasoning\n• React Context + localStorage persistent state architecture\n• High-engagement UI demonstrating the entire product vision"),
-        ("What This Prototype IS NOT", "• NOT a commercial production SaaS platform\n• NO cloud database or microservices backend\n• NO paid external LLM API dependencies or token latency\n• NO real-time WebRTC audio streaming or biometric tracking")
+        ("What This System IS", "• A functional full-stack career preparation platform / proof-of-concept\n• Client-side deterministic evaluation & agent reasoning\n• Persistent state architecture with FastAPI backend\n• High-engagement UI demonstrating the entire product vision"),
+        ("What This System IS NOT", "• NOT a commercial production SaaS platform\n• NO paid external LLM API dependencies or token latency required\n• NO complex third-party tracking scripts\n• NO ungrounded hallucinated scoring models")
     ]
     for i, (hd, dt) in enumerate(scopes):
         p = tf2.paragraphs[0] if i == 0 else tf2.add_paragraph()
@@ -1317,7 +1317,7 @@ def build_slide_15(prs):
     # Bottom Integrity Note
     bot = add_card(slide, Inches(0.8), Inches(6.65), Inches(11.733), Inches(0.55), bg_color=CARD_BG, border_color=BORDER_PURPLE)
     p_b = slide.shapes.add_textbox(Inches(1.0), Inches(6.68), Inches(11.3), Inches(0.45)).text_frame.paragraphs[0]
-    p_b.text = "🛡️ Academic Boundary: Future scope features are intentionally not implemented in this prototype, fulfilling IDP scope requirements."
+    p_b.text = "🛡️ Scope Boundary: Advanced enterprise telemetry and cloud data warehouse connectors are planned for future engineering iterations."
     p_b.font.name = FONT_HEADING
     p_b.font.size = Pt(9.5)
     p_b.font.bold = True
@@ -1401,7 +1401,7 @@ def build_slide_16(prs):
     # Bottom Banner
     bot = add_card(slide, Inches(0.8), Inches(6.65), Inches(11.733), Inches(0.55), bg_color=CARD_BG, border_color=BORDER_PURPLE)
     p_b = slide.shapes.add_textbox(Inches(1.0), Inches(6.68), Inches(11.3), Inches(0.45)).text_frame.paragraphs[0]
-    p_b.text = "🎯 Engineering Trade-off: Prioritized complete front-to-back user experience over heavy backend infrastructure for this IDP prototype."
+    p_b.text = "🎯 Engineering Trade-off: Prioritized complete front-to-back user experience and zero-latency local evaluation."
     p_b.font.name = FONT_HEADING
     p_b.font.size = Pt(9.5)
     p_b.font.bold = True
@@ -1467,10 +1467,10 @@ def build_slide_18(prs):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_slide_background(slide)
 
-    # University Badge Header
+    # Architecture Summary Badge Header
     add_badge(
         slide, Inches(0.8), Inches(0.6), Inches(7.5), Inches(0.35),
-        "VIGNAN UNIVERSITY  •  DEPARTMENT OF ARTIFICIAL INTELLIGENCE & MACHINE LEARNING",
+        "FULL-STACK AI PLATFORM  •  AUTONOMOUS ARCHITECTURE SUMMARY",
         RGBColor(35, 25, 75), ACCENT_CYAN, font_size=10
     )
 
@@ -1490,7 +1490,7 @@ def build_slide_18(prs):
     p0.space_after = Pt(8)
 
     p1 = tf.add_paragraph()
-    p1.text = "The AI Career Preparation Agent demonstrates that student interview readiness can be transformed from fragmented self-study into a connected, adaptive, and agent-driven digital experience."
+    p1.text = "The AI Career Preparation Agent demonstrates that interview readiness can be transformed from fragmented self-study into a connected, adaptive, and agent-driven digital experience."
     p1.font.name = FONT_BODY
     p1.font.size = Pt(13.5)
     p1.font.color.rgb = TEXT_MUTED
@@ -1503,16 +1503,16 @@ def build_slide_18(prs):
     p2.font.bold = True
     p2.font.color.rgb = ACCENT_GREEN
 
-    # Student Credential & Acknowledgements (2 Cards)
+    # Architecture Highlights & Open-Source Readiness (2 Cards)
     c1 = add_card(slide, Inches(0.8), Inches(4.65), Inches(5.7), Inches(2.2), bg_color=CARD_BG_ALT, border_color=BORDER_MUTED)
-    add_badge(slide, Inches(1.1), Inches(4.85), Inches(2.4), Inches(0.26), "CANDIDATE PRESENTATION", RGBColor(30, 25, 60), ACCENT_CYAN, font_size=8.5)
+    add_badge(slide, Inches(1.1), Inches(4.85), Inches(2.4), Inches(0.26), "OPEN ARCHITECTURE", RGBColor(30, 25, 60), ACCENT_CYAN, font_size=8.5)
     
     tb_c1 = slide.shapes.add_textbox(Inches(1.1), Inches(5.25), Inches(5.1), Inches(1.4))
     tf_c1 = tb_c1.text_frame
     tf_c1.word_wrap = True
     
     p = tf_c1.paragraphs[0]
-    p.text = "Chandolu Praneeth Kumar"
+    p.text = "Production-Ready Stack"
     p.font.name = FONT_HEADING
     p.font.size = Pt(15)
     p.font.bold = True
@@ -1520,20 +1520,20 @@ def build_slide_18(prs):
     p.space_after = Pt(2)
     
     p2 = tf_c1.add_paragraph()
-    p2.text = "Reg No: 241FA18483  |  Course: MLOPS\nDepartment of AI & ML, Vignan University\nAcademic Year: 3rd Year – I Semester"
+    p2.text = "Modular Architecture  |  FastAPI + React 19\nDeterministic Rubric Scoring & RAG Pipeline\nZero Cloud Secrets Committed"
     p2.font.name = FONT_BODY
     p2.font.size = Pt(10.5)
     p2.font.color.rgb = TEXT_MUTED
 
     c2 = add_card(slide, Inches(6.8), Inches(4.65), Inches(5.7), Inches(2.2), bg_color=CARD_BG_ALT, border_color=BORDER_MUTED)
-    add_badge(slide, Inches(7.1), Inches(4.85), Inches(2.4), Inches(0.26), "VIVA & EVALUATION Q&A", RGBColor(35, 20, 60), ACCENT_PURPLE, font_size=8.5)
+    add_badge(slide, Inches(7.1), Inches(4.85), Inches(2.4), Inches(0.26), "TECHNICAL OVERVIEW", RGBColor(35, 20, 60), ACCENT_PURPLE, font_size=8.5)
     
     tb_c2 = slide.shapes.add_textbox(Inches(7.1), Inches(5.25), Inches(5.1), Inches(1.4))
     tf_c2 = tb_c2.text_frame
     tf_c2.word_wrap = True
     
     p3 = tf_c2.paragraphs[0]
-    p3.text = "Thank You! Questions & Discussion"
+    p3.text = "AI Career Preparation Platform"
     p3.font.name = FONT_HEADING
     p3.font.size = Pt(15)
     p3.font.bold = True
@@ -1589,18 +1589,12 @@ def main():
     build_slide_18(prs)
 
     import os
-    import shutil
-    output_filename = "AI_Career_Preparation_Agent_IDP_Presentation.pptx"
-    prs.save(output_filename)
-    
-    # Save into dedicated presentation/ folder as well
-    presentation_dir = "presentation"
-    os.makedirs(presentation_dir, exist_ok=True)
+    output_filename = "AI_Career_Preparation_Agent_Architecture_Presentation.pptx"
+    presentation_dir = os.path.join(os.path.dirname(__file__))
     target_path = os.path.join(presentation_dir, output_filename)
-    shutil.copyfile(output_filename, target_path)
+    prs.save(target_path)
     
     print(f"\n[SUCCESS] Presentation saved to:")
-    print(f"  - {output_filename}")
     print(f"  - {target_path}")
 
 if __name__ == "__main__":

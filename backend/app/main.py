@@ -1,8 +1,6 @@
 """
 FastAPI Main Application Entrypoint
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483)
-Vignan University — Department of AIML (MLOPS)
+AI Career Preparation Agent
 """
 
 import logging
@@ -43,8 +41,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description=(
-        "Autonomous career coach backend powering proactive practice reminders, "
-        "activity tracking, ATS analysis, and SQLite persistence. Built for College IDP (Vignan University)."
+        "Autonomous career intelligence backend powering proactive practice reminders, "
+        "activity tracking, ATS analysis, and SQLite persistence."
     ),
     version=settings.VERSION,
     lifespan=lifespan
@@ -78,13 +76,10 @@ app.include_router(api_router)
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 @app.get("/api/health", response_model=HealthResponse, tags=["System"])
 def health_check():
-    """System health check and academic project attribution."""
+    """System health check probe."""
     return HealthResponse(
         status="healthy",
         service=settings.PROJECT_NAME,
-        student=settings.STUDENT_NAME,
-        regNo=settings.STUDENT_REG_NO,
-        university=settings.UNIVERSITY,
         version=settings.VERSION,
         schedulerActive=proactive_scheduler.is_running
     )

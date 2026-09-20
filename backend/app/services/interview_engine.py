@@ -1,7 +1,6 @@
 """
 Interview Engine Service
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Orchestrates dynamic, grounded, adaptive generative mock interviews.
 Handles session initialization, dynamic question generation via RAG & candidate career context,
@@ -68,7 +67,7 @@ class InterviewEngine:
             # Safe creation of user record if testing with prototype id
             user = User(
                 id=user_id,
-                email=f"{user_id}@vignan.ac.in",
+                email=f"{user_id}@example.com",
                 name="Candidate",
                 target_role=request.role or "Machine Learning Engineer"
             )

@@ -1,7 +1,6 @@
 /**
  * Skill & Unified Career Competency Client Service
- * AI Career Preparation Agent — Academic IDP Project
- * Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+ * AI Career Preparation Agent
  */
 
 import { storageService } from '../utils/storage/storageService';

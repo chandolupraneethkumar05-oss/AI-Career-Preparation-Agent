@@ -1,7 +1,6 @@
 """
 Grounded Prompt Builder for RAG & LLM
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Constructs delineated, hallucination-resistant prompts strictly structuring:
 - SYSTEM INSTRUCTIONS
@@ -34,8 +33,8 @@ def build_grounded_prompt(
 
     # 1. System Instructions
     system_instruction = (
-        "You are the Senior AI Career Preparation Coach at Vignan University (AIML Department). "
-        "Your mission is to help students become job-ready for competitive technical roles. "
+        "You are the Senior AI Career Preparation Coach. "
+        "Your mission is to help candidates become job-ready for competitive technical roles. "
         "Strict Grounding Rules:\n"
         "1. Prioritize the factual information in the RETRIEVED KNOWLEDGE section for technical definitions and engineering details.\n"
         "2. Contextualize explanations to the candidate's TARGET ROLE and active SKILL GAPS without inventing unsupported facts.\n"

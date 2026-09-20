@@ -1,7 +1,6 @@
 """
 Pydantic Schemas for Proactive Practice Reminders
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483)
+AI Career Preparation Agent
 """
 
 from typing import Optional, List
@@ -14,7 +13,7 @@ class ReminderPreferenceBase(BaseModel):
     enabled: bool = Field(default=False, description="Whether proactive practice reminders are active")
     preferred_time: str = Field(default="19:00", description="Notification time in 24-hr HH:MM format")
     method: str = Field(default="email", description="Notification delivery channel: email")
-    email: str = Field(default="praneeth.chandolu@vignan.ac.in", description="Candidate email address")
+    email: str = Field(default="candidate@example.com", description="Candidate email address")
     timezone: str = Field(default="Asia/Kolkata", description="User local timezone (e.g. Asia/Kolkata)")
     frequency: str = Field(default="daily", description="Frequency: daily or weekdays")
     target_role: Optional[str] = Field(default="Machine Learning Engineer", description="Target role")

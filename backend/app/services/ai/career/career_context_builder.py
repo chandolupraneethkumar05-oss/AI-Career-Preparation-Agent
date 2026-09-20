@@ -1,7 +1,6 @@
 """
 User Career Context Builder
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Gathers live, sanitized candidate state across User Profile, Resume Analyses,
 Skill Gaps, Interview Rubrics, and Autonomous Next-Best-Action recommendations.

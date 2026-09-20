@@ -1,7 +1,5 @@
 ﻿"""
 Pydantic Schemas for Weekly AI Career Report
-Academic IDP Project — Student: Chandolu Praneeth Kumar (241FA18483)
-Vignan University — Department of AIML (MLOPS)
 """
 
 from typing import Optional, List, Dict, Any

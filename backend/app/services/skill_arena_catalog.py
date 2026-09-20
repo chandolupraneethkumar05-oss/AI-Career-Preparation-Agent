@@ -1,7 +1,6 @@
 """
 Canonical Challenge Catalog for Skill Arena
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Contains high-quality, career-focused challenges across:
 Python, SQL, Machine Learning, Statistics, MLOps, Docker, Git, Scikit-learn, PyTorch, Communication.

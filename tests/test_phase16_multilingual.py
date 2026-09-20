@@ -1,7 +1,6 @@
 """
 Comprehensive Test Suite for Phase 16: Multilingual AI Feedback
-AI Career Preparation Agent — Academic IDP Project
-Candidate: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Verifies:
 1. Supported languages registry and validation (en, te, hi).
@@ -48,14 +47,14 @@ class TestMultilingualAIFeedback(unittest.TestCase):
         user = cls.db.query(User).filter(User.id == "user-test-p16").first()
         if not user:
             # Check if email is used
-            email = "user.test.p16@vignan-ai.org"
+            email = "user.test.p16@example.com"
             existing_by_email = cls.db.query(User).filter(User.email == email).first()
             if existing_by_email:
                 user = existing_by_email
             else:
                 user = User(
                     id="user-test-p16",
-                    name="Praneeth Kumar",
+                    name="Test Candidate",
                     email=email,
                     role="AIML Engineer",
                     target_role="Machine Learning Engineer"

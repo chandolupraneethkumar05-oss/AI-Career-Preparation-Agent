@@ -1,7 +1,6 @@
 """
 Proactive Reminder Service & Duplicate Prevention Engine
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 """
 
 import logging
@@ -61,7 +60,7 @@ class ProactiveReminderService:
                 time="19:00",
                 preferred_time="19:00",
                 method="email",
-                email="praneeth.chandolu@vignan.ac.in",
+                email="candidate@example.com",
                 timezone="Asia/Kolkata",
                 frequency="daily",
                 target_role="Machine Learning Engineer",

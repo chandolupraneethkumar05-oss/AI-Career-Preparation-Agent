@@ -49,7 +49,7 @@ export default function SettingsPage() {
   const { theme: activeTheme, setTheme: changeTheme, availableThemes } = useTheme();
   const navigate = useNavigate();
 
-  const [name, setName] = useState(user?.name || 'Chandolu Praneeth Kumar');
+  const [name, setName] = useState(user?.name || 'Candidate');
   const [role, setRole] = useState(setup.targetRole || 'Machine Learning Engineer');
   const [difficulty, setDifficulty] = useState(setup.difficulty || 'Intermediate');
   const [feedbackLanguage, setFeedbackLanguage] = useState(user?.feedbackLanguage || setup.feedbackLanguage || 'en');
@@ -59,7 +59,7 @@ export default function SettingsPage() {
   const initialPrefs = storageService.getReminderPrefs();
   const [reminderEnabled, setReminderEnabled] = useState(initialPrefs.enabled ?? true);
   const [reminderTime, setReminderTime] = useState(initialPrefs.preferred_time || initialPrefs.time || '19:00');
-  const [reminderEmail, setReminderEmail] = useState(initialPrefs.email || user?.email || '241fa18483@vignan.ac.in');
+  const [reminderEmail, setReminderEmail] = useState(initialPrefs.email || user?.email || 'candidate@example.com');
   const [reminderTimezone, setReminderTimezone] = useState(initialPrefs.timezone || 'Asia/Kolkata');
   const [reminderFrequency, setReminderFrequency] = useState(initialPrefs.frequency || 'daily');
   const [reminderStatus, setReminderStatus] = useState(null);

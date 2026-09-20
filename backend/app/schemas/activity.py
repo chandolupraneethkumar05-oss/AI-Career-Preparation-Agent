@@ -1,6 +1,6 @@
 """
 Pydantic Schemas for Activity Tracking
-AI Career Preparation Agent — Academic IDP Project
+AI Career Preparation Agent
 """
 
 from typing import Optional, Dict, Any, List

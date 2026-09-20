@@ -494,7 +494,7 @@ function getFallbackJourney(user) {
   const role = user?.target_role || 'Machine Learning Engineer';
   return {
     user_id: user?.id || 'user-001',
-    candidate_name: user?.name || 'Chandolu Praneeth Kumar',
+    candidate_name: user?.name || 'Candidate',
     target_role: role,
     preparation_headline: `Structured preparation path toward ${role}`,
     current_focus: 'Establish baseline ATS analysis and take your first technical mock interview.',

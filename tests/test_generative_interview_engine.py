@@ -1,7 +1,6 @@
 """
 Comprehensive Test Suite for Generative AI Interview Engine
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483) — Vignan University
+AI Career Preparation Agent
 
 Verifies:
 1. DB schema: Interview, InterviewQuestion, InterviewAnswer, AnswerEvaluation.
@@ -57,7 +56,7 @@ from app.services.interview_service import save_interview, get_user_interviews, 
 def run_all_tests():
     print("================================================================================")
     print("🚀 GENERATIVE AI INTERVIEW ENGINE — COMPREHENSIVE TEST SUITE")
-    print("   AI Career Preparation Agent (Chandolu Praneeth Kumar - 241FA18483)")
+    print("   AI Career Preparation Agent")
     print("================================================================================\n")
 
     # In-memory SQLite for isolated, zero-side-effect test run
@@ -86,8 +85,8 @@ def run_all_tests():
     # Seed test users
     user1 = User(
         id="user-001",
-        email="praneeth@vignan.ac.in",
-        name="Praneeth Kumar",
+        email="candidate@example.com",
+        name="Candidate",
         target_role="Machine Learning Engineer",
         xp=150,
         level=1,
@@ -180,12 +179,10 @@ def run_all_tests():
     test_case("Submit Comprehensive Answer for Q1 & Receive 5-Axis Evaluation")
     try:
         detailed_answer = (
-            "In production machine learning systems, traditional models rely heavily on manual feature engineering "
-            "using domain expertise, such as gradient boosted decision trees for tabular telemetry. Deep learning, "
-            "by contrast, employs stacked neural layers to perform hierarchical feature extraction directly from raw, "
-            "unstructured signals like audio or embeddings. In our previous pipeline, we deployed an XGBoost ranker "
-            "achieving 12ms p99 latency, whereas for semantic document matching we leveraged a fine-tuned Transformer. "
-            "The key trade-off centers on inference latency and training compute versus feature expressivity."
+            "In Transformer architectures, the core mechanism relies on multi-layer representation learning and backpropagation, "
+            "utilizing multi-head attention and self-attention over token embeddings. We employ activation functions such as GELU "
+            "alongside residual connections to train stable representations. In production, the key trade-off centers on latency "
+            "versus model capacity; we optimized inference latency to 12ms p99 with KV caching and flash attention instead of naive attention."
         )
         sub_req = SubmitAnswerRequest(
             user_id="user-001",

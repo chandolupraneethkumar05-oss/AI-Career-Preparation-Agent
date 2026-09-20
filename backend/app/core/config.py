@@ -1,8 +1,6 @@
 """
 Core Configuration Settings
-AI Career Preparation Agent — Academic IDP Project
-Student: Chandolu Praneeth Kumar (241FA18483)
-Vignan University — Department of AIML (MLOPS)
+AI Career Preparation Agent
 """
 
 import os
@@ -17,13 +15,6 @@ class Settings(BaseModel):
     PROJECT_NAME: str = "AI Career Preparation Agent API"
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
-    
-    # Academic IDP Project Attribution
-    STUDENT_NAME: str = "Chandolu Praneeth Kumar"
-    STUDENT_REG_NO: str = "241FA18483"
-    UNIVERSITY: str = "Vignan University"
-    DEPARTMENT: str = "Artificial Intelligence & Machine Learning"
-    COURSE: str = "MLOPS"
 
     # SQLite Database Configuration
     DATABASE_URL: str = os.getenv(
