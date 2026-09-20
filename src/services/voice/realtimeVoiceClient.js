@@ -93,8 +93,7 @@ export class RealtimeVoiceClient {
     this._setState(VoiceState.CONNECTING);
     this.questions = this._buildCurriculum();
     this.currentQuestionIndex = 0;
-    this.totalQuestions = this.questions.length;
-    this.onQuestionChange(1, this.totalQuestions, this.questions[0].stage);
+    this.onQuestionChange(1, this.totalQuestions, this.questions[0].stage, this.questions[0].question);
 
     // Setup audio playback interruption callback
     this.audioPlayback.onInterrupted = () => {
@@ -288,7 +287,7 @@ export class RealtimeVoiceClient {
     }, 600);
   }
 
-  _speakSimulated(text) {
+  _speakSimulated(text, isFinalWrapUp = false) {
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
@@ -301,20 +300,31 @@ export class RealtimeVoiceClient {
         this.onAIVolume(0.65);
       };
       utterance.onend = () => {
-        if (this.state === VoiceState.AI_SPEAKING) {
+        this.onAIVolume(0);
+        if (isFinalWrapUp) {
+          this.audioCapture.setMuted(true);
+          this._setState(VoiceState.ENDED);
+        } else if (this.state === VoiceState.AI_SPEAKING) {
           this._setState(VoiceState.LISTENING);
-          this.onAIVolume(0);
         }
       };
       utterance.onerror = () => {
-        if (this.state === VoiceState.AI_SPEAKING) {
+        this.onAIVolume(0);
+        if (isFinalWrapUp) {
+          this.audioCapture.setMuted(true);
+          this._setState(VoiceState.ENDED);
+        } else if (this.state === VoiceState.AI_SPEAKING) {
           this._setState(VoiceState.LISTENING);
-          this.onAIVolume(0);
         }
       };
       window.speechSynthesis.speak(utterance);
     } else {
-      this._setState(VoiceState.LISTENING);
+      if (isFinalWrapUp) {
+        this.audioCapture.setMuted(true);
+        this._setState(VoiceState.ENDED);
+      } else {
+        this._setState(VoiceState.LISTENING);
+      }
     }
   }
 
@@ -343,7 +353,7 @@ export class RealtimeVoiceClient {
         if (this.state === VoiceState.ENDED) return;
         if (nextIdx < this.totalQuestions) {
           const nextItem = this.questions[nextIdx];
-          this.onQuestionChange(nextIdx + 1, this.totalQuestions, nextItem.stage);
+          this.onQuestionChange(nextIdx + 1, this.totalQuestions, nextItem.stage, nextItem.question);
 
           const acks = [
             "Good point on that implementation.",
@@ -354,12 +364,12 @@ export class RealtimeVoiceClient {
           const ack = acks[(nextIdx - 1) % acks.length];
           const speech = `${ack} Let's proceed to Question ${nextIdx + 1} of ${this.totalQuestions}: ${nextItem.question}`;
           this._recordTurn('ai', speech);
-          this._speakSimulated(speech);
+          this._speakSimulated(speech, false);
         } else {
-          this.onQuestionChange(this.totalQuestions, this.totalQuestions, 'Interview Completed');
-          const wrapUp = `Excellent work! You have successfully completed all 5 technical interview questions for the ${this.sessionData.role} role. Please click 'End Interview & View Report' below to review your comprehensive 5-axis score report.`;
+          const wrapUp = `Excellent work! You have successfully completed all 5 technical interview questions for the ${this.sessionData.role} role. Please click 'View Feedback Report' below to review your comprehensive 5-axis score report.`;
+          this.onQuestionChange(this.totalQuestions, this.totalQuestions, 'Interview Completed', wrapUp);
           this._recordTurn('ai', wrapUp);
-          this._speakSimulated(wrapUp);
+          this._speakSimulated(wrapUp, true);
         }
       }, 1000);
     }
