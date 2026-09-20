@@ -52,13 +52,61 @@ export class RealtimeVoiceClient {
     this._bargeInThreshold = 0.25;
     this._speakingFrames = 0;
     this.currentQuestionIndex = 0;
-    this.totalQuestions = 5;
+    this.totalQuestions = (sessionData && (sessionData.total_questions || sessionData.totalQuestions)) || 5;
     this.questions = [];
+    this._activeUtterance = null;
+    this._speechSimVolInterval = null;
   }
 
   _buildCurriculum() {
     const role = this.sessionData.role || 'Software Engineer';
     const topic = this.sessionData.topic || 'System Design & Algorithms';
+    const total = this.totalQuestions || 5;
+
+    if (total === 10) {
+      return [
+        {
+          stage: 'Architecture & System Design',
+          question: `Welcome to your technical mock interview for the ${role} position. Let's begin with Question 1 of 10: In ${topic}, what core system architecture would you design for high-throughput production workloads, and which components would you prioritize?`
+        },
+        {
+          stage: 'Data Modeling & Schema Design',
+          question: `Moving to Question 2 of 10 on data modeling: How would you structure your storage engine schema, indexing strategies, and normalization to optimize for high-frequency writes versus reads?`
+        },
+        {
+          stage: 'Algorithmic Complexity & Big-O',
+          question: `For Question 3 of 10 on algorithmic depth: What specific data structures and computational complexity trade-offs would you implement to guarantee minimal latency and prevent hot-spotting?`
+        },
+        {
+          stage: 'Concurrency & Race Conditions',
+          question: `Now for Question 4 of 10 on concurrency: How do you handle distributed locks, optimistic versus pessimistic concurrency, and thread safety under heavy concurrent access?`
+        },
+        {
+          stage: 'Caching & Partitioning Strategies',
+          question: `Advancing to Question 5 of 10 on data scale: Which caching patterns—such as write-through, cache-aside, or read-through—would you implement, and how would you handle cache invalidation and database sharding?`
+        },
+        {
+          stage: 'Network Protocols & Security',
+          question: `For Question 6 of 10 on infrastructure: How would you secure the API perimeter with mutual TLS, rate limiting, and zero-trust authorization policies across services?`
+        },
+        {
+          stage: 'Scalability & Load Balancing',
+          question: `Now for Question 7 of 10 on scale: How would you architect this solution for horizontal autoscaling, load-balancing algorithms, and backpressure when user traffic surges tenfold?`
+        },
+        {
+          stage: 'Fault Tolerance & Disaster Recovery',
+          question: `For Question 8 of 10 on resilience: What are the primary failure modes in this distributed design, and how would you implement automated circuit breaking, data replication, and graceful degradation?`
+        },
+        {
+          stage: 'Observability & SLOs',
+          question: `Moving to Question 9 of 10 on operations: How would you instrument this system with distributed tracing, structured logging, error budgets, and critical SLIs and SLOs?`
+        },
+        {
+          stage: 'Production Readiness & CI/CD',
+          question: `To conclude our technical questions with Question 10 of 10: What is your rollout strategy for zero-downtime blue-green deployments, canary verification, and immediate automated rollback if an incident arises?`
+        }
+      ];
+    }
 
     return [
       {
@@ -138,11 +186,17 @@ export class RealtimeVoiceClient {
       clearTimeout(this._speechTimer);
       this._speechTimer = null;
     }
+    if (this._speechSimVolInterval) {
+      clearInterval(this._speechSimVolInterval);
+      this._speechSimVolInterval = null;
+    }
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
       } catch (_) {}
     }
+    this._activeUtterance = null;
+    window._aiVoiceUtterance = null;
     this.audioPlayback.interrupt();
     this.onAIVolume(0);
 
@@ -274,33 +328,78 @@ export class RealtimeVoiceClient {
   }
 
   async _initSimulatedVoiceSession() {
-    console.log('[RealtimeVoice] Initialized simulated 5-question voice session');
+    console.log(`[RealtimeVoice] Initialized simulated ${this.totalQuestions}-question voice session`);
     this._setState(VoiceState.READY);
 
-    // Initial Question 1 of 5
+    // Initial Question 1 of totalQuestions
     if (this._speechTimer) clearTimeout(this._speechTimer);
     this._speechTimer = setTimeout(() => {
       if (this.state === VoiceState.ENDED) return;
-      const q1 = this.questions[0].question;
-      this._recordTurn('ai', q1);
-      this._speakSimulated(q1);
+      const q1 = this.questions[0]?.question;
+      if (q1) {
+        this._recordTurn('ai', q1);
+        this._speakSimulated(q1);
+      }
     }, 600);
   }
 
   _speakSimulated(text, isFinalWrapUp = false) {
+    if (this._speechSimVolInterval) {
+      clearInterval(this._speechSimVolInterval);
+      this._speechSimVolInterval = null;
+    }
+
     if ('speechSynthesis' in window) {
+      if (window.speechSynthesis.paused) {
+        try {
+          window.speechSynthesis.resume();
+        } catch (_) {}
+      }
+
       try {
         window.speechSynthesis.cancel();
       } catch (_) {}
+
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
+      this._activeUtterance = utterance;
+      window._aiVoiceUtterance = utterance;
+
+      utterance.rate = 1.0;
       utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      // Select natural articulate voice if available
+      try {
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(
+          v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('David') || v.name.includes('Zira') || v.name.includes('Samantha'))
+        ) || voices.find(v => v.lang.startsWith('en'));
+        if (preferredVoice) utterance.voice = preferredVoice;
+      } catch (_) {}
+
       utterance.onstart = () => {
         this._setState(VoiceState.AI_SPEAKING);
         this.onAIVolume(0.65);
+        this._speechSimVolInterval = setInterval(() => {
+          if (this.state === VoiceState.AI_SPEAKING) {
+            const simVol = 0.35 + Math.random() * 0.45;
+            this.onAIVolume(simVol);
+          }
+        }, 120);
       };
+
+      const cleanupSpeech = () => {
+        if (this._speechSimVolInterval) {
+          clearInterval(this._speechSimVolInterval);
+          this._speechSimVolInterval = null;
+        }
+        this.onAIVolume(0);
+        this._activeUtterance = null;
+        window._aiVoiceUtterance = null;
+      };
+
       utterance.onend = () => {
-        this.onAIVolume(0);
+        cleanupSpeech();
         if (isFinalWrapUp) {
           this.audioCapture.setMuted(true);
           this._setState(VoiceState.ENDED);
@@ -308,8 +407,10 @@ export class RealtimeVoiceClient {
           this._setState(VoiceState.LISTENING);
         }
       };
-      utterance.onerror = () => {
-        this.onAIVolume(0);
+
+      utterance.onerror = (e) => {
+        console.warn('[RealtimeVoice] SpeechSynthesis notice/error:', e?.error);
+        cleanupSpeech();
         if (isFinalWrapUp) {
           this.audioCapture.setMuted(true);
           this._setState(VoiceState.ENDED);
@@ -317,7 +418,15 @@ export class RealtimeVoiceClient {
           this._setState(VoiceState.LISTENING);
         }
       };
-      window.speechSynthesis.speak(utterance);
+
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (speakErr) {
+          console.warn('[RealtimeVoice] speak() failed:', speakErr);
+          this._setState(VoiceState.LISTENING);
+        }
+      }, 40);
     } else {
       if (isFinalWrapUp) {
         this.audioCapture.setMuted(true);
@@ -325,6 +434,14 @@ export class RealtimeVoiceClient {
       } else {
         this._setState(VoiceState.LISTENING);
       }
+    }
+  }
+
+  speakCurrentQuestion() {
+    const currentQ = this.questions[this.currentQuestionIndex];
+    if (currentQ && currentQ.question) {
+      console.log('[RealtimeVoice] Explicit user request to read aloud current question');
+      this._speakSimulated(currentQ.question, false);
     }
   }
 
@@ -358,15 +475,17 @@ export class RealtimeVoiceClient {
           const acks = [
             "Good point on that implementation.",
             "That's a sound architectural trade-off.",
-            "Understood, that addresses the scaling bottleneck.",
-            "Solid analysis of the recovery pattern."
+            "Understood, that directly addresses the scalability requirement.",
+            "Solid analysis of the recovery pattern.",
+            "Clear articulation of the design principle.",
+            "Good consideration of the production constraints."
           ];
           const ack = acks[(nextIdx - 1) % acks.length];
           const speech = `${ack} Let's proceed to Question ${nextIdx + 1} of ${this.totalQuestions}: ${nextItem.question}`;
           this._recordTurn('ai', speech);
           this._speakSimulated(speech, false);
         } else {
-          const wrapUp = `Excellent work! You have successfully completed all 5 technical interview questions for the ${this.sessionData.role} role. Please click 'View Feedback Report' below to review your comprehensive 5-axis score report.`;
+          const wrapUp = `Excellent work! You have successfully completed all ${this.totalQuestions} technical interview questions for the ${this.sessionData.role} role. Please click 'View Feedback Report' below to review your comprehensive 5-axis score report.`;
           this.onQuestionChange(this.totalQuestions, this.totalQuestions, 'Interview Completed', wrapUp);
           this._recordTurn('ai', wrapUp);
           this._speakSimulated(wrapUp, true);

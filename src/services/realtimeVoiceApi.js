@@ -21,7 +21,8 @@ export const realtimeVoiceApi = {
     difficulty = 'Intermediate',
     topic = 'System Design & Algorithms',
     interview_id = null,
-    voice_name = 'Puck'
+    voice_name = 'Puck',
+    total_questions = 5
   } = {}) {
     try {
       const response = await fetchWithTimeout(
@@ -37,7 +38,8 @@ export const realtimeVoiceApi = {
             difficulty,
             topic,
             interview_id,
-            voice_name
+            voice_name,
+            total_questions: total_questions || 5
           })
         },
         DEFAULT_TIMEOUT_MS
@@ -56,6 +58,10 @@ export const realtimeVoiceApi = {
         expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         system_instruction: `You are an expert technical interviewer conducting a mock interview for a ${role} position.`,
         voice_name: voice_name || 'Puck',
+        role,
+        difficulty,
+        topic,
+        total_questions: total_questions || 5,
         websocket_url: 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent'
       };
     }

@@ -12,7 +12,8 @@ import {
   ChevronRight,
   Layers,
   Square,
-  Play
+  Play,
+  Volume2
 } from 'lucide-react';
 import Badge from '../Badge';
 import GradientButton from '../GradientButton';
@@ -36,10 +37,10 @@ export default function RealtimeVoiceChamber({
   const [callDuration, setCallDuration] = useState(0);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  // 5-Question Multi-Turn Tracking
+  // Multi-Turn Tracking (Dynamic 5 or 10 Questions)
   const [questionProgress, setQuestionProgress] = useState({
     current: 1,
-    total: 5,
+    total: setup?.totalQuestions || 5,
     stage: 'Architecture & System Design',
     questionText: ''
   });
@@ -54,6 +55,11 @@ export default function RealtimeVoiceChamber({
   const transcriptScrollRef = useRef(null);
   const clientRef = useRef(null);
   const latestTranscriptRef = useRef('');
+
+  const manualInputRef = useRef(manualInput);
+  manualInputRef.current = manualInput;
+  const liveSpeechTranscriptRef = useRef(liveSpeechTranscript);
+  liveSpeechTranscriptRef.current = liveSpeechTranscript;
 
   const isMicActiveRef = useRef(isMicActive);
   isMicActiveRef.current = isMicActive;
@@ -85,7 +91,9 @@ export default function RealtimeVoiceChamber({
     return () => clearInterval(timer);
   }, []);
 
-  // Submit candidate answer (from speech or text)
+  const submitCandidateAnswerRef = useRef(null);
+
+  // Submit candidate answer (from speech or text) — stable ref, no re-render teardown
   const submitCandidateAnswer = useCallback((customText) => {
     if (speechSilenceTimerRef.current) {
       clearTimeout(speechSilenceTimerRef.current);
@@ -99,8 +107,8 @@ export default function RealtimeVoiceChamber({
 
     const answer = (
       (typeof customText === 'string' && customText.trim()) ||
-      manualInput.trim() ||
-      liveSpeechTranscript.trim() ||
+      manualInputRef.current.trim() ||
+      liveSpeechTranscriptRef.current.trim() ||
       latestTranscriptRef.current.trim() ||
       "[Candidate provided verbal answer]"
     ).trim();
@@ -120,7 +128,11 @@ export default function RealtimeVoiceChamber({
     setLiveSpeechTranscript('');
     setManualInput('');
     latestTranscriptRef.current = '';
-  }, [liveSpeechTranscript, manualInput]);
+    liveSpeechTranscriptRef.current = '';
+    manualInputRef.current = '';
+  }, []);
+
+  submitCandidateAnswerRef.current = submitCandidateAnswer;
 
   // Safe Recognition Helpers
   const startRecognition = useCallback(() => {
@@ -151,7 +163,8 @@ export default function RealtimeVoiceChamber({
           difficulty: setup.difficulty || 'Intermediate',
           topic: setup.interviewType || 'System Design & Algorithms',
           interview_id: session?.id,
-          voice_name: 'Puck'
+          voice_name: 'Puck',
+          total_questions: setup.totalQuestions || 5
         });
         setVoiceSession(sess);
 
@@ -229,11 +242,18 @@ export default function RealtimeVoiceChamber({
 
         if (fullTranscript) {
           latestTranscriptRef.current = fullTranscript;
+          liveSpeechTranscriptRef.current = fullTranscript;
           setLiveSpeechTranscript(fullTranscript);
 
           // Reset silence countdown timer
-          if (speechSilenceTimerRef.current) clearTimeout(speechSilenceTimerRef.current);
-          if (speechCountdownIntervalRef.current) clearInterval(speechCountdownIntervalRef.current);
+          if (speechSilenceTimerRef.current) {
+            clearTimeout(speechSilenceTimerRef.current);
+            speechSilenceTimerRef.current = null;
+          }
+          if (speechCountdownIntervalRef.current) {
+            clearInterval(speechCountdownIntervalRef.current);
+            speechCountdownIntervalRef.current = null;
+          }
 
           setSilenceCountdown(2);
           let seconds = 2;
@@ -242,16 +262,28 @@ export default function RealtimeVoiceChamber({
             if (seconds > 0) {
               setSilenceCountdown(seconds);
             } else {
-              clearInterval(speechCountdownIntervalRef.current);
+              if (speechCountdownIntervalRef.current) {
+                clearInterval(speechCountdownIntervalRef.current);
+                speechCountdownIntervalRef.current = null;
+              }
               setSilenceCountdown(null);
             }
           }, 1000);
 
           speechSilenceTimerRef.current = setTimeout(() => {
-            if (fullTranscript && !isCompletedRef.current) {
-              submitCandidateAnswer(fullTranscript);
+            if (speechCountdownIntervalRef.current) {
+              clearInterval(speechCountdownIntervalRef.current);
+              speechCountdownIntervalRef.current = null;
             }
-          }, 2400);
+            setSilenceCountdown(null);
+
+            const textToSubmit = latestTranscriptRef.current.trim();
+            if (textToSubmit && !isCompletedRef.current) {
+              if (submitCandidateAnswerRef.current) {
+                submitCandidateAnswerRef.current(textToSubmit);
+              }
+            }
+          }, 2200);
         }
       };
 
@@ -308,7 +340,7 @@ export default function RealtimeVoiceChamber({
         } catch (_) {}
       }
     };
-  }, [submitCandidateAnswer]);
+  }, []);
 
   // Synchronize Recognition Lifecycle with Voice State
   useEffect(() => {
@@ -385,13 +417,18 @@ export default function RealtimeVoiceChamber({
   };
 
   const handleEndInterview = async () => {
+    const fullHistory = (clientRef.current?.transcriptHistory && clientRef.current.transcriptHistory.length > 0)
+      ? [...clientRef.current.transcriptHistory]
+      : [...turns];
+    const clientQuestions = clientRef.current?.questions ? [...clientRef.current.questions] : [];
+
     if (clientRef.current) {
       clientRef.current.disconnect();
     }
     stopRecognition();
     setVoiceState(VoiceState.ENDED);
     if (onCompleteInterview) {
-      onCompleteInterview(turns);
+      onCompleteInterview(fullHistory, clientQuestions);
     }
   };
 
@@ -497,10 +534,10 @@ export default function RealtimeVoiceChamber({
             <CheckCircle2 className="w-9 h-9 text-[#4ADE80]" />
           </div>
           <h3 className="text-xl font-serif font-bold text-[#1F1B16]">
-            All 5 Technical Questions Completed!
+            All {questionProgress.total} Technical Questions Completed!
           </h3>
           <p className="text-xs text-[#70685E] mt-2 mb-6 max-w-md leading-relaxed">
-            Congratulations! You have completed all 5 technical interview stages for the <strong>{setup.targetRole}</strong> role. Click below to view your full 5-axis score report, rubric grading, and personalized improvement plan.
+            Congratulations! You have completed all {questionProgress.total} technical interview stages for the <strong>{setup.targetRole}</strong> role. Click below to view your full 5-axis score report, rubric grading, and personalized improvement plan.
           </p>
           <GradientButton
             size="lg"
@@ -515,15 +552,30 @@ export default function RealtimeVoiceChamber({
       ) : (
         /* ACTIVE INTERVIEW CHAMBER */
         <div className="py-4 flex flex-col items-center justify-center space-y-4">
-          {/* Current Question Text Card */}
+          {/* Current Question Text Card with Explicit Play Audio Trigger */}
           {questionProgress.questionText && (
-            <div className="w-full max-w-2xl p-4 rounded-xl bg-[#FFFDF9] border-2 border-[#1A365D]/20 shadow-xs text-left">
-              <div className="flex items-center justify-between text-xs mb-1">
+            <div className="w-full max-w-2xl p-4 sm:p-5 rounded-xl bg-[#FFFDF9] border-2 border-[#1A365D]/20 shadow-xs text-left space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span className="font-bold text-[#1A365D] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5" />
-                  Stage {questionProgress.current} • {questionProgress.stage}
+                  Stage {questionProgress.current} of {questionProgress.total} • {questionProgress.stage}
                 </span>
-                {getStateBadge()}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (clientRef.current) {
+                        clientRef.current.speakCurrentQuestion();
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAF8F3] hover:bg-[#EAEFF5] border border-[#BAC7D5] text-[11px] font-semibold text-[#1A365D] transition-colors cursor-pointer shadow-2xs"
+                    title="Click to speak or replay question aloud via Speech Synthesis"
+                  >
+                    <Volume2 className="w-3.5 h-3.5 text-[#1A365D]" />
+                    <span>{voiceState === VoiceState.AI_SPEAKING ? 'Replay Audio' : '🔊 Play Question Audio'}</span>
+                  </button>
+                  {getStateBadge()}
+                </div>
               </div>
               <p className="text-sm font-serif font-semibold text-[#1F1B16] leading-relaxed">
                 {questionProgress.questionText}
@@ -630,20 +682,40 @@ export default function RealtimeVoiceChamber({
 
           {/* PERMANENT, ALWAYS-VISIBLE PRIMARY SUBMIT & ANSWER ACTION BAR */}
           <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-3 mt-1">
-            {/* Live speech transcription preview card */}
-            <div className="w-full p-3 rounded-lg bg-[#FAF8F3] border border-[#BAC7D5] flex items-center justify-between gap-3 text-xs shadow-xs">
-              <div className="flex items-center gap-2 truncate flex-1">
-                <Mic className={`w-4 h-4 shrink-0 ${isMicActive && !isMuted ? 'text-[#1A365D] animate-pulse' : 'text-[#70685E]'}`} />
-                <span className="font-semibold text-[#1A365D] shrink-0">Your Answer:</span>
-                <span className="text-[#1F1B16] italic truncate">
-                  {liveSpeechTranscript || manualInput || (isMicActive && !isMuted ? "Speak your answer or click 'Submit My Answer' below..." : "Mic stopped. Click 'Start Mic' to speak, or type below...")}
-                </span>
+            {/* Live speech transcription preview card (Full text, no truncation) */}
+            <div className="w-full p-3.5 rounded-xl bg-[#FAF8F3] border border-[#BAC7D5] shadow-xs space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <Mic className={`w-4 h-4 ${isMicActive && !isMuted ? 'text-[#1A365D] animate-pulse' : 'text-[#70685E]'}`} />
+                  <span className="font-bold text-[#1A365D]">Your Answer (Live Transcription):</span>
+                </div>
+                <div className="flex items-center gap-2 font-mono text-[11px]">
+                  {silenceCountdown !== null ? (
+                    <span className="font-bold px-2 py-0.5 rounded bg-[#CDE5D4] text-[#235E3B] animate-pulse">
+                      Auto-submitting in {silenceCountdown}s...
+                    </span>
+                  ) : isMicActive && !isMuted ? (
+                    <span className="text-[#70685E]">Listening (Pause 2s to submit)</span>
+                  ) : (
+                    <span className="text-[#9A421A]">Mic Stopped</span>
+                  )}
+                  {(liveSpeechTranscript || manualInput) && (
+                    <span className="text-[#70685E] px-1.5 py-0.5 rounded bg-[#E5E0D5]/60 text-[10px]">
+                      {(liveSpeechTranscript || manualInput).split(/\s+/).filter(Boolean).length} words
+                    </span>
+                  )}
+                </div>
               </div>
-              {silenceCountdown !== null && (
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#CDE5D4] text-[#235E3B] shrink-0 animate-pulse">
-                  Auto-submitting in {silenceCountdown}s
-                </span>
-              )}
+
+              <div className="min-h-[58px] max-h-32 overflow-y-auto p-2.5 rounded-lg bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] leading-relaxed break-words whitespace-pre-wrap">
+                {liveSpeechTranscript || manualInput || (
+                  <span className="text-[#70685E]/70 italic">
+                    {isMicActive && !isMuted
+                      ? "Start speaking your answer into your microphone... When you finish and pause for 2 seconds, it will auto-submit, or click 'Submit My Answer' anytime."
+                      : "Microphone is stopped. Click 'Start Mic' to speak, or type your answer in the box below."}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* UNMISSABLE PRIMARY ACTION BUTTONS */}

@@ -33,6 +33,7 @@ import { useFaceToFaceDialogue } from '../hooks/useFaceToFaceDialogue';
 import { useInterview } from '../context/InterviewContext';
 import { useAuth } from '../context/AuthContext';
 import { interviewApi } from '../services/interviewApi';
+import { evaluateAnswer } from '../utils/evaluator';
 
 export default function MockInterviewPage() {
   const navigate = useNavigate();
@@ -554,18 +555,92 @@ export default function MockInterviewPage() {
     }
   };
 
-  const handleRealtimeVoiceComplete = async (turns) => {
-    const candidateAnswers = (turns || [])
-      .filter(t => t.speaker === 'candidate')
-      .map(t => t.text)
-      .join('\n\n');
-
+  const handleRealtimeVoiceComplete = async (turns = [], clientQuestions = []) => {
     try {
-      if (candidateAnswers) {
-        await submitCurrentAnswer(candidateAnswers.slice(0, 1000));
+      // 1. Resolve questions list
+      let questionsList = [];
+      if (clientQuestions && clientQuestions.length > 0) {
+        questionsList = clientQuestions.map((q, idx) => ({
+          id: `voice_q_${idx + 1}`,
+          question: q.question,
+          category: q.stage || 'System Design & Algorithms',
+          difficulty: setup.difficulty || 'Intermediate',
+          idealKeywords: ['architecture', 'scalability', 'performance', 'distributed', 'resilience', 'throughput', 'caching', 'latency', 'tradeoff']
+        }));
+      } else {
+        const aiTurns = turns.filter(t => t.speaker === 'ai' && !t.text.includes('Excellent work! You have successfully completed'));
+        questionsList = aiTurns.map((t, idx) => ({
+          id: `voice_q_${idx + 1}`,
+          question: t.text,
+          category: `Stage ${idx + 1} Technical Assessment`,
+          difficulty: setup.difficulty || 'Intermediate',
+          idealKeywords: ['architecture', 'scalability', 'performance', 'distributed', 'resilience', 'throughput', 'caching', 'latency', 'tradeoff']
+        }));
       }
-      completeInterview(session.id || session.sessionId);
-    } catch (_) {}
+
+      if (questionsList.length === 0) {
+        questionsList = [
+          {
+            id: 'voice_q_1',
+            question: `In ${setup.interviewType || 'System Design'}, what core architecture and trade-offs would you implement for ${setup.targetRole || 'Software Engineer'}?`,
+            category: 'Architecture & System Design',
+            difficulty: setup.difficulty || 'Intermediate',
+            idealKeywords: ['architecture', 'scalability', 'performance']
+          }
+        ];
+      }
+
+      // 2. Segment candidate turns according to question intervals
+      const candidateAnswers = [];
+      let currentSegment = [];
+
+      for (const turn of turns) {
+        if (turn.speaker === 'ai') {
+          if (currentSegment.length > 0) {
+            candidateAnswers.push(currentSegment.join(' '));
+            currentSegment = [];
+          }
+        } else if (turn.speaker === 'candidate') {
+          if (turn.text && turn.text.trim()) {
+            currentSegment.push(turn.text.trim());
+          }
+        }
+      }
+      if (currentSegment.length > 0) {
+        candidateAnswers.push(currentSegment.join(' '));
+      }
+
+      // 3. Dynamically evaluate each question-answer pair
+      const evaluatedAnswers = questionsList.map((qObj, idx) => {
+        const candidateSpeech = candidateAnswers[idx] ||
+          (idx === 0 && candidateAnswers.length === 1 ? candidateAnswers[0] : null) ||
+          "[Candidate provided verbal answer during live voice round]";
+
+        const evaluation = evaluateAnswer(
+          qObj,
+          candidateSpeech,
+          setup.targetRole || 'Software Engineer',
+          setup.interviewType || 'Technical',
+          setup.difficulty || 'Intermediate'
+        );
+
+        return {
+          questionId: qObj.id,
+          question: qObj.question,
+          category: qObj.category,
+          difficulty: qObj.difficulty,
+          answerText: candidateSpeech,
+          evaluation,
+          hintsUsed: 0
+        };
+      });
+
+      // 4. Conclude session and calculate genuine report aggregates
+      await completeInterview(evaluatedAnswers, questionsList);
+    } catch (err) {
+      console.warn('[MockInterviewPage] Error in handleRealtimeVoiceComplete:', err);
+    }
+
     navigate('/interview-feedback');
   };
 
@@ -671,8 +746,8 @@ export default function MockInterviewPage() {
           session={session}
           setup={setup}
           onCancel={() => navigate('/interview-setup')}
-          onCompleteInterview={(turns) => {
-            handleRealtimeVoiceComplete(turns);
+          onCompleteInterview={(turns, clientQuestions) => {
+            handleRealtimeVoiceComplete(turns, clientQuestions);
           }}
         />
       </div>

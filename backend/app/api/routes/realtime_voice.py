@@ -16,6 +16,7 @@ class CreateVoiceSessionRequest(BaseModel):
     topic: Optional[str] = "System Design & Algorithms"
     interview_id: Optional[str] = None
     voice_name: Optional[str] = "Puck"
+    total_questions: Optional[int] = 5
 
 class AppendTurnRequest(BaseModel):
     session_id: str
@@ -35,7 +36,8 @@ async def create_voice_session(req: CreateVoiceSessionRequest):
             difficulty=req.difficulty or "Intermediate",
             topic=req.topic or "System Design & Algorithms",
             interview_id=req.interview_id,
-            voice_name=req.voice_name or "Puck"
+            voice_name=req.voice_name or "Puck",
+            total_questions=req.total_questions or 5
         )
         return session
     except Exception as e:

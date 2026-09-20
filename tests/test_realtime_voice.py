@@ -71,5 +71,19 @@ class TestRealtimeVoice(unittest.TestCase):
             self.assertTrue(data['token'].startswith('ephemeral_sim_'))
             self.assertIn('Frontend Architect', data['system_instruction'])
 
+    def test_create_session_with_10_questions(self):
+        payload = {
+            "role": "Distributed Systems Engineer",
+            "difficulty": "Advanced",
+            "topic": "Consensus & Raft",
+            "total_questions": 10
+        }
+        response = self.client.post('/api/realtime-voice/session', json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data.get('total_questions'), 10)
+        self.assertIn('EXACTLY 10 TECHNICAL QUESTIONS', data['system_instruction'])
+        self.assertIn('Question 10 of 10', data['system_instruction'])
+
 if __name__ == '__main__':
     unittest.main()
