@@ -1,18 +1,30 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0F1026" />
-    <title>InterviewAI — AI Career Preparation Agent | Prepare Smarter. Interview Better.</title>
-    <meta name="description" content="AI Career Preparation Agent prototype. Personalized mock interviews, adaptive question engine, ATS resume scanning, and skill progression tracking." />
+    <meta name="theme-color" content="#F8F6F0" />
+    <title>TalentPath — Academic Career Dossier & Preparation Agent</title>
+    <meta name="description" content="Academic Career Dossier & Preparation Agent. Editorial interview evaluations, adaptive conceptual drills, and verified skill development records." />
     <!-- Preconnect Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Alexandria Theme Bootstrap: Single official theme, auto-migrate legacy storage -->
+    <script>
+      (function() {
+        try {
+          var THEME = 'editorial_scholar';
+          localStorage.setItem('interview_ai_theme', JSON.stringify(THEME));
+          document.documentElement.setAttribute('data-theme', THEME);
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#0F1026] text-[#F8FAFC] antialiased">
+  <body class="bg-[#F8F6F0] text-[#1F1B16] font-sans antialiased selection:bg-[#EAEFF5] selection:text-[#1A365D]">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

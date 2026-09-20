@@ -1,31 +1,32 @@
 import React from 'react';
 
+/**
+ * Editorial Card — Academic Curator & Alexandria Style
+ * Surfaces: Porcelain Cream (#FFFDF9)
+ * Hairline Border: #E5E0D5 (1px)
+ * Restrained Radius: 8px (rounded-lg)
+ * Subtle Elevation: 0 1px 2px rgba(31, 27, 22, 0.04)
+ */
 export default function GlassCard({
   children,
   className = '',
   hoverEffect = false,
-  glow = 'purple', // 'purple' | 'cyan' | 'none'
+  glow = 'none',
   onClick,
   ...props
 }) {
-  const glowClasses = {
-    purple: 'hover:border-purple-500/50 hover:shadow-[0_0_25px_-5px_rgba(124,58,237,0.3)]',
-    cyan: 'hover:border-cyan-500/50 hover:shadow-[0_0_25px_-5px_rgba(6,182,212,0.3)]',
-    none: ''
-  };
-
   return (
     <div
       onClick={onClick}
       className={`
-        bg-[#191A3A]/80 
-        backdrop-blur-md 
-        border border-purple-500/20 
-        rounded-2xl 
-        p-6 
-        transition-all 
-        duration-300
-        ${hoverEffect ? 'hover:-translate-y-1 ' + glowClasses[glow] : ''}
+        bg-[var(--theme-surface,#FFFDF9)] 
+        border border-[var(--theme-border,#E5E0D5)] 
+        rounded-lg 
+        p-5 sm:p-6 
+        transition-colors 
+        duration-150
+        shadow-[0_1px_2px_rgba(31,27,22,0.04)]
+        ${hoverEffect ? 'hover:border-[var(--theme-border-strong,#D5CFBF)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] cursor-pointer' : ''}
         ${className}
       `}
       {...props}

@@ -23,3 +23,21 @@ dist-ssr
 *.sln
 *.sw?
 ~$*
+
+# Python & SQLite Database
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv/
+*.db
+*.sqlite3
+career_agent.db
+backend/career_agent.db
+
+# Storage & Media
+backend/storage/recordings/
+*.webm
+.pytest_cache/
+scratch/
+

@@ -43,25 +43,14 @@ export default function RadarChart({
         className="overflow-visible"
       >
         <defs>
-          <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.4" />
-            <stop offset="70%" stopColor="#06B6D4" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#0F1026" stopOpacity="0.0" />
+          <radialGradient id="radarAcademicBg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#FAF8F3" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#FFFDF9" stopOpacity="0.0" />
           </radialGradient>
-
-          <linearGradient id="polygonStrokeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#A855F7" />
-            <stop offset="50%" stopColor="#06B6D4" />
-            <stop offset="100%" stopColor="#22C55E" />
-          </linearGradient>
-
-          <filter id="radarDropShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#06B6D4" floodOpacity="0.4" />
-          </filter>
         </defs>
 
-        {/* Background Ambient Radial Glow */}
-        <circle cx={centerX} cy={centerY} r={radius} fill="url(#radarGlow)" />
+        {/* Background Subtle Radial Tint */}
+        <circle cx={centerX} cy={centerY} r={radius} fill="url(#radarAcademicBg)" />
 
         {/* Concentric Grid Webs */}
         {levels.map((level, levelIdx) => {
@@ -77,7 +66,7 @@ export default function RadarChart({
               <polygon
                 points={webPoints}
                 fill="none"
-                stroke="rgba(165, 180, 252, 0.15)"
+                stroke="#E5E0D5"
                 strokeWidth={level === 1 ? '1.5' : '1'}
                 strokeDasharray={level === 1 ? 'none' : '3 3'}
               />
@@ -85,7 +74,7 @@ export default function RadarChart({
               <text
                 x={centerX + 4}
                 y={centerY - radius * level + 10}
-                fill="rgba(165, 180, 252, 0.4)"
+                fill="#8A8277"
                 fontSize="9"
                 fontFamily="monospace"
               >
@@ -105,8 +94,8 @@ export default function RadarChart({
               y1={centerY}
               x2={x}
               y2={y}
-              stroke="rgba(124, 58, 237, 0.25)"
-              strokeWidth="1.2"
+              stroke="#E5E0D5"
+              strokeWidth="1"
             />
           );
         })}
@@ -114,10 +103,9 @@ export default function RadarChart({
         {/* Candidate Data Polygon */}
         <polygon
           points={dataPoints}
-          fill="rgba(6, 182, 212, 0.25)"
-          stroke="url(#polygonStrokeGrad)"
-          strokeWidth="2.5"
-          filter="url(#radarDropShadow)"
+          fill="rgba(26, 54, 93, 0.12)"
+          stroke="#1A365D"
+          strokeWidth="2"
           className="transition-all duration-700 ease-out"
         />
 
@@ -125,7 +113,7 @@ export default function RadarChart({
         {dimensions.map((dim, idx) => {
           const ratio = Math.min(1, Math.max(0, dim.score / 100));
           const point = getCoordinates(idx, ratio);
-          const outer = getCoordinates(idx, 1.22); // Placement for label
+          const outer = getCoordinates(idx, 1.24); // Placement for label
 
           // Determine text anchor based on X position relative to center
           let textAnchor = 'middle';
@@ -138,20 +126,11 @@ export default function RadarChart({
               <circle
                 cx={point.x}
                 cy={point.y}
-                r="4.5"
-                fill="#06B6D4"
-                stroke="#0F1026"
-                strokeWidth="2"
+                r="4"
+                fill="#1A365D"
+                stroke="#FFFDF9"
+                strokeWidth="1.5"
                 className="transition-all duration-700"
-              />
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r="7"
-                fill="none"
-                stroke="#A855F7"
-                strokeWidth="1"
-                opacity="0.6"
               />
 
               {/* Label and Score */}
@@ -159,9 +138,10 @@ export default function RadarChart({
                 x={outer.x}
                 y={outer.y - 4}
                 textAnchor={textAnchor}
-                fill="#F8FAFC"
+                fill="#1F1B16"
                 fontSize="11"
-                fontWeight="700"
+                fontWeight="600"
+                fontFamily="inherit"
                 className="select-none"
               >
                 {dim.name}
@@ -170,9 +150,9 @@ export default function RadarChart({
                 x={outer.x}
                 y={outer.y + 10}
                 textAnchor={textAnchor}
-                fill={dim.score >= 80 ? '#22C55E' : dim.score >= 70 ? '#06B6D4' : '#EC4899'}
+                fill={dim.score >= 80 ? '#235E3B' : dim.score >= 65 ? '#1A365D' : '#9A421A'}
                 fontSize="10"
-                fontWeight="800"
+                fontWeight="700"
                 fontFamily="monospace"
               >
                 {dim.score}%

@@ -1,74 +1,422 @@
 @import "tailwindcss";
 
-@theme {
-  --color-ai-bg: #0F1026;
-  --color-ai-card: #191A3A;
-  --color-ai-card-hover: #22244E;
-  --color-ai-border: rgba(124, 58, 237, 0.25);
-  --color-ai-purple: #7C3AED;
-  --color-ai-purple-light: #A855F7;
-  --color-ai-cyan: #06B6D4;
-  --color-ai-pink: #EC4899;
-  --color-ai-green: #22C55E;
-  --color-ai-text: #F8FAFC;
-  --color-ai-muted: #A5B4FC;
+/* =========================================================================
+   1. EDITORIAL SCHOLAR & ACADEMIC CURATOR — ALEXANDRIA STYLE DESIGN SYSTEM
+   ========================================================================= */
+
+:root, [data-theme], [data-theme="editorial_scholar"] {
+  --theme-id: "editorial_scholar";
+  
+  /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
+  --theme-bg: #F8F6F0;                /* Warm Archival Canvas */
+  --theme-surface: #FFFDF9;           /* Porcelain Card Surface */
+  --theme-surface-hover: #F2EFE9;     /* Subtle Surface Hover */
+  --theme-surface-subtle: #F2EFE9;    /* Inset Subdued Surface */
+  --theme-surface-low: #FAF8F3;       /* Secondary Low Surface */
+  --theme-sidebar: #F8F6F0;           /* Restrained Archival Sidebar */
+  --theme-border: #E5E0D5;            /* 1px Hairline Divider */
+  --theme-border-strong: #D5CFBF;     /* Emphasized Divider */
+
+  /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
+  --theme-ink-primary: #1F1B16;       /* Primary Headings & Important Text */
+  --theme-ink-secondary: #3B352E;     /* Body Text & Descriptions */
+  --theme-ink-tertiary: #70685E;      /* Subtitles & Timestamps */
+  --theme-ink-micro: #8A8277;         /* Tracked Overlines & Micro Labels */
+
+  --theme-text: #1F1B16;
+  --theme-text-secondary: #3B352E;
+  --theme-text-muted: #70685E;
+  --theme-text-micro: #8A8277;
+
+  /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
+  --theme-primary: #1A365D;           /* Academic Navy (Active & Key Links) */
+  --theme-primary-light: #2A4A7F;
+  --theme-cta: #1B2A4A;               /* Primary CTA Button */
+  --theme-cta-hover: #142038;         /* CTA Hover State */
+  --theme-cta-text: #FFFFFF;          /* High-Contrast White Text */
+
+  /* ── Secondary Editorial Accent ──────────────────────────────────────── */
+  --theme-bronze: #8C6E54;            /* Aged Bronze / Ochre */
+  --theme-bronze-hover: #795E47;
+  --theme-accent: #1A365D;
+
+  /* ── Semantic System (Strict High-Contrast Ratios) ───────────────────── */
+  --theme-success: #235E3B;
+  --theme-success-bg: #EBF4EE;
+  --theme-warning: #9A421A;
+  --theme-warning-bg: #FDF2E9;
+  --theme-danger: #9A421A;
+  --theme-danger-bg: #FDF2E9;
+  --theme-neutral: #4A453E;
+  --theme-neutral-bg: #EFECE6;
+
+  /* ── Form Controls & Active States ───────────────────────────────────── */
+  --theme-card-bg: #FFFDF9;
+  --theme-header-bg: rgba(255, 253, 249, 0.98);
+  --theme-input-bg: #FFFDF9;
+  --theme-selected: #EAE6DC;
+  --theme-glow-primary: none;
+  --theme-glow-secondary: none;
+
+  color-scheme: light;
 }
 
+/* =========================================================================
+   2. TAILWIND @THEME BINDINGS
+   ========================================================================= */
+
+@theme {
+  --font-serif: 'Noto Serif', Georgia, Cambria, 'Times New Roman', serif;
+  --font-sans: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --color-ai-bg: var(--theme-bg, #F8F6F0);
+  --color-ai-card: var(--theme-surface, #FFFDF9);
+  --color-ai-card-hover: var(--theme-surface-hover, #F2EFE9);
+  --color-ai-border: var(--theme-border, #E5E0D5);
+  --color-ai-purple: var(--theme-primary, #1A365D);
+  --color-ai-purple-light: var(--theme-primary-light, #2A4A7F);
+  --color-ai-cyan: var(--theme-bronze, #8C6E54);
+  --color-ai-pink: var(--theme-primary, #1A365D);
+  --color-ai-green: var(--theme-success, #235E3B);
+  --color-ai-text: var(--theme-text, #1F1B16);
+  --color-ai-muted: var(--theme-text-muted, #70685E);
+}
+
+/* =========================================================================
+   3. BASE & GLOBAL STYLING
+   ========================================================================= */
+
 @layer base {
+  html {
+    background-color: #F8F6F0;
+    color: #1F1B16;
+  }
+
   body {
-    background-color: #0F1026;
-    color: #F8FAFC;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--theme-bg, #F8F6F0);
+    color: var(--theme-text, #1F1B16);
+    font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Noto Serif', Georgia, Cambria, 'Times New Roman', serif;
   }
 }
 
-/* Custom glow and glassmorphic utilities */
-.glass-panel {
-  background: rgba(25, 26, 58, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(124, 58, 237, 0.25);
+/* =========================================================================
+   4. EDITORIAL TYPOGRAPHY & HIERARCHY UTILITIES
+   ========================================================================= */
+
+.font-editorial-serif {
+  font-family: 'Noto Serif', Georgia, serif;
 }
 
-.glass-panel-cyan {
-  background: rgba(25, 26, 58, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(6, 182, 212, 0.25);
+.font-editorial-sans {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
 }
 
-.glow-purple {
-  box-shadow: 0 0 25px -5px rgba(124, 58, 237, 0.35);
+/* Tracked Overlines & Precept Labels */
+.editorial-overline {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--theme-ink-micro, #8A8277);
 }
 
-.glow-cyan {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.35);
+/* Hairline Dividers */
+.editorial-divider {
+  border-bottom: 1px solid var(--theme-border, #E5E0D5);
 }
 
-.glow-text-purple {
-  text-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+/* =========================================================================
+   5. RESTRAINED EDITORIAL SURFACES & CARDS (NO GLOW, NO BUBBLY CORNERS)
+   ========================================================================= */
+
+/* Replace Glassmorphic and Legacy Dark Surfaces Globally */
+.glass-panel,
+.glass-panel-cyan,
+[class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: var(--theme-surface, #FFFDF9) !important;
+  border: 1px solid var(--theme-border, #E5E0D5) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(31, 27, 22, 0.04) !important;
 }
 
+/* Universal Card & Surface Replacement */
+[class*="bg-[#191A3A]"],
+[class*="bg-[#111827]"],
+[class*="bg-[#0F1026]"],
+[class*="bg-[#0B0F19]"],
+[class*="bg-[#061524]"],
+[class*="bg-[#061A14]"],
+[class*="bg-[#1A0D18]"] {
+  background-color: var(--theme-surface, #FFFDF9) !important;
+}
+
+/* Restrain Rounding Globally — Remove 3xl / 30px Bloat */
+[class*="rounded-3xl"],
+[class*="rounded-[28px]"],
+[class*="rounded-[30px]"],
+[class*="rounded-[32px]"] {
+  border-radius: 8px !important;
+}
+
+/* =========================================================================
+   6. SOLID ACADEMIC BUTTONS (NO GRADIENTS, NO NEON, ABSOLUTE CONTRAST)
+   ========================================================================= */
+
+/* Primary CTA Button: Academic Navy #1B2A4A with Crisp White Text */
+button.bg-gradient-to-r,
+button[class*="from-purple-"],
+.bg-gradient-to-tr[class*="from-[#7C3AED]"],
+.bg-gradient-to-r[class*="from-"],
+button[class*="bg-[#1B2A4A]"],
+button[class*="bg-[#142038]"],
+button[class*="bg-[#1A365D]"],
+button[class*="bg-[#1E3A8A]"],
+button[class*="bg-blue-"],
+a[class*="bg-[#1B2A4A]"],
+a[class*="bg-[#142038]"],
+a[class*="bg-[#1A365D]"],
+a[class*="bg-[#1E3A8A]"],
+a[class*="bg-blue-"],
+.academic-btn-primary,
+.text-white-keep {
+  background-image: none !important;
+  color: #FFFFFF !important;
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif !important;
+  font-weight: 600 !important;
+}
+
+/* Ensure all button text & icons inside full blue buttons are pure white */
+button[class*="bg-[#1B2A4A]"] *,
+button[class*="bg-[#142038]"] *,
+button[class*="bg-[#1A365D]"] *,
+button[class*="bg-[#1E3A8A]"] *,
+button[class*="bg-blue-"] *,
+button.bg-gradient-to-r *,
+button[class*="from-purple-"] *,
+a[class*="bg-[#1B2A4A]"] *,
+a[class*="bg-[#142038]"] *,
+a[class*="bg-[#1A365D]"] *,
+a[class*="bg-[#1E3A8A]"] *,
+a[class*="bg-blue-"] *,
+.academic-btn-primary *,
+.text-white-keep,
+.text-white-keep * {
+  color: #FFFFFF !important;
+  fill: currentColor;
+}
+
+button.bg-gradient-to-r,
+button[class*="from-purple-"],
+.bg-gradient-to-tr[class*="from-[#7C3AED]"],
+.bg-gradient-to-r[class*="from-"] {
+  background-color: var(--theme-cta, #1B2A4A) !important;
+  border: 1px solid var(--theme-cta, #1B2A4A) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(31, 27, 22, 0.05) !important;
+}
+
+button.bg-gradient-to-r:hover,
+button[class*="from-purple-"]:hover,
+button[class*="bg-[#1B2A4A]"]:hover,
+button[class*="bg-[#142038]"]:hover,
+button[class*="bg-[#1A365D]"]:hover,
+a[class*="bg-[#1B2A4A]"]:hover,
+a[class*="bg-[#142038]"]:hover,
+a[class*="bg-[#1A365D]"]:hover {
+  background-color: var(--theme-cta-hover, #142038) !important;
+  color: #FFFFFF !important;
+}
+
+/* Secondary / Bordered Button */
+button.border-purple-500\/30:not(.bg-gradient-to-r),
+button.border-purple-500\/20:not(.bg-gradient-to-r) {
+  background-color: var(--theme-surface-subtle, #F2EFE9) !important;
+  border: 1px solid var(--theme-border, #E5E0D5) !important;
+  color: var(--theme-ink-primary, #1F1B16) !important;
+  border-radius: 6px !important;
+}
+
+button.border-purple-500\/30:not(.bg-gradient-to-r):hover {
+  background-color: var(--theme-surface-hover, #EAE6DD) !important;
+}
+
+/* =========================================================================
+   7. ABSOLUTE TEXT CONTRAST & VISIBILITY OVERRIDES
+   ========================================================================= */
+
+/* Enforce dark ink for light backgrounds — NEVER apply to buttons, badges, or elements on dark backgrounds */
+.text-white:not(
+  button,
+  button *,
+  a[class*="bg-"],
+  a[class*="bg-"] *,
+  [class*="bg-[#1B2A4A]"],
+  [class*="bg-[#1B2A4A]"] *,
+  [class*="bg-[#142038]"],
+  [class*="bg-[#142038]"] *,
+  [class*="bg-[#1A365D]"],
+  [class*="bg-[#1A365D]"] *,
+  [class*="bg-[#1E3A8A]"],
+  [class*="bg-[#1E3A8A]"] *,
+  [class*="bg-[#0F172A]"],
+  [class*="bg-[#0F172A]"] *,
+  [class*="bg-blue-"],
+  [class*="bg-blue-"] *,
+  [class*="bg-indigo-"],
+  [class*="bg-indigo-"] *,
+  [class*="bg-slate-9"],
+  [class*="bg-slate-9"] *,
+  .academic-btn-primary,
+  .academic-btn-primary *,
+  .text-white-keep,
+  .text-white-keep *
+) {
+  color: var(--theme-ink-primary, #1F1B16) !important;
+}
+
+/* Legacy text color sanitization */
+.text-\[\#F8FAFC\],
+.text-\[\#F9FAFB\],
+.text-\[\#F0F9FF\],
+.text-\[\#F0FDF4\],
+.text-\[\#FFF1F2\] {
+  color: var(--theme-ink-primary, #1F1B16) !important;
+}
+
+.text-\[\#A5B4FC\],
+.text-\[\#9CA3AF\],
+.text-\[\#7DD3FC\],
+.text-\[\#86EFAC\],
+.text-\[\#FDA4AF\] {
+  color: var(--theme-ink-secondary, #3B352E) !important;
+}
+
+.text-\[\#A5B4FC\]\/70,
+.text-\[\#A5B4FC\]\/80,
+.text-\[\#A5B4FC\]\/90 {
+  color: var(--theme-ink-tertiary, #70685E) !important;
+}
+
+/* Replace legacy purple and cyan text with Academic Navy and Aged Bronze */
+.text-purple-400,
+.text-purple-300,
+.text-purple-500 {
+  color: var(--theme-primary, #1A365D) !important;
+}
+
+.text-cyan-400,
+.text-cyan-300,
+.text-cyan-500 {
+  color: var(--theme-bronze, #8C6E54) !important;
+}
+
+.text-pink-400,
+.text-pink-300 {
+  color: var(--theme-warning, #9A421A) !important;
+}
+
+/* =========================================================================
+   8. FORMS, INPUTS & TEXTAREAS
+   ========================================================================= */
+
+input,
+textarea,
+select {
+  background-color: var(--theme-input-bg, #FFFDF9) !important;
+  color: var(--theme-ink-primary, #1F1B16) !important;
+  border: 1px solid var(--theme-border, #E5E0D5) !important;
+  border-radius: 6px !important;
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--theme-ink-tertiary, #70685E) !important;
+  opacity: 0.9 !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--theme-primary, #1A365D) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px var(--theme-primary, #1A365D) !important;
+}
+
+select option {
+  background-color: #FFFDF9 !important;
+  color: #1F1B16 !important;
+}
+
+/* =========================================================================
+   9. NAVIGATION, SIDEBAR & ACTIVE STATES
+   ========================================================================= */
+
+aside {
+  background-color: var(--theme-sidebar, #F8F6F0) !important;
+  border-right: 1px solid var(--theme-border, #E5E0D5) !important;
+}
+
+aside nav a.bg-gradient-to-r {
+  background-image: none !important;
+  background-color: #EAEFF5 !important;
+  border: 1px solid #D0DBE7 !important;
+  color: var(--theme-primary, #1A365D) !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+}
+
+aside nav a.bg-gradient-to-r * {
+  color: var(--theme-primary, #1A365D) !important;
+}
+
+aside nav a:not(.bg-gradient-to-r):hover {
+  background-color: var(--theme-surface-hover, #F2EFE9) !important;
+  color: var(--theme-ink-primary, #1F1B16) !important;
+}
+
+/* =========================================================================
+   10. REMOVE GLOWS & NEON EFFECTS
+   ========================================================================= */
+
+.glow-purple,
+.glow-cyan,
+[class*="shadow-purple-"],
+[class*="shadow-cyan-"],
+[class*="shadow-2xl"] {
+  box-shadow: 0 1px 2px rgba(31, 27, 22, 0.04) !important;
+}
+
+.glow-text-purple,
 .glow-text-cyan {
-  text-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+  text-shadow: none !important;
 }
 
-/* Custom scrollbar */
+/* =========================================================================
+   11. EDITORIAL SCROLLBAR
+   ========================================================================= */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #0F1026;
+  background: var(--theme-bg, #F8F6F0);
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #252754;
-  border-radius: 4px;
+  background: var(--theme-border, #E5E0D5);
+  border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #7C3AED;
+  background: var(--theme-border-strong, #D5CFBF);
 }

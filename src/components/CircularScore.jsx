@@ -1,12 +1,19 @@
 import React from 'react';
 
+/**
+ * Editorial Circular Score Gauge — Alexandria Style
+ * Indicator: Academic Navy (#1A365D)
+ * Track: Hairline Border (#E5E0D5)
+ * Score Text: Primary Ink (#1F1B16)
+ * Label: Tertiary Ink (#70685E)
+ */
 export default function CircularScore({
   score = 0,
   max = 100,
-  size = 110,
-  strokeWidth = 8,
-  label = 'Score',
-  color = '#7C3AED',
+  size = 100,
+  strokeWidth = 6,
+  label = 'Proficiency',
+  color = '#1A365D',
   showPercentage = true,
   className = ''
 }) {
@@ -15,28 +22,27 @@ export default function CircularScore({
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-  // Determine accent color gradient if default
   let strokeColor = color;
   if (color === 'auto') {
-    if (percentage >= 80) strokeColor = '#22C55E';
-    else if (percentage >= 65) strokeColor = '#06B6D4';
-    else if (percentage >= 50) strokeColor = '#A855F7';
-    else strokeColor = '#F59E0B';
+    if (percentage >= 80) strokeColor = '#235E3B'; // Success Green
+    else if (percentage >= 65) strokeColor = '#1A365D'; // Academic Navy
+    else if (percentage >= 50) strokeColor = '#8C6E54'; // Aged Bronze
+    else strokeColor = '#9A421A'; // Warning Rust
   }
 
   return (
     <div className={`relative inline-flex flex-col items-center justify-center ${className}`}>
       <svg width={size} height={size} className="transform -rotate-90">
-        {/* Background circle */}
+        {/* Background track circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="rgba(124, 58, 237, 0.15)"
+          stroke="#E5E0D5"
           strokeWidth={strokeWidth}
           fill="transparent"
         />
-        {/* Progress circle */}
+        {/* Progress indicator circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -47,16 +53,16 @@ export default function CircularScore({
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
-          className="transition-all duration-1000 ease-out"
+          className="transition-all duration-700 ease-out"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-xl font-black tracking-tight text-[#F8FAFC]">
+        <span className="text-xl font-bold tracking-tight text-[#1F1B16] font-mono">
           {score}
-          {showPercentage && <span className="text-xs text-[#A5B4FC]/70 font-normal">%</span>}
+          {showPercentage && <span className="text-xs text-[#70685E] font-normal">%</span>}
         </span>
         {label && (
-          <span className="text-[10px] uppercase font-bold tracking-wider text-[#A5B4FC]/80 mt-0.5">
+          <span className="text-[9px] uppercase font-semibold tracking-widest text-[#70685E] mt-0.5">
             {label}
           </span>
         )}

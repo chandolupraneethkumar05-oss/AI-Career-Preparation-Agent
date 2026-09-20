@@ -1,21 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Brain,
   Sparkles,
   TrendingUp,
-  Target,
-  AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  Clock,
-  Zap,
   ArrowUpRight,
   Bot,
   Compass,
-  Cpu,
-  Flame,
-  Layers
+  AlertTriangle,
+  FileText,
+  Mic,
+  ShieldCheck
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -25,37 +22,145 @@ import Badge from '../components/Badge';
 import RadarChart from '../components/RadarChart';
 import { useInterview } from '../context/InterviewContext';
 import { analyzeSkillGaps } from '../utils/skillGapAnalyzer';
+import { skillApi } from '../services/skillApi';
 
 export default function SkillGapPage() {
   const navigate = useNavigate();
   const { session, setup } = useInterview();
 
-  // Run dynamic prototype skill analysis
+  // Unified backend skill profile state
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    skillApi.getSkillProfile('user-001')
+      .then((data) => {
+        if (mounted && data) {
+          setProfileData(data);
+        }
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.debug('[SkillGapPage] profile fetch error:', err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  // Run dynamic prototype skill analysis as fallback
   const analysis = analyzeSkillGaps(session.summaryResult, session.answers);
+
+  const hasUnified = Boolean(profileData && profileData.unified_skills && profileData.unified_skills.length > 0);
+  const totalEvidenceCount = profileData?.evidence_summary?.total_evidences || 0;
+  const hasEvidence = totalEvidenceCount > 0 || (session.answers && session.answers.length > 0);
+
+  const displayReadiness = hasUnified ? profileData.overall_readiness : analysis.overallReadiness;
+  const displayRole = profileData?.target_role || setup?.targetRole || 'Machine Learning Engineer';
+  const displayRadar = hasUnified && profileData.radar_data?.length > 0
+    ? profileData.radar_data.map(r => ({ name: r.subject, score: r.score }))
+    : analysis.radarDimensions;
+
+  const displaySkills = hasUnified
+    ? profileData.unified_skills
+    : analysis.skills.map(s => ({
+        skill_name: s.name,
+        category: s.category,
+        role_importance: 'Core',
+        demonstrated_score: s.score,
+        target_score: 80,
+        gap: Math.max(0, 80 - s.score),
+        priority: s.score < 65 ? 'high' : s.score < 80 ? 'medium' : 'low',
+        confidence: 'Medium',
+        trend: 'stable',
+        repeated_weakness: false,
+        resume_present: false,
+        resume_score: null,
+        interview_score: s.score,
+        evidence_count: 1
+      }));
+
+  const displayTopGaps = hasUnified && profileData.top_skill_gaps?.length > 0
+    ? profileData.top_skill_gaps
+    : analysis.topSkillGaps.map(g => ({
+        skill_name: g.name,
+        demonstrated_score: g.score,
+        target_score: 80,
+        gap: Math.max(0, 80 - g.score),
+        priority: g.priority.toLowerCase(),
+        role_importance: 'Core',
+        repeated_weakness: false
+      }));
 
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Strong':
-        return <Badge variant="green" size="sm">Strong</Badge>;
+        return <Badge variant="forest" size="sm">Strong</Badge>;
       case 'Needs Practice':
-        return <Badge variant="cyan" size="sm">Needs Practice</Badge>;
+        return <Badge variant="navy" size="sm">Needs Practice</Badge>;
       case 'Priority':
       default:
-        return <Badge variant="pink" size="sm">Priority</Badge>;
+        return <Badge variant="bronze" size="sm">Priority</Badge>;
     }
   };
 
   const getPriorityBadge = (priority) => {
     switch (priority) {
       case 'High':
-        return <Badge variant="pink" size="sm">Priority: High</Badge>;
+        return <Badge variant="bronze" size="sm">Priority: High</Badge>;
       case 'Medium':
-        return <Badge variant="amber" size="sm">Priority: Medium</Badge>;
+        return <Badge variant="neutral" size="sm">Priority: Medium</Badge>;
       case 'Low':
       default:
-        return <Badge variant="green" size="sm">Priority: Low</Badge>;
+        return <Badge variant="forest" size="sm">Priority: Low</Badge>;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-10 pb-20 animate-pulse">
+        {/* Skeleton Hero */}
+        <div className="text-center space-y-3 pt-4">
+          <div className="h-6 w-48 mx-auto rounded-sm bg-[#FAF8F3] border border-[#E5E0D5]" />
+          <div className="h-10 w-80 mx-auto rounded-sm bg-[#FAF8F3]" />
+          <div className="h-4 w-96 mx-auto rounded-sm bg-[#FAF8F3]/60" />
+        </div>
+
+        {/* Skeleton Readiness Card */}
+        <div className="p-8 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="space-y-4 w-full md:w-2/3">
+            <div className="h-4 w-32 rounded-sm bg-[#FAF8F3]" />
+            <div className="h-12 w-28 rounded-sm bg-[#FAF8F3]" />
+            <div className="h-6 w-44 rounded-sm bg-[#FAF8F3]" />
+            <div className="h-4 w-full rounded-sm bg-[#FAF8F3]" />
+          </div>
+          <div className="w-36 h-36 rounded-full bg-[#FAF8F3] border-4 border-[#E5E0D5] shrink-0" />
+        </div>
+
+        {/* Skeleton Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7 p-6 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] space-y-4">
+            <div className="h-6 w-48 rounded-sm bg-[#FAF8F3]" />
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
+                <div className="flex justify-between">
+                  <div className="h-4 w-28 rounded-sm bg-[#E5E0D5]" />
+                  <div className="h-4 w-12 rounded-sm bg-[#E5E0D5]" />
+                </div>
+                <div className="h-2 w-full rounded-sm bg-[#E5E0D5]" />
+              </div>
+            ))}
+          </div>
+          <div className="lg:col-span-5 p-6 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-center min-h-[350px]">
+            <div className="w-64 h-64 rounded-full border-2 border-dashed border-[#E5E0D5] flex items-center justify-center">
+              <div className="w-40 h-40 rounded-full border border-[#E5E0D5]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 pb-20">
@@ -64,68 +169,91 @@ export default function SkillGapPage() {
       {/* 2. HERO SECTION                                                          */}
       {/* ========================================================================= */}
       <div className="text-center space-y-3 pt-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-900/40 border border-purple-500/40 text-purple-300 text-xs font-semibold shadow-sm">
-          <Brain className="w-3.5 h-3.5 text-cyan-400" />
-          <span>🧠 AI Skill Gap Analysis</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] text-xs font-semibold uppercase tracking-wider font-mono">
+          <Brain className="w-3.5 h-3.5 text-[#1A365D]" />
+          <span>Skill Gap Analysis</span>
         </div>
 
-        <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-          KNOW WHAT TO IMPROVE NEXT
+        <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#1F1B16] tracking-tight">
+          Skill Gap &amp; Readiness Analysis
         </h1>
 
-        <p className="text-sm sm:text-base text-[#A5B4FC] max-w-2xl mx-auto leading-relaxed">
-          InterviewAI analyzed your recent interview performance to identify the skills that need the most attention.
+        <p className="text-sm sm:text-base text-[#70685E] max-w-2xl mx-auto leading-relaxed">
+          Detailed breakdown of your skills compared to industry expectations for your target role.
         </p>
 
-        <div className="pt-1 flex items-center justify-center gap-2 text-xs text-emerald-400 font-semibold">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span>● AI Analysis Complete</span>
+        <div className="pt-1 flex items-center justify-center gap-2 text-xs text-[#235E3B] font-semibold">
+          <span className="w-2 h-2 rounded-full bg-[#235E3B]" />
+          <span>● Analysis Up to Date</span>
         </div>
       </div>
 
       {/* ========================================================================= */}
+      {/* 2.5 HONEST ONBOARDING BANNER (When 0 interviews & 0 resumes exist)       */}
+      {/* ========================================================================= */}
+      {!hasEvidence && (
+        <GlassCard className="p-6 border-[#F0C9B3] bg-[#FFFDF9] space-y-3 shadow-xs">
+          <div className="flex items-center gap-2.5 text-[#9A421A]">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <h3 className="text-base font-serif font-bold">Needs Initial Assessment</h3>
+          </div>
+          <p className="text-xs sm:text-sm text-[#3B352E] leading-relaxed">
+            No interview answers or resume scans recorded yet. Complete a mock interview or scan your resume to see your personalized skill breakdown.
+          </p>
+          <div className="flex flex-wrap gap-3 pt-1">
+            <GradientButton variant="primary" size="sm" onClick={() => navigate('/ats')}>
+              Scan Resume for Skill Gaps
+            </GradientButton>
+            <GradientButton variant="secondary" size="sm" onClick={() => navigate('/interview-setup')}>
+              Start First Mock Interview
+            </GradientButton>
+          </div>
+        </GlassCard>
+      )}
+
+      {/* ========================================================================= */}
       {/* 3. OVERALL READINESS SCORE CARD                                          */}
       {/* ========================================================================= */}
-      <GlassCard className="p-8 border-purple-500/40 shadow-2xl relative overflow-hidden bg-gradient-to-r from-[#191A3A] via-[#161D3A] to-[#12233F]">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
-
+      <GlassCard className="p-8 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs relative overflow-hidden">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative">
           <div className="space-y-4 text-center md:text-left">
-            <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
-              INTERVIEW READINESS
+            <span className="text-xs font-bold text-[#70685E] uppercase tracking-widest font-mono">
+              EXAMINATION READINESS INDEX
             </span>
 
             <div className="flex items-baseline justify-center md:justify-start gap-3">
-              <span className="text-5xl sm:text-6xl font-black text-white tracking-tight">
-                {analysis.overallReadiness}%
+              <span className="text-5xl sm:text-6xl font-serif font-black text-[#1F1B16] tracking-tight">
+                {displayReadiness}%
               </span>
-              <span className="text-sm font-bold text-emerald-400 flex items-center gap-1">
+              <span className="text-sm font-bold text-[#235E3B] flex items-center gap-1 font-mono">
                 <ArrowUpRight className="w-4 h-4" />
-                +{analysis.improvementRate}% vs diagnostic
+                +{hasUnified ? Math.max(0, displayReadiness - 50) : analysis.improvementRate}% vs baseline
               </span>
             </div>
 
-            <div className="inline-block px-3 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
-              ● {analysis.readinessLabel}
+            <div className="inline-block px-3 py-1 rounded-sm bg-[#EBF4EE] border border-[#CDE5D4] text-[#235E3B] text-xs font-bold font-mono">
+              ● {displayReadiness >= 80 ? 'Interview Ready' : displayReadiness >= 65 ? 'Competitive Candidate' : 'Developing Foundations'}
             </div>
 
-            <p className="text-sm text-[#A5B4FC] max-w-lg leading-relaxed">
-              "{analysis.readinessSummary}"
+            <p className="text-sm text-[#70685E] max-w-lg leading-relaxed">
+              {hasUnified
+                ? `Calibrated for ${displayRole}. Evidence synthesized from ${profileData?.evidence_summary?.total_evidences || 0} performance observations across résumé and examination rounds.`
+                : `"${analysis.readinessSummary}"`}
             </p>
 
             {/* Historical Progress Metrics */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
-              <div className="px-3 py-2 rounded-xl bg-[#0F1026] border border-purple-500/30 text-xs">
-                <span className="text-[#A5B4FC] block text-[10px] uppercase">Previous Readiness</span>
-                <span className="font-bold text-white font-mono">{analysis.previousReadiness}%</span>
+              <div className="px-3 py-2 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-xs">
+                <span className="text-[#70685E] block text-[10px] uppercase font-mono">Curricular Role</span>
+                <span className="font-serif font-bold text-[#1F1B16]">{displayRole}</span>
               </div>
-              <div className="px-3 py-2 rounded-xl bg-[#0F1026] border border-cyan-500/30 text-xs">
-                <span className="text-[#A5B4FC] block text-[10px] uppercase">Current Readiness</span>
-                <span className="font-bold text-cyan-300 font-mono">{analysis.overallReadiness}%</span>
+              <div className="px-3 py-2 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-xs">
+                <span className="text-[#70685E] block text-[10px] uppercase font-mono">Verified Evidence</span>
+                <span className="font-mono font-bold text-[#1A365D]">{totalEvidenceCount} items</span>
               </div>
-              <div className="px-3 py-2 rounded-xl bg-[#0F1026] border border-emerald-500/30 text-xs">
-                <span className="text-[#A5B4FC] block text-[10px] uppercase">Improvement</span>
-                <span className="font-bold text-emerald-400 font-mono">+{analysis.improvementRate}%</span>
+              <div className="px-3 py-2 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-xs">
+                <span className="text-[#70685E] block text-[10px] uppercase font-mono">Proficiency Tier</span>
+                <span className="font-mono font-bold text-[#235E3B]">{displayReadiness}%</span>
               </div>
             </div>
           </div>
@@ -133,10 +261,10 @@ export default function SkillGapPage() {
           {/* Circular Score Gauge */}
           <div className="shrink-0 flex flex-col items-center">
             <CircularScore
-              score={analysis.overallReadiness}
+              score={displayReadiness}
               size={145}
-              strokeWidth={11}
-              color="#06B6D4"
+              strokeWidth={9}
+              color="auto"
               label="Readiness"
             />
           </div>
@@ -149,78 +277,135 @@ export default function SkillGapPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left: Your Skill Profile (7 Cols) */}
-        <GlassCard className="lg:col-span-7 p-6 sm:p-7 space-y-5 border-purple-500/30">
-          <div className="flex items-center justify-between border-b border-purple-500/20 pb-4">
+        <GlassCard className="lg:col-span-7 p-6 sm:p-7 space-y-5 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
+          <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-4">
             <div>
-              <h2 className="text-lg font-bold text-white uppercase tracking-wider">
-                YOUR SKILL PROFILE
+              <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+                OVERALL SKILL PROFILE
               </h2>
-              <p className="text-xs text-[#A5B4FC]">
-                Calibrated across 8 core industry competency benchmarks
+              <p className="text-xs text-[#70685E]">
+                Skill ratings evaluated against {displayRole} standards
               </p>
             </div>
-            <span className="text-xs text-cyan-400 font-mono font-bold">
-              Target: {setup?.targetRole || 'ML Engineer'}
+            <span className="text-xs text-[#1A365D] font-mono font-bold">
+              Target: {displayRole}
             </span>
           </div>
 
           <div className="space-y-3.5 pt-1">
-            {analysis.skills.map((skill) => (
+            {displaySkills.map((skill) => (
               <div
-                key={skill.name}
-                className="p-3.5 rounded-xl bg-[#0F1026]/70 border border-purple-500/20 hover:border-purple-500/40 transition-all space-y-2"
+                key={skill.skill_name || skill.name}
+                className="p-3.5 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] hover:border-[#1A365D] transition-all space-y-2.5"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white">{skill.name}</span>
-                    <span className="text-[10px] text-[#A5B4FC]/70 uppercase">({skill.category})</span>
+                    <span className="text-sm font-serif font-bold text-[#1F1B16]">{skill.skill_name || skill.name}</span>
+                    <span className="text-[10px] text-[#70685E] uppercase font-mono">
+                      ({skill.role_importance || skill.category || 'Core'})
+                    </span>
+                    {skill.repeated_weakness && (
+                      <span className="text-[10px] text-[#9A421A] font-bold bg-[#FDF2E9] border border-[#F0C9B3] px-2 py-0.5 rounded-sm flex items-center gap-1 font-mono">
+                        <AlertTriangle className="w-2.5 h-2.5" /> Recurring Deficit
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2.5">
-                    {getStatusBadge(skill.status)}
-                    <span className="text-sm font-extrabold text-white font-mono">{skill.score}%</span>
+                    {getPriorityBadge(skill.priority === 'high' ? 'High' : skill.priority === 'medium' ? 'Medium' : 'Low')}
+                    <span className="text-sm font-bold text-[#1A365D] font-mono">
+                      {skill.demonstrated_score ?? skill.score}%
+                    </span>
                   </div>
                 </div>
 
                 <ProgressBar
-                  value={skill.score}
-                  gradient={skill.score >= 80 ? 'green' : skill.score >= 65 ? 'cyan' : 'purple-pink'}
-                  height="h-2"
+                  value={skill.demonstrated_score ?? skill.score}
+                  height="h-1.5"
                 />
+
+                {/* Multi-Source Evidence Indicators */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-[10px]">
+                  {skill.resume_present ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#EBF4EE] border border-[#CDE5D4] text-[#235E3B] font-medium">
+                      <FileText className="w-3 h-3" /> Résumé: Verified ({skill.resume_score}%)
+                    </span>
+                  ) : skill.resume_score !== null && skill.resume_score !== undefined ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#FDF2E9] border border-[#F0C9B3] text-[#9A421A] font-medium">
+                      <FileText className="w-3 h-3" /> Résumé: Unobserved ({skill.resume_score}%)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-[#70685E]">
+                      <FileText className="w-3 h-3" /> Résumé: Untested
+                    </span>
+                  )}
+
+                  {skill.interview_score !== null && skill.interview_score !== undefined ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] font-medium">
+                      <Mic className="w-3 h-3" /> Examination: {skill.interview_score}%
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-[#70685E]">
+                      <Mic className="w-3 h-3" /> Examination: Unobserved
+                    </span>
+                  )}
+
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-[#3B352E]">
+                    <ShieldCheck className="w-3 h-3 text-[#1A365D]" /> {skill.confidence || 'Medium'} Conf ({skill.evidence_count || 0} pts)
+                  </span>
+
+                  {skill.trend === 'improving' ? (
+                    <span className="text-[#235E3B] font-bold flex items-center gap-0.5">
+                      📈 Improving
+                    </span>
+                  ) : skill.trend === 'declining' ? (
+                    <span className="text-[#9A421A] font-bold flex items-center gap-0.5">
+                      📉 Declining
+                    </span>
+                  ) : (
+                    <span className="text-[#70685E] font-medium flex items-center gap-0.5">
+                      ➡️ Stable
+                    </span>
+                  )}
+
+                  <span className="text-[#70685E] ml-auto font-mono">
+                    Target: {skill.target_score || 80}% (Gap: -{skill.gap || Math.max(0, (skill.target_score || 80) - (skill.demonstrated_score ?? skill.score))}%)
+                  </span>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="pt-2 flex items-center justify-between text-[11px] text-[#A5B4FC]/80 border-t border-purple-500/20">
-            <span>🟢 80–100%: Strong</span>
-            <span>🔵 65–79%: Needs Practice</span>
-            <span>🔴 &lt;65%: Priority</span>
+          <div className="pt-2 flex items-center justify-between text-[11px] text-[#70685E] border-t border-[#E5E0D5] font-mono">
+            <span>🟢 80–100%: Exemplary</span>
+            <span>🔵 65–79%: Developing</span>
+            <span>🔴 &lt;65%: Priority Remediation</span>
           </div>
         </GlassCard>
 
         {/* Right: Radar Chart (5 Cols) */}
-        <GlassCard className="lg:col-span-5 p-6 sm:p-7 flex flex-col justify-between space-y-4 border-cyan-500/30 bg-gradient-to-b from-[#191A3A] to-[#15173B]">
-          <div className="flex items-center justify-between">
+        <GlassCard className="lg:col-span-5 p-6 sm:p-7 flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
+          <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              <h2 className="text-base font-bold text-white uppercase tracking-wider">
-                AI Skill Profile
+              <Sparkles className="w-4 h-4 text-[#1A365D]" />
+              <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+                Skill Balance Chart
               </h2>
             </div>
-            <Badge variant="cyan" size="sm">Radar Analysis</Badge>
+            <Badge variant="navy" size="sm">Multi-Axis</Badge>
           </div>
 
-          <p className="text-xs text-[#A5B4FC]">
-            Multi-axial visual comparison showing your dimensional strengths and deficit pockets:
+          <p className="text-xs text-[#70685E]">
+            Visual breakdown of your strengths and areas to practice:
           </p>
 
           <div className="py-2 flex justify-center">
-            <RadarChart dimensions={analysis.radarDimensions} size={320} />
+            <RadarChart dimensions={displayRadar} size={320} />
           </div>
 
-          <div className="p-3 rounded-xl bg-[#0F1026]/70 border border-purple-500/20 text-xs text-[#A5B4FC]">
-            <p className="font-semibold text-white mb-0.5">Key Takeaway:</p>
+          <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-xs text-[#70685E]">
+            <p className="font-serif font-semibold text-[#1F1B16] mb-0.5">Live Updates:</p>
             <p>
-              Your algorithmic profile is broad and well-developed, with asymmetry located primarily in <strong>System Design (61%)</strong> and <strong>Confidence (68%)</strong>.
+              This chart updates automatically as you complete mock interviews and resume reviews.
             </p>
           </div>
         </GlassCard>
@@ -231,62 +416,73 @@ export default function SkillGapPage() {
       {/* 6. TOP SKILL GAPS (Dynamically Calculated)                               */}
       {/* ========================================================================= */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-2">
           <div>
-            <h2 className="text-lg font-bold text-white uppercase tracking-wider">
-              TOP SKILL GAPS
+            <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+              PRIORITIZED REMEDIATION TARGETS
             </h2>
-            <p className="text-xs text-[#A5B4FC]">
-              The 3 most critical bottlenecks currently impacting your candidate rating
+            <p className="text-xs text-[#70685E]">
+              Critical bottlenecks currently impacting candidate viability for {displayRole}
             </p>
           </div>
-          <Badge variant="pink" size="sm">Priority Remediation</Badge>
+          <Badge variant="bronze" size="sm">Priority Remediation</Badge>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {analysis.topSkillGaps.map((gap) => (
+          {displayTopGaps.map((gap, idx) => (
             <GlassCard
-              key={gap.name}
-              hoverEffect
-              glow={gap.priority === 'High' ? 'purple' : 'cyan'}
-              className="p-6 flex flex-col justify-between space-y-4 border-purple-500/30"
+              key={gap.skill_name || gap.name}
+              className="p-6 flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] hover:border-[#1A365D] transition-all shadow-xs"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-base">{gap.priority === 'High' ? '🔴' : '🟠'}</span>
-                    <span className="w-6 h-6 rounded-lg bg-purple-900/40 border border-purple-500/30 text-xs font-bold text-cyan-300 flex items-center justify-center">
-                      #{gap.rank}
+                    <span className="w-6 h-6 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-xs font-bold text-[#1A365D] font-mono flex items-center justify-center">
+                      #{idx + 1}
                     </span>
                   </div>
-                  {getPriorityBadge(gap.priority)}
+                  {getPriorityBadge((gap.priority === 'high' || gap.priority === 'High') ? 'High' : 'Medium')}
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-black text-white">{gap.name}</h3>
-                  <div className="flex items-baseline gap-1 mt-0.5">
-                    <span className="text-2xl font-black text-cyan-300 font-mono">{gap.score}%</span>
-                    <span className="text-xs text-[#A5B4FC]">Proficiency</span>
+                  <h3 className="text-lg font-serif font-bold text-[#1F1B16]">{gap.skill_name || gap.name}</h3>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-2xl font-serif font-bold text-[#1F1B16]">
+                      {gap.demonstrated_score ?? gap.score}%
+                    </span>
+                    <span className="text-xs text-[#70685E] font-mono">
+                      vs {gap.target_score || 80}% Target (Gap: -{gap.gap || Math.max(0, (gap.target_score || 80) - (gap.score || 0))}%)
+                    </span>
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#0F1026]/70 border border-purple-500/20 text-xs space-y-1.5">
-                  <span className="font-bold text-amber-300 block">Why:</span>
-                  <p className="text-[#A5B4FC] leading-relaxed">{gap.why}</p>
+                <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-xs space-y-1.5">
+                  <span className="font-serif font-bold text-[#9A421A] block">Skill Context:</span>
+                  <p className="text-[#3B352E] leading-relaxed">
+                    {gap.repeated_weakness
+                      ? "Showed difficulty (<60%) across multiple practice questions."
+                      : gap.role_importance === 'Core'
+                      ? `Important core skill for ${displayRole}. Improving this will boost your interview performance.`
+                      : `Currently below target benchmark (${gap.target_score || 80}%).`}
+                  </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/25 text-xs space-y-1">
-                  <span className="font-bold text-cyan-300 block">Recommended Action:</span>
-                  <p className="text-white">{gap.recommended}</p>
+                <div className="p-3 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] text-xs space-y-1">
+                  <span className="font-serif font-bold text-[#1A365D] block">Recommended Practice:</span>
+                  <p className="text-[#1F1B16]">
+                    {(gap.skill_name || gap.name) === 'Communication'
+                      ? 'Practice behavioral STAR storytelling drills to improve answer structure.'
+                      : `Practice targeted drills focused on ${gap.skill_name || gap.name}.`}
+                  </p>
                 </div>
               </div>
 
               <button
-                onClick={() => navigate(gap.route)}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#191A3A] border border-cyan-500/40 text-xs font-bold text-cyan-300 hover:bg-cyan-500/20 hover:text-white transition-all flex items-center justify-center gap-1.5"
+                onClick={() => navigate('/interview-setup')}
+                className="w-full py-2.5 px-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-xs font-semibold text-[#1F1B16] hover:bg-[#F2EFE9] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <span>Practice {gap.name}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Practice {gap.skill_name || gap.name}</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#1A365D]" />
               </button>
             </GlassCard>
           ))}
@@ -296,37 +492,37 @@ export default function SkillGapPage() {
       {/* ========================================================================= */}
       {/* 7. AI AGENT INSIGHT (Crucial Agentic Reasoning Card)                      */}
       {/* ========================================================================= */}
-      <GlassCard className="p-6 sm:p-8 border-cyan-500/40 bg-gradient-to-r from-[#191A3A] via-[#14233F] to-[#191A3A] space-y-4 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-500/20 pb-3">
+      <GlassCard className="p-6 sm:p-8 border-[#E5E0D5] bg-[#FFFDF9] space-y-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E0D5] pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-cyan-600/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300">
+            <div className="w-9 h-9 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-center justify-center text-[#1A365D]">
               <Bot className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">🤖 AI AGENT INSIGHT</h2>
-              <p className="text-xs text-cyan-300 font-medium">Continuous Career Coach Reasoning</p>
+              <h2 className="text-base font-serif font-bold text-[#1F1B16]">AI COACH RECOMMENDATION</h2>
+              <p className="text-xs text-[#70685E]">Personalized Preparation Strategy</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-purple-900/60 text-purple-300 border border-purple-500/40">
-            <span>ANALYZING</span>
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-sm bg-[#FAF8F3] text-[#70685E] border border-[#E5E0D5] font-mono">
+            <span>EVALUATE</span>
             <span>→</span>
-            <span>DECIDING</span>
+            <span>IDENTIFY GAPS</span>
             <span>→</span>
-            <span className="text-cyan-300">RECOMMENDING</span>
+            <span className="text-[#1A365D]">ACTION PLAN</span>
           </div>
         </div>
 
-        <p className="text-sm sm:text-base text-[#F8FAFC] leading-relaxed font-medium">
+        <p className="text-sm sm:text-base text-[#1F1B16] font-serif leading-relaxed">
           "{analysis.agentInsight}"
         </p>
 
-        <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-[#A5B4FC]">
-          <span className="flex items-center gap-1.5 text-emerald-400">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Prevents redundant over-practice of strong skills
+        <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-[#3B352E]">
+          <span className="flex items-center gap-1.5 text-[#235E3B]">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Saves time by focusing on your actual weak spots
           </span>
-          <span className="flex items-center gap-1.5 text-cyan-300">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Focuses on highest hiring-risk deficit
+          <span className="flex items-center gap-1.5 text-[#1A365D]">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Prioritizes topics most important for the hiring bar
           </span>
         </div>
       </GlassCard>
@@ -335,12 +531,12 @@ export default function SkillGapPage() {
       {/* 8. PERSONALIZED LEARNING PATH                                             */}
       {/* ========================================================================= */}
       <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-white uppercase tracking-wider">
-            YOUR PERSONALIZED PREPARATION PATH
+        <div className="border-b border-[#E5E0D5] pb-2">
+          <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+            RECOMMENDED LEARNING ROADMAP
           </h2>
-          <p className="text-xs text-[#A5B4FC]">
-            Step-by-step roadmap tailored specifically to your evaluated bottleneck
+          <p className="text-xs text-[#70685E]">
+            Step-by-step roadmap tailored specifically to your target skills
           </p>
         </div>
 
@@ -348,43 +544,43 @@ export default function SkillGapPage() {
           {analysis.preparationPath.map((step, idx) => (
             <GlassCard
               key={idx}
-              className={`p-5 flex flex-col justify-between space-y-3 transition-all ${
+              className={`p-5 flex flex-col justify-between space-y-3 transition-all border ${
                 step.isCurrent
-                  ? 'border-cyan-400 shadow-[0_0_25px_-5px_rgba(6,182,212,0.4)] bg-[#1D2149]'
-                  : 'border-purple-500/25 bg-[#0F1026]/70 opacity-80'
+                  ? 'border-[#1A365D] bg-[#FFFDF9] shadow-xs'
+                  : 'border-[#E5E0D5] bg-[#FAF8F3]'
               }`}
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span
-                    className={`w-7 h-7 rounded-lg text-xs font-black flex items-center justify-center ${
+                    className={`w-7 h-7 rounded-sm text-xs font-mono font-bold flex items-center justify-center ${
                       step.isCurrent
-                        ? 'bg-cyan-500 text-[#0F1026]'
-                        : 'bg-purple-900/40 text-[#A5B4FC] border border-purple-500/30'
+                        ? 'bg-[#1B2A4A] text-white'
+                        : 'bg-[#FAF8F3] text-[#70685E] border border-[#E5E0D5]'
                     }`}
                   >
                     0{step.step}
                   </span>
 
-                  <Badge variant={step.isCurrent ? 'cyan' : 'purple'} size="sm">
+                  <Badge variant={step.isCurrent ? 'navy' : 'neutral'} size="sm">
                     {step.status}
                   </Badge>
                 </div>
 
-                <h3 className="text-sm font-bold text-white mt-2">{step.title}</h3>
-                <p className="text-xs text-[#A5B4FC] mt-1 leading-relaxed">{step.desc}</p>
+                <h3 className="text-sm font-serif font-bold text-[#1F1B16] mt-2">{step.title}</h3>
+                <p className="text-xs text-[#70685E] mt-1 leading-relaxed">{step.desc}</p>
               </div>
 
               <div className="pt-2">
                 <button
                   onClick={() => navigate(step.route)}
-                  className={`w-full py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                  className={`w-full py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
                     step.isCurrent
-                      ? 'bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:brightness-110 shadow-md'
-                      : 'bg-[#191A3A] text-[#A5B4FC] hover:text-white'
+                      ? 'bg-[#1B2A4A] hover:bg-[#142038] text-white shadow-xs'
+                      : 'bg-[#FFFDF9] border border-[#E5E0D5] text-[#1F1B16] hover:bg-[#F2EFE9]'
                   }`}
                 >
-                  {step.isCurrent ? 'Start Step 1 Now →' : 'View Module'}
+                  {step.isCurrent ? 'Commence Step 1 Now →' : 'Inspect Module'}
                 </button>
               </div>
             </GlassCard>
@@ -396,34 +592,32 @@ export default function SkillGapPage() {
       {/* 9. RECOMMENDED ACTIVITIES                                                 */}
       {/* ========================================================================= */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-2">
           <div>
-            <h2 className="text-lg font-bold text-white uppercase tracking-wider">
-              RECOMMENDED FOR YOU
+            <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+              PRACTICE EXERCISES &amp; ACTIONS
             </h2>
-            <p className="text-xs text-[#A5B4FC]">
-              Targeted drills designed to resolve your identified deficits
+            <p className="text-xs text-[#70685E]">
+              Targeted exercises designed to strengthen your weak areas
             </p>
           </div>
-          <Badge variant="purple" size="sm">Curated Queue</Badge>
+          <Badge variant="navy" size="sm">Action Items</Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {analysis.recommendedActivities.map((act) => (
             <GlassCard
               key={act.id}
-              hoverEffect
-              glow={act.color === 'cyan' ? 'cyan' : 'purple'}
-              className="p-5 flex flex-col justify-between space-y-4 border-purple-500/25"
+              className="p-5 flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] hover:border-[#1A365D] transition-all shadow-xs"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <Badge variant="green" size="sm">{act.xp}</Badge>
-                  <span className="text-[11px] text-[#A5B4FC] font-mono">{act.specs}</span>
+                  <Badge variant="forest" size="sm">{act.xp}</Badge>
+                  <span className="text-[11px] text-[#70685E] font-mono">{act.specs}</span>
                 </div>
 
-                <h3 className="text-sm font-bold text-white mt-1">{act.title}</h3>
-                <p className="text-xs text-[#A5B4FC] mt-1 leading-relaxed">{act.desc}</p>
+                <h3 className="text-sm font-serif font-bold text-[#1F1B16] mt-1">{act.title}</h3>
+                <p className="text-xs text-[#70685E] mt-1 leading-relaxed">{act.desc}</p>
               </div>
 
               <GradientButton
@@ -442,34 +636,34 @@ export default function SkillGapPage() {
       {/* ========================================================================= */}
       {/* 10. SKILL IMPROVEMENT TRACKING                                            */}
       {/* ========================================================================= */}
-      <GlassCard className="p-6 sm:p-7 space-y-5 border-purple-500/30">
-        <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+      <GlassCard className="p-6 sm:p-7 space-y-5 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
+        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-white uppercase tracking-wider">
-              SKILL PROGRESS & TRAJECTORY
+            <TrendingUp className="w-5 h-5 text-[#235E3B]" />
+            <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+              SKILL PROGRESS OVER TIME
             </h2>
           </div>
-          <span className="text-xs text-[#A5B4FC]">Multi-session comparative tracking</span>
+          <span className="text-xs text-[#70685E]">Track your improvement across sessions</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {analysis.historicalProgress.map((item, idx) => (
             <div
               key={idx}
-              className="p-4 rounded-xl bg-[#0F1026]/70 border border-purple-500/20 space-y-2"
+              className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2"
             >
-              <span className="text-xs font-bold text-white block">{item.skill}</span>
+              <span className="text-xs font-serif font-bold text-[#1F1B16] block">{item.skill}</span>
               <div className="flex items-baseline justify-between">
-                <span className="text-xs text-[#A5B4FC]">
-                  {item.previousScore}% → <strong className="text-white">{item.currentScore}%</strong>
+                <span className="text-xs text-[#70685E] font-mono">
+                  {item.previousScore}% → <strong className="text-[#1F1B16]">{item.currentScore}%</strong>
                 </span>
-                <span className="text-xs font-bold text-emerald-400 flex items-center">
+                <span className="text-xs font-bold text-[#235E3B] flex items-center font-mono">
                   <ArrowUpRight className="w-3.5 h-3.5" /> +{item.change}%
                 </span>
               </div>
-              <ProgressBar value={item.currentScore} gradient="green" height="h-1.5" />
-              <p className="text-[10px] text-[#A5B4FC]/60 italic mt-1">{item.period}</p>
+              <ProgressBar value={item.currentScore} height="h-1.5" />
+              <p className="text-[10px] text-[#70685E] italic mt-1 font-mono">{item.period}</p>
             </div>
           ))}
         </div>
@@ -478,14 +672,14 @@ export default function SkillGapPage() {
       {/* ========================================================================= */}
       {/* 11. AGENT DECISION PIPELINE                                               */}
       {/* ========================================================================= */}
-      <GlassCard className="p-6 sm:p-8 space-y-6 border-purple-500/30">
+      <GlassCard className="p-6 sm:p-8 space-y-6 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
         <div>
-          <h2 className="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Compass className="w-5 h-5 text-cyan-400" />
-            HOW INTERVIEWAI IDENTIFIED YOUR SKILL GAPS
+          <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider flex items-center gap-2">
+            <Compass className="w-5 h-5 text-[#1A365D]" />
+            FACULTY DIAGNOSTIC PIPELINE PROVENANCE
           </h2>
-          <p className="text-xs text-[#A5B4FC] mt-0.5">
-            Transparent autonomous decision pipeline — connecting interview evaluations to actionable drills
+          <p className="text-xs text-[#70685E] mt-0.5">
+            Transparent algorithmic reasoning pipeline — connecting interview evaluations to actionable drills
           </p>
         </div>
 
@@ -493,14 +687,14 @@ export default function SkillGapPage() {
           {analysis.pipelineSteps.map((step) => (
             <div
               key={step.step}
-              className="p-3.5 rounded-xl bg-[#0F1026]/70 border border-purple-500/20 flex flex-col justify-between space-y-2"
+              className="p-3.5 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex flex-col justify-between space-y-2"
             >
               <div>
-                <div className="w-6 h-6 rounded-md bg-purple-900/50 border border-purple-500/30 text-cyan-300 font-extrabold text-[11px] flex items-center justify-center mb-1.5">
+                <div className="w-6 h-6 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] font-mono font-bold text-[11px] flex items-center justify-center mb-1.5">
                   0{step.step}
                 </div>
-                <h3 className="text-xs font-bold text-white leading-tight">{step.title}</h3>
-                <p className="text-[10px] text-[#A5B4FC] mt-1 leading-relaxed">{step.desc}</p>
+                <h3 className="text-xs font-serif font-bold text-[#1F1B16] leading-tight">{step.title}</h3>
+                <p className="text-[10px] text-[#70685E] mt-1 leading-relaxed">{step.desc}</p>
               </div>
             </div>
           ))}
@@ -510,12 +704,12 @@ export default function SkillGapPage() {
       {/* ========================================================================= */}
       {/* 12. CTA SECTION                                                           */}
       {/* ========================================================================= */}
-      <GlassCard className="p-8 text-center space-y-4 border-purple-500/40 bg-gradient-to-r from-[#191A3A] via-[#1D1B44] to-[#12233F]">
-        <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-          READY TO IMPROVE?
+      <GlassCard className="p-8 text-center space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
+        <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1F1B16] tracking-tight">
+          Start Targeted Practice
         </h2>
-        <p className="text-sm text-[#A5B4FC] max-w-xl mx-auto">
-          Turn your weakest skills into your strongest ones. Choose your high-yield drill or start a new mock round.
+        <p className="text-sm text-[#70685E] max-w-xl mx-auto">
+          Turn your identified skill gaps into verified strengths through hands-on practice questions and realistic mock interviews.
         </p>
 
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -524,7 +718,7 @@ export default function SkillGapPage() {
             size="lg"
             onClick={() => navigate(analysis.primaryActionRoute)}
             icon={ArrowRight}
-            className="w-full sm:w-auto px-8 shadow-xl shadow-purple-900/50"
+            className="w-full sm:w-auto px-8"
           >
             {analysis.primaryActionLabel}
           </GradientButton>
@@ -536,7 +730,7 @@ export default function SkillGapPage() {
             icon={Sparkles}
             className="w-full sm:w-auto"
           >
-            Take Another Mock Interview →
+            Start Another Mock Interview →
           </GradientButton>
         </div>
       </GlassCard>

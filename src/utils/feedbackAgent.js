@@ -155,6 +155,27 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
     { ...action3, id: 'act_3', num: 3 }
   ];
 
+  // If backend provided a localized next best action, integrate it as the top recommendation
+  let finalActions = recommendedActions;
+  if (sessionSummary?.nextBestAction) {
+    const nba = sessionSummary.nextBestAction;
+    finalActions = [
+      {
+        id: 'act_1',
+        num: 1,
+        title: nba.title || action1.title,
+        desc: nba.reason || action1.desc,
+        category: 'Next Best Action',
+        tag: 'Recommended',
+        badgeColor: 'cyan',
+        route: nba.route || action1.route,
+        actionLabel: nba.action || 'Start Drill'
+      },
+      { ...action2, id: 'act_2', num: 2 },
+      { ...action3, id: 'act_3', num: 3 }
+    ];
+  }
+
   // Synthesize questionPerformance from sessionAnswers if available, else default
   let questionPerformance = base.questionPerformance;
   if (sessionAnswers && sessionAnswers.length > 0) {
@@ -189,6 +210,16 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
   else if (overall >= 65) qualitativeRating = 'Developing Performance';
   else qualitativeRating = 'Foundational Baseline';
 
+  const feedbackLang = sessionSummary?.feedbackLanguage || setup?.feedbackLanguage || 'en';
+
+  // Localized recommendation explanation
+  let recommendationExplanation = 'Based on your interview performance, these are the areas where additional practice will provide the greatest improvement.';
+  if (feedbackLang === 'te') {
+    recommendationExplanation = 'మీ ఇంటర్వ్యూ ప్రదర్శన ఆధారంగా, అదనపు సాధన ద్వారా మీ నైపుణ్యాలను వేగంగా మెరుగుపరచగల కీలక అంశాలు ఇవి.';
+  } else if (feedbackLang === 'hi') {
+    recommendationExplanation = 'आपके साक्षात्कार प्रदर्शन के आधार पर, यह वे प्रमुख क्षेत्र हैं जहाँ अतिरिक्त अभ्यास से सबसे अधिक सुधार होगा।';
+  }
+
   return {
     overallScore: overall,
     qualitativeRating,
@@ -203,9 +234,9 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
       ...d,
       tag: d.score >= 85 ? 'Above Average' : d.score >= 78 ? 'Proficient' : 'Priority Focus'
     })),
-    aiSummary: sessionSummary?.aiRecommendation
-      ? `You demonstrated solid command of ${setup?.targetRole || 'engineering'} principles. Your answers were relevant and technically grounded. ${sessionSummary.aiRecommendation}`
-      : base.aiSummary,
+    feedbackLanguage: feedbackLang,
+    fallbackNotice: sessionSummary?.fallbackNotice || null,
+    aiSummary: sessionSummary?.aiRecommendation || base.aiSummary,
     strengths: sessionSummary?.strengths?.length
       ? sessionSummary.strengths
       : base.strengths,
@@ -213,8 +244,8 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
       ? sessionSummary.areasToImprove
       : base.improvements,
     recommendationFocus,
-    recommendationExplanation: `Based on your interview performance, these are the areas where additional practice will provide the greatest improvement.`,
-    recommendedActions,
+    recommendationExplanation,
+    recommendedActions: finalActions,
     timelineSteps: [
       {
         step: 1,

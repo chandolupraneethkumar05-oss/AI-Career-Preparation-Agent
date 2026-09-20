@@ -1,9 +1,15 @@
 import React from 'react';
 
+/**
+ * Academic Button — Alexandria Style
+ * Primary: Academic Navy (#1B2A4A, text #FFFFFF, hover #142038)
+ * Secondary: Subdued Surface (#F2EFE9, text #1F1B16, border #E5E0D5)
+ * Restrained Radius: 6px (rounded-md)
+ */
 export default function GradientButton({
   children,
   onClick,
-  variant = 'primary', // 'primary' (purple->cyan) | 'secondary' (glass) | 'pink' (purple->pink) | 'danger'
+  variant = 'primary', // 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
   size = 'md', // 'sm' | 'md' | 'lg'
   className = '',
   disabled = false,
@@ -13,17 +19,18 @@ export default function GradientButton({
   ...props
 }) {
   const sizeClasses = {
-    sm: 'px-4 py-2 text-xs font-semibold rounded-lg gap-1.5',
-    md: 'px-5 py-2.5 text-sm font-semibold rounded-xl gap-2',
-    lg: 'px-7 py-3.5 text-base font-bold rounded-xl gap-2.5'
+    sm: 'px-3 py-1.5 text-xs font-semibold rounded-md gap-1.5',
+    md: 'px-4 py-2 text-xs sm:text-sm font-semibold rounded-md gap-2',
+    lg: 'px-6 py-2.5 text-sm sm:text-base font-semibold rounded-md gap-2.5'
   };
 
   const variantClasses = {
-    primary: 'bg-gradient-to-r from-[#7C3AED] via-[#9333EA] to-[#06B6D4] text-white shadow-lg shadow-purple-900/30 hover:shadow-purple-600/40 hover:brightness-110 active:scale-[0.98]',
-    pink: 'bg-gradient-to-r from-[#7C3AED] to-[#EC4899] text-white shadow-lg shadow-pink-900/30 hover:shadow-pink-600/40 hover:brightness-110 active:scale-[0.98]',
-    secondary: 'bg-[#191A3A] border border-purple-500/30 text-[#A5B4FC] hover:text-white hover:border-cyan-400/50 hover:bg-[#20224A] active:scale-[0.98]',
-    outline: 'border border-cyan-400/40 text-cyan-300 hover:bg-cyan-500/10 active:scale-[0.98]',
-    ghost: 'text-[#A5B4FC] hover:text-white hover:bg-white/5 active:scale-[0.98]'
+    primary: 'bg-[#1B2A4A] text-white academic-btn-primary text-white-keep border border-[#1B2A4A] hover:bg-[#142038] shadow-[0_1px_2px_rgba(31,27,22,0.06)]',
+    pink: 'bg-[#1B2A4A] text-white academic-btn-primary text-white-keep border border-[#1B2A4A] hover:bg-[#142038] shadow-[0_1px_2px_rgba(31,27,22,0.06)]',
+    secondary: 'bg-[#F2EFE9] border border-[#E5E0D5] text-[#1F1B16] hover:bg-[#EAE6DD]',
+    outline: 'border border-[#E5E0D5] text-[#1A365D] hover:bg-[#F2EFE9]',
+    ghost: 'text-[#70685E] hover:text-[#1F1B16] hover:bg-[#F2EFE9]',
+    danger: 'bg-[#FDF2E9] text-[#9A421A] border border-[#F5D6C6] hover:bg-[#F9E4D8]'
   };
 
   return (
@@ -36,12 +43,12 @@ export default function GradientButton({
         items-center 
         justify-center 
         cursor-pointer 
-        transition-all 
-        duration-200 
+        transition-colors 
+        duration-150 
         select-none
+        font-sans
         disabled:opacity-50 
         disabled:cursor-not-allowed 
-        disabled:transform-none
         ${sizeClasses[size] || sizeClasses.md}
         ${variantClasses[variant] || variantClasses.primary}
         ${className}

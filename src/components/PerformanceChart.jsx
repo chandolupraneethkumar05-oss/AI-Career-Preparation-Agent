@@ -73,24 +73,11 @@ export default function PerformanceChart({
         className="w-full h-auto overflow-visible"
       >
         <defs>
-          {/* Gradient area fill */}
+          {/* Subtle archival area fill */}
           <linearGradient id="chartAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.45" />
-            <stop offset="55%" stopColor="#06B6D4" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#0F1026" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#1B2A4A" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="#1B2A4A" stopOpacity="0.0" />
           </linearGradient>
-
-          {/* Stroke gradient */}
-          <linearGradient id="chartStrokeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#A855F7" />
-            <stop offset="50%" stopColor="#06B6D4" />
-            <stop offset="100%" stopColor="#22C55E" />
-          </linearGradient>
-
-          {/* Glow filter */}
-          <filter id="chartGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#06B6D4" floodOpacity="0.45" />
-          </filter>
         </defs>
 
         {/* Horizontal Grid lines and labels */}
@@ -104,16 +91,15 @@ export default function PerformanceChart({
                 y1={y}
                 x2={width - paddingX + 10}
                 y2={y}
-                stroke="#A5B4FC"
-                strokeOpacity="0.12"
-                strokeDasharray="4 4"
+                stroke="#E5E0D5"
+                strokeWidth="1"
+                strokeDasharray="3 3"
               />
               <text
                 x={paddingX - 16}
                 y={y + 3.5}
                 textAnchor="end"
-                fill="#A5B4FC"
-                fillOpacity="0.5"
+                fill="#70685E"
                 fontSize="9.5"
                 fontFamily="ui-monospace, monospace"
               >
@@ -130,11 +116,10 @@ export default function PerformanceChart({
         <path
           d={linePath}
           fill="none"
-          stroke="url(#chartStrokeGradient)"
-          strokeWidth="3.5"
+          stroke="#1B2A4A"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          filter="url(#chartGlow)"
         />
 
         {/* Data Points and Badges */}
@@ -149,15 +134,14 @@ export default function PerformanceChart({
               onMouseEnter={() => setHoveredIdx(idx)}
               onMouseLeave={() => setHoveredIdx(null)}
             >
-              {/* Highlight Pulse Ring for Current Point */}
+              {/* Highlight Ring for Current Point */}
               {isCurrent && (
                 <circle
                   cx={pt.x}
                   cy={pt.y}
-                  r="12"
-                  fill="#06B6D4"
-                  fillOpacity="0.2"
-                  className="animate-pulse"
+                  r="10"
+                  fill="#1B2A4A"
+                  fillOpacity="0.1"
                 />
               )}
 
@@ -165,10 +149,10 @@ export default function PerformanceChart({
               <circle
                 cx={pt.x}
                 cy={pt.y}
-                r={isHovered ? 6.5 : isCurrent ? 5.5 : 4.5}
-                fill={isCurrent ? '#06B6D4' : '#191A3A'}
-                stroke={isCurrent ? '#F8FAFC' : '#A855F7'}
-                strokeWidth={isCurrent ? '2.5' : '2'}
+                r={isHovered ? 6 : isCurrent ? 5 : 4}
+                fill={isCurrent ? '#1B2A4A' : '#FFFDF9'}
+                stroke="#1B2A4A"
+                strokeWidth={isCurrent ? '2' : '1.5'}
                 className="transition-all duration-200"
               />
 
@@ -179,18 +163,16 @@ export default function PerformanceChart({
                   y="-12"
                   width="28"
                   height="16"
-                  rx="6"
-                  fill={isCurrent ? '#06B6D4' : '#191A3A'}
-                  stroke={isCurrent ? '#22C55E' : '#7C3AED'}
+                  rx="3"
+                  fill="#FFFDF9"
+                  stroke="#E5E0D5"
                   strokeWidth="1"
-                  strokeOpacity={isCurrent ? '0.9' : '0.4'}
-                  fillOpacity={isCurrent ? '0.95' : '0.8'}
                 />
                 <text
                   x="0"
                   y="0"
                   textAnchor="middle"
-                  fill={isCurrent ? '#0F1026' : '#F8FAFC'}
+                  fill="#1F1B16"
                   fontSize="9.5"
                   fontWeight="bold"
                   fontFamily="ui-monospace, monospace"
@@ -204,10 +186,10 @@ export default function PerformanceChart({
                 x={pt.x}
                 y={height - 12}
                 textAnchor="middle"
-                fill={isCurrent ? '#06B6D4' : '#A5B4FC'}
-                fillOpacity={isCurrent ? 1 : 0.75}
-                fontSize="10.5"
-                fontWeight={isCurrent ? 'bold' : '500'}
+                fill={isCurrent ? '#1B2A4A' : '#70685E'}
+                fontSize="10"
+                fontFamily="ui-monospace, monospace"
+                fontWeight={isCurrent ? 'bold' : 'normal'}
               >
                 {pt.shortLabel || pt.label}
               </text>

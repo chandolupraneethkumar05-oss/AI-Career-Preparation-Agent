@@ -1,100 +1,123 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { MOCK_USER } from '../data/mockData';
+import { storageService, STORAGE_KEYS } from '../utils/storage/storageService';
+import { activityService } from '../utils/activityService';
 
 const AuthContext = createContext(null);
 
-const STORAGE_KEY = 'interview_ai_auth_user';
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
+    return storageService.getCurrentUser();
   });
 
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
+      storageService.saveCurrentUser(user);
     }
   }, [user]);
 
-  const login = (email, _password) => {
+  const login = useCallback((email, _password) => {
     setIsLoading(true);
-    // Simulate lightweight auth
     return new Promise((resolve) => {
       setTimeout(() => {
+        const existing = storageService.getCurrentUser();
+        const currentActivities = activityService.getActivities();
+        const realStreak = activityService.calculateCurrentStreak(currentActivities);
         const loggedUser = {
-          ...MOCK_USER,
-          email: email || MOCK_USER.email,
-          name: email ? email.split('@')[0].replace('.', ' ').toUpperCase() : MOCK_USER.name
+          name: email ? email.split('@')[0].replace('.', ' ').toUpperCase() : (existing?.name || 'Career Candidate'),
+          email: email || existing?.email || 'candidate@career-ai.dev',
+          targetRole: existing?.targetRole || 'Machine Learning Engineer',
+          role: existing?.role || 'Machine Learning Engineer',
+          avatar: existing?.avatar || MOCK_USER.avatar,
+          level: existing?.level || 1,
+          title: existing?.title || 'Aspiring Candidate',
+          xp: existing?.xp || 0,
+          streak: realStreak,
+          feedbackLanguage: existing?.feedbackLanguage || 'en'
         };
         setUser(loggedUser);
+        storageService.saveCurrentUser(loggedUser);
         setIsLoading(false);
         resolve(loggedUser);
-      }, 400);
+      }, 300);
     });
-  };
+  }, []);
 
-  const loginAsDemo = () => {
+  const loginAsDemo = useCallback(() => {
     setIsLoading(true);
     return new Promise((resolve) => {
       setTimeout(() => {
-        setUser(MOCK_USER);
+        const existing = storageService.getCurrentUser();
+        const currentActivities = activityService.getActivities();
+        const realStreak = activityService.calculateCurrentStreak(currentActivities);
+        const demoUser = {
+          name: 'Alex Rivera',
+          email: 'alex.rivera@career-ai.dev',
+          targetRole: existing?.targetRole || 'Machine Learning Engineer',
+          role: existing?.role || 'Machine Learning Engineer',
+          avatar: MOCK_USER.avatar,
+          level: existing?.level || 1,
+          title: 'Career Candidate',
+          xp: existing?.xp || 0,
+          streak: realStreak,
+          feedbackLanguage: existing?.feedbackLanguage || 'en'
+        };
+        setUser(demoUser);
+        storageService.saveCurrentUser(demoUser);
         setIsLoading(false);
-        resolve(MOCK_USER);
+        resolve(demoUser);
       }, 250);
     });
-  };
+  }, []);
 
-  const signup = (name, email, _password) => {
+  const signup = useCallback((name, email, _password) => {
     setIsLoading(true);
     return new Promise((resolve) => {
       setTimeout(() => {
         const newUser = {
-          ...MOCK_USER,
           name: name || 'Career Candidate',
-          email: email,
-          xp: 100,
+          email: email || 'candidate@career-ai.dev',
+          targetRole: 'Machine Learning Engineer',
+          role: 'Machine Learning Engineer',
+          avatar: MOCK_USER.avatar,
+          xp: 0,
           level: 1,
-          streak: 1,
-          interviewsCompleted: 0,
-          averageScore: 0,
-          questionsAnswered: 0
+          streak: 0,
+          title: 'New Candidate',
+          feedbackLanguage: 'en'
         };
         setUser(newUser);
+        storageService.saveCurrentUser(newUser);
         setIsLoading(false);
         resolve(newUser);
-      }, 400);
+      }, 300);
     });
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
-  };
+    localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+  }, []);
 
-  const addXP = (amount) => {
-    if (!user) return;
-    const newXP = (user.xp || 0) + amount;
-    // 0-499 XP -> Level 1, 500-999 XP -> Level 2, 1000-1499 XP -> Level 3 (or preserve current level)
-    const computedLevel = Math.floor(newXP / 500) + 1;
-    setUser(prev => ({
-      ...prev,
-      xp: newXP,
-      level: Math.max(prev.level || 1, computedLevel)
-    }));
-  };
+  const addXP = useCallback((amount) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const newXP = (prev.xp || 0) + amount;
+      // 0-499 XP -> Level 1, 500-999 XP -> Level 2, 1000-1499 XP -> Level 3
+      const computedLevel = Math.floor(newXP / 500) + 1;
+      return {
+        ...prev,
+        xp: newXP,
+        level: Math.max(prev.level || 1, computedLevel)
+      };
+    });
+  }, []);
 
-  const updateUser = (updates) => {
-    setUser(prev => ({ ...prev, ...updates }));
-  };
+  const updateUser = useCallback((updates) => {
+    setUser(prev => (prev ? { ...prev, ...updates } : prev));
+  }, []);
 
   return (
     <AuthContext.Provider

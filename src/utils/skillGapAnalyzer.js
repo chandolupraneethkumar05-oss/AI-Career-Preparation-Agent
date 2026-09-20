@@ -90,49 +90,81 @@ export const BASELINE_SKILL_ANALYSIS = {
   ]
 };
 
-export function analyzeSkillGaps(sessionSummary = null, sessionAnswers = []) {
+import { storageService } from './storage/storageService';
+
+export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = []) {
   const base = BASELINE_SKILL_ANALYSIS;
 
-  // Clone skills array so we can calculate reactive scores if session exists
+  // Retrieve persistent interview and ATS context
+  const effectiveSummary = sessionSummary || storageService.getInterviews()[0] || null;
+  const atsResult = storageService.getATSResult();
+
+  // Clone skills array so we can calculate reactive scores
   let skills = base.skills.map((s) => ({ ...s }));
   let radarDimensions = base.radarDimensions.map((r) => ({ ...r }));
 
-  // If a live interview was just completed, merge relevant dimension scores
-  if (sessionSummary && sessionSummary.scores) {
-    const sc = sessionSummary.scores;
+  // 1. If an interview exists, merge relevant rubric scores
+  if (effectiveSummary && effectiveSummary.scores) {
+    const sc = effectiveSummary.scores;
     skills = skills.map((s) => {
-      if (s.name === 'Problem Solving' && sc.structure) {
-        return { ...s, score: Math.round((s.score + sc.structure * 10) / 2) };
+      if (s.name === 'Problem Solving' && (sc.structure || sc.problemSolving)) {
+        const val = (sc.structure || sc.problemSolving) > 10 ? (sc.structure || sc.problemSolving) : (sc.structure || sc.problemSolving) * 10;
+        return { ...s, score: Math.round((s.score + val) / 2) };
       }
-      if (s.name === 'Communication' && sc.clarity) {
-        return { ...s, score: Math.round((s.score + sc.clarity * 10) / 2) };
+      if (s.name === 'Communication' && (sc.clarity || sc.communication)) {
+        const val = (sc.clarity || sc.communication) > 10 ? (sc.clarity || sc.communication) : (sc.clarity || sc.communication) * 10;
+        return { ...s, score: Math.round((s.score + val) / 2) };
       }
-      if (s.name === 'Confidence' && sc.confidence) {
-        return { ...s, score: Math.round((s.score + sc.confidence * 10) / 2) };
+      if (s.name === 'Confidence' && (sc.confidence || sc.confidenceDelivery)) {
+        const val = (sc.confidence || sc.confidenceDelivery) > 10 ? (sc.confidence || sc.confidenceDelivery) : (sc.confidence || sc.confidenceDelivery) * 10;
+        return { ...s, score: Math.round((s.score + val) / 2) };
       }
       if (s.name === 'Machine Learning' && sc.technicalKnowledge) {
-        return { ...s, score: Math.round((s.score + sc.technicalKnowledge * 10) / 2) };
+        const val = sc.technicalKnowledge > 10 ? sc.technicalKnowledge : sc.technicalKnowledge * 10;
+        return { ...s, score: Math.round((s.score + val) / 2) };
       }
       return s;
     });
 
     radarDimensions = radarDimensions.map((r) => {
       if (r.name === 'Technical Knowledge' && sc.technicalKnowledge) {
-        return { ...r, score: Math.round(sc.technicalKnowledge * 10) };
+        return { ...r, score: sc.technicalKnowledge > 10 ? sc.technicalKnowledge : Math.round(sc.technicalKnowledge * 10) };
       }
-      if (r.name === 'Problem Solving' && sc.structure) {
-        return { ...r, score: Math.round(sc.structure * 10) };
+      if (r.name === 'Problem Solving' && (sc.structure || sc.problemSolving)) {
+        const val = sc.structure || sc.problemSolving;
+        return { ...r, score: val > 10 ? val : Math.round(val * 10) };
       }
-      if (r.name === 'Communication' && sc.clarity) {
-        return { ...r, score: Math.round(sc.clarity * 10) };
+      if (r.name === 'Communication' && (sc.clarity || sc.communication)) {
+        const val = sc.clarity || sc.communication;
+        return { ...r, score: val > 10 ? val : Math.round(val * 10) };
       }
-      if (r.name === 'Confidence' && sc.confidence) {
-        return { ...r, score: Math.round(sc.confidence * 10) };
+      if (r.name === 'Confidence' && (sc.confidence || sc.confidenceDelivery)) {
+        const val = sc.confidence || sc.confidenceDelivery;
+        return { ...r, score: val > 10 ? val : Math.round(val * 10) };
       }
       if (r.name === 'Relevance' && sc.relevance) {
-        return { ...r, score: Math.round(sc.relevance * 10) };
+        return { ...r, score: sc.relevance > 10 ? sc.relevance : Math.round(sc.relevance * 10) };
       }
       return r;
+    });
+  }
+
+  // 2. If ATS scan exists, incorporate missing vs matched keywords into skill gaps
+  if (atsResult) {
+    const missing = (atsResult.missingKeywords || []).map((k) => k.toLowerCase());
+    const matched = (atsResult.matchedKeywords || []).map((k) => k.toLowerCase());
+
+    skills = skills.map((s) => {
+      const lower = s.name.toLowerCase();
+      // If skill is missing in ATS, lower score into priority/practice threshold
+      if (missing.some((m) => lower.includes(m) || m.includes(lower))) {
+        return { ...s, score: Math.min(s.score, 58) };
+      }
+      // If skill was verified in resume, boost confidence
+      if (matched.some((m) => lower.includes(m) || m.includes(lower))) {
+        return { ...s, score: Math.max(s.score, 82) };
+      }
+      return s;
     });
   }
 
@@ -329,12 +361,16 @@ export function analyzeSkillGaps(sessionSummary = null, sessionAnswers = []) {
     }
   ];
 
-  return {
-    overallReadiness: base.overallReadiness,
+  const dynamicReadiness = Math.round(
+    radarDimensions.reduce((acc, curr) => acc + curr.score, 0) / Math.max(1, radarDimensions.length)
+  );
+
+  const payload = {
+    overallReadiness: dynamicReadiness,
     previousReadiness: base.previousReadiness,
-    improvementRate: base.improvementRate,
-    readinessLabel: base.readinessLabel,
-    readinessSummary: base.readinessSummary,
+    improvementRate: Math.max(0, dynamicReadiness - base.previousReadiness),
+    readinessLabel: dynamicReadiness >= 80 ? 'Strong — Interview Ready' : dynamicReadiness >= 65 ? 'Good — Approaching Readiness' : 'Priority Attention Needed',
+    readinessSummary: dynamicReadiness >= 80 ? 'You are performing strongly across core dimensions. Escalate to high-scale architecture rounds.' : `Focus on ${weakest.name} to accelerate your overall interview readiness.`,
     skills,
     radarDimensions,
     topSkillGaps,
@@ -346,4 +382,7 @@ export function analyzeSkillGaps(sessionSummary = null, sessionAnswers = []) {
     historicalProgress: base.historicalProgress,
     pipelineSteps: base.pipelineSteps
   };
+
+  storageService.setSkillProfile(payload);
+  return payload;
 }
