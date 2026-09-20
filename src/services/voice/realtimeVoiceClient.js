@@ -31,6 +31,7 @@ export class RealtimeVoiceClient {
     onTranscriptTurn,
     onCandidateVolume,
     onAIVolume,
+    onQuestionChange,
     onError
   }) {
     this.sessionData = sessionData;
