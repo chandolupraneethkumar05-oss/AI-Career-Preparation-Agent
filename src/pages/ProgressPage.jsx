@@ -51,10 +51,41 @@ export default function ProgressPage() {
           })))
     : [];
 
-  // Competency skills from profile or default
-  const techSkill = skillProfile?.skills?.find((s) => s.name.includes('Machine') || s.name.includes('Python'))?.score || (hasInterviews ? 80 : 0);
-  const commSkill = skillProfile?.skills?.find((s) => s.name.includes('Communication'))?.score || (hasInterviews ? 75 : 0);
-  const confSkill = skillProfile?.skills?.find((s) => s.name.includes('Confidence') || s.name.includes('Problem'))?.score || (hasInterviews ? 70 : 0);
+  // Derive real competency skills from interview history or resume evidence
+  const atsResult = storageService.getATSResult();
+  const hasEvidence = hasInterviews || Boolean(atsResult);
+
+  let techSkill = 0;
+  let commSkill = 0;
+  let confSkill = 0;
+
+  if (hasInterviews) {
+    let techSum = 0;
+    let commSum = 0;
+    let confSum = 0;
+    let validCount = 0;
+
+    history.forEach(h => {
+      const s = h.scores || {};
+      const t = s.technicalKnowledge || s.technicalAccuracy || s.overall;
+      const c = s.communication || s.communicationSTAR || s.clarity;
+      const cf = s.confidence || s.confidenceDelivery || s.structure || s.problemSolving;
+      if (typeof t === 'number') techSum += t;
+      if (typeof c === 'number') commSum += c;
+      if (typeof cf === 'number') confSum += cf;
+      validCount++;
+    });
+
+    if (validCount > 0) {
+      techSkill = Math.round(techSum / validCount);
+      commSkill = Math.round(commSum / validCount);
+      confSkill = Math.round(confSum / validCount);
+    }
+  } else if (skillProfile?.hasEvidence && Array.isArray(skillProfile?.skills) && skillProfile.skills.length > 0) {
+    techSkill = skillProfile.skills[0]?.score || 0;
+    commSkill = skillProfile.skills.find(s => s.name?.toLowerCase().includes('comm'))?.score || 0;
+    confSkill = skillProfile.skills.find(s => s.name?.toLowerCase().includes('prob') || s.name?.toLowerCase().includes('conf'))?.score || 0;
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
@@ -221,40 +252,60 @@ export default function ProgressPage() {
           </span>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#70685E]">Technical Knowledge</span>
-              <span className="text-xs font-mono font-bold text-[#235E3B] flex items-center">
-                {techSkill > 0 ? `${techSkill}%` : 'Pending'}
-              </span>
+        {!hasEvidence ? (
+          <div className="p-6 rounded-md bg-[#FAF8F3] border border-dashed border-[#D5CFBF] text-center space-y-2">
+            <span className="text-xs font-mono uppercase tracking-wider text-[#8C6E54] font-semibold">
+              Competencies Uncalibrated • Awaiting 1st Round
+            </span>
+            <p className="text-sm text-[#70685E] max-w-md mx-auto">
+              Your competency growth matrix calibrates automatically once you complete your initial diagnostic interview or upload an ATS resume.
+            </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => navigate('/interview-setup')}
+                className="px-3.5 py-1.5 rounded-md bg-[#1B2A4A] text-white text-xs font-semibold hover:bg-[#142038] transition-colors cursor-pointer"
+              >
+                Launch Diagnostic Interview →
+              </button>
             </div>
-            <p className="text-xl font-serif font-bold text-[#1F1B16]">{techSkill > 0 ? `${techSkill}%` : '—'}</p>
-            <ProgressBar value={techSkill} height="h-1.5" />
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#70685E]">Technical Knowledge</span>
+                <span className="text-xs font-mono font-bold text-[#235E3B] flex items-center">
+                  {techSkill > 0 ? `${techSkill}%` : 'Pending'}
+                </span>
+              </div>
+              <p className="text-xl font-serif font-bold text-[#1F1B16]">{techSkill > 0 ? `${techSkill}%` : '—'}</p>
+              <ProgressBar value={techSkill} height="h-1.5" />
+            </div>
 
-          <div className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#70685E]">Communication (STAR)</span>
-              <span className="text-xs font-mono font-bold text-[#235E3B] flex items-center">
-                {commSkill > 0 ? `${commSkill}%` : 'Pending'}
-              </span>
+            <div className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#70685E]">Communication (STAR)</span>
+                <span className="text-xs font-mono font-bold text-[#235E3B] flex items-center">
+                  {commSkill > 0 ? `${commSkill}%` : 'Pending'}
+                </span>
+              </div>
+              <p className="text-xl font-serif font-bold text-[#1F1B16]">{commSkill > 0 ? `${commSkill}%` : '—'}</p>
+              <ProgressBar value={commSkill} height="h-1.5" />
             </div>
-            <p className="text-xl font-serif font-bold text-[#1F1B16]">{commSkill > 0 ? `${commSkill}%` : '—'}</p>
-            <ProgressBar value={commSkill} height="h-1.5" />
-          </div>
 
-          <div className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#70685E]">Confidence & Delivery</span>
-              <span className="text-xs font-mono font-bold text-[#235E3B] flex items-center">
-                {confSkill > 0 ? `${confSkill}%` : 'Pending'}
-              </span>
+            <div className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#70685E]">Confidence & Delivery</span>
+                <span className="text-xs font-mono font-bold text-[#235E3B] flex items-center">
+                  {confSkill > 0 ? `${confSkill}%` : 'Pending'}
+                </span>
+              </div>
+              <p className="text-xl font-serif font-bold text-[#1F1B16]">{confSkill > 0 ? `${confSkill}%` : '—'}</p>
+              <ProgressBar value={confSkill} height="h-1.5" />
             </div>
-            <p className="text-xl font-serif font-bold text-[#1F1B16]">{confSkill > 0 ? `${confSkill}%` : '—'}</p>
-            <ProgressBar value={confSkill} height="h-1.5" />
           </div>
-        </div>
+        )}
       </GlassCard>
     </div>
   );

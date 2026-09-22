@@ -9,6 +9,8 @@
  */
 
 import { DEFAULT_MOCK_INTERVIEW_RESULT } from '../data/mockData';
+import { storageService } from './storage/storageService.js';
+import { activityService, ACTIVITY_XP, ACTIVITY_TYPES } from './activityService.js';
 
 export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [], setup = null) {
   if (!sessionSummary && (!sessionAnswers || sessionAnswers.length === 0)) {
@@ -220,11 +222,27 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
     recommendationExplanation = 'आपके साक्षात्कार प्रदर्शन के आधार पर, यह वे प्रमुख क्षेत्र हैं जहाँ अतिरिक्त अभ्यास से सबसे अधिक सुधार होगा।';
   }
 
+  // Dynamic XP based on question count and overall performance
+  const baseXP = ACTIVITY_XP[ACTIVITY_TYPES.INTERVIEW_COMPLETED] || 100;
+  const performanceBonus = overall >= 90 ? 25 : overall >= 80 ? 15 : overall >= 70 ? 10 : 0;
+  const calculatedXP = baseXP + performanceBonus;
+
+  // Dynamic streak calculation
+  let calculatedStreak = 1;
+  try {
+    const currentUser = storageService.getCurrentUser();
+    const activities = activityService.getActivities();
+    const realStreak = activityService.calculateCurrentStreak(activities);
+    calculatedStreak = currentUser?.streak || realStreak || 1;
+  } catch {
+    calculatedStreak = 1;
+  }
+
   return {
     overallScore: overall,
     qualitativeRating,
-    xpEarned: 120,
-    streakDays: 7,
+    xpEarned: sessionSummary?.xpEarned || calculatedXP,
+    streakDays: sessionSummary?.streakDays || calculatedStreak,
     questionsCompleted: questionPerformance.length,
     totalQuestions: questionPerformance.length,
     targetRole: setup?.targetRole || sessionSummary?.role || 'Machine Learning Engineer',

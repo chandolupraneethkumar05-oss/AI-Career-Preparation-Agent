@@ -99,6 +99,74 @@ class TestRealLLMAndRoleSync(unittest.TestCase):
         for axis in profile.radar_data:
             self.assertEqual(axis.score, 0)
 
+    def test_07_question_vault_integration_into_interview(self):
+        """Approved questions from the Question Vault are discovered and integrated into mock interviews."""
+        from backend.app.db.models import InterviewExperience, InterviewExperienceQuestion
+        from backend.app.services.interview_engine import get_vault_questions_for_role, default_interview_engine
+        from backend.app.schemas.interview import InterviewStartRequest
+        import uuid
+
+        exp_id = f"exp_test_{uuid.uuid4().hex[:8]}"
+        q_id = f"q_vault_{uuid.uuid4().hex[:8]}"
+
+        exp = InterviewExperience(
+            id=exp_id,
+            user_id="usr_author_123",
+            company="Stripe",
+            role="DevSecOps Engineer",
+            experience_text="Great interview covering cloud infrastructure and zero-day patch mitigation.",
+            difficulty="hard",
+            outcome="offer",
+            moderation_status="APPROVED"
+        )
+        self.db.add(exp)
+        self.db.flush()
+
+        vault_q = InterviewExperienceQuestion(
+            id=q_id,
+            experience_id=exp_id,
+            question_text="How do you remediate a zero-day vulnerability in a live Kubernetes cluster?",
+            round_type="technical",
+            topic="DevSecOps",
+            difficulty="hard"
+        )
+        self.db.add(vault_q)
+        self.db.commit()
+
+        # Test retrieval helper
+        discovered = get_vault_questions_for_role(self.db, "DevSecOps Engineer", limit=3)
+        self.assertTrue(len(discovered) >= 1)
+        self.assertTrue(any("zero-day" in d["content"] for d in discovered))
+
+        # Test interview engine start session with this custom role
+        req = InterviewStartRequest(
+            user_id="usr_candidate_vault_test",
+            role="DevSecOps Engineer",
+            interview_type="Technical",
+            difficulty="Intermediate",
+            total_questions=3
+        )
+        session_resp = default_interview_engine.start_session(self.db, "usr_candidate_vault_test", req)
+        self.assertEqual(session_resp.target_role, "DevSecOps Engineer")
+        self.assertIsNotNone(session_resp.current_question)
+
+    def test_08_custom_role_interview_start(self):
+        """Any custom target role not in the default 6 roles can initiate a valid mock interview."""
+        from backend.app.services.interview_engine import default_interview_engine
+        from backend.app.schemas.interview import InterviewStartRequest
+
+        custom_role = "Quantum Computing Specialist"
+        req = InterviewStartRequest(
+            user_id="usr_quantum_candidate",
+            role=custom_role,
+            interview_type="Technical",
+            difficulty="Advanced",
+            total_questions=3
+        )
+        session_resp = default_interview_engine.start_session(self.db, "usr_quantum_candidate", req)
+        self.assertEqual(session_resp.target_role, custom_role)
+        self.assertTrue(len(session_resp.current_question.question) > 10)
+
 
 if __name__ == "__main__":
     unittest.main()

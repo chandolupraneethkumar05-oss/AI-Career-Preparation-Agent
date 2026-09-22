@@ -55,9 +55,20 @@ export default function SettingsPage() {
   const [feedbackLanguage, setFeedbackLanguage] = useState(user?.feedbackLanguage || setup.feedbackLanguage || 'en');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  const isPredefinedRole = MOCK_ROLES.includes(role);
+  const [isCustomRole, setIsCustomRole] = useState(!isPredefinedRole && Boolean(role));
+  const [customRoleInput, setCustomRoleInput] = useState(!isPredefinedRole ? role : '');
+
   useEffect(() => {
     if (user?.targetRole || user?.role) {
-      setRole(user.targetRole || user.role);
+      const activeRole = user.targetRole || user.role;
+      setRole(activeRole);
+      if (!MOCK_ROLES.includes(activeRole)) {
+        setIsCustomRole(true);
+        setCustomRoleInput(activeRole);
+      } else {
+        setIsCustomRole(false);
+      }
     }
   }, [user?.targetRole, user?.role]);
 
@@ -115,9 +126,11 @@ export default function SettingsPage() {
   const handleSave = async (e) => {
     e.preventDefault();
     const currentUserId = user?.id || 'usr_candidate';
-    updateUser({ name, role, targetRole: role, feedbackLanguage });
-    updateSetup({ targetRole: role, difficulty, feedbackLanguage });
-    profileApi.updateProfile({ target_role: role, role, name, feedback_language: feedbackLanguage }, currentUserId).catch(() => {});
+    const finalRole = isCustomRole ? (customRoleInput.trim() || 'Software Engineer') : role;
+    setRole(finalRole);
+    updateUser({ name, role: finalRole, targetRole: finalRole, feedbackLanguage });
+    updateSetup({ targetRole: finalRole, difficulty, feedbackLanguage });
+    profileApi.updateProfile({ target_role: finalRole, role: finalRole, name, feedback_language: feedbackLanguage }, currentUserId).catch(() => {});
 
 
     const newReminderPrefs = {
@@ -240,8 +253,16 @@ export default function SettingsPage() {
                 Default Target Role
               </label>
               <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
+                value={isCustomRole ? 'OTHER_CUSTOM' : role}
+                onChange={(e) => {
+                  if (e.target.value === 'OTHER_CUSTOM') {
+                    setIsCustomRole(true);
+                    if (!customRoleInput) setCustomRoleInput('Software Engineer');
+                  } else {
+                    setIsCustomRole(false);
+                    setRole(e.target.value);
+                  }
+                }}
                 className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-[#1F1B16] text-sm focus:outline-none focus:border-[#1A365D]"
               >
                 {MOCK_ROLES.map((r) => (
@@ -249,7 +270,23 @@ export default function SettingsPage() {
                     {r}
                   </option>
                 ))}
+                <option value="OTHER_CUSTOM">+ Other (Custom Target Role)...</option>
               </select>
+
+              {isCustomRole && (
+                <div className="mt-2.5 space-y-1">
+                  <label className="block text-[11px] font-semibold text-[#8C6E54]">
+                    Custom Target Role Title:
+                  </label>
+                  <input
+                    type="text"
+                    value={customRoleInput}
+                    onChange={(e) => setCustomRoleInput(e.target.value)}
+                    placeholder="e.g., Senior iOS Engineer, Security Architect, Product Lead..."
+                    className="w-full p-2 rounded-md bg-[#FFFDF9] border border-[#1A365D] text-[#1F1B16] text-sm focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -335,6 +372,70 @@ export default function SettingsPage() {
           </div>
         </GlassCard>
 
+        {/* Visual Appearance & Theme Settings */}
+        <GlassCard className="p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E0D5] pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
+                <Palette className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#1F1B16]">
+                  IV. Visual Appearance &amp; Themes
+                </h3>
+                <p className="text-xs text-[#70685E]">
+                  Choose your reading aesthetic: System auto-detect, Archival Warm Scholar, Pure White, or Midnight Dark
+                </p>
+              </div>
+            </div>
+            <Badge variant="navy" size="sm">4 Themes Available</Badge>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            {availableThemes.map((thm) => {
+              const isSelected = activeTheme === thm.id;
+              return (
+                <div
+                  key={thm.id}
+                  onClick={() => changeTheme(thm.id)}
+                  className={`
+                    p-3.5 rounded-md border text-left cursor-pointer transition-all flex flex-col justify-between
+                    ${isSelected
+                      ? 'bg-[#EAEFF5] border-[#1A365D] ring-1 ring-[#1A365D] shadow-xs'
+                      : 'bg-[#FFFDF9] border-[#E5E0D5] hover:border-[#1A365D]'
+                    }
+                  `}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">{thm.emoji}</span>
+                        <span className="text-sm font-bold font-serif text-[#1F1B16]">{thm.name}</span>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle2 className="w-4 h-4 text-[#1A365D]" />
+                      )}
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[#8C6E54] block mb-1">
+                      {thm.badge}
+                    </span>
+                    <p className="text-[11px] text-[#70685E] leading-relaxed">
+                      {thm.description}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-[#E5E0D5] flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.bg }} />
+                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.card }} />
+                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.primary }} />
+                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.secondary }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
+
         {/* Proactive Daily Practice Reminders */}
         <GlassCard className="p-6 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E0D5] pb-3">
@@ -344,7 +445,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h3 className="text-base font-serif font-bold text-[#1F1B16]">
-                  IV. Proactive Daily Practice Reminders
+                  V. Proactive Daily Practice Reminders
                 </h3>
                 <p className="text-xs text-[#70685E]">
                   Autonomous schedule notifications dispatched when daily preparation is pending

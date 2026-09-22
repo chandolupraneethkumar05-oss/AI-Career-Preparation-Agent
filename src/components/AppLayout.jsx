@@ -84,11 +84,11 @@ export default function AppLayout() {
             <div className="hidden sm:flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F5EFEA] border border-[#E8DCD1] text-[#8C6E54] text-xs font-semibold">
                 <span>🔥</span>
-                <span>{user?.streak || 4}d Streak</span>
+                <span>{(user?.streak ?? 0)}d Streak</span>
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] text-[#3B352E] text-xs font-semibold">
                 <Zap className="w-3.5 h-3.5 text-[#70685E]" />
-                <span>{user?.xp || 1240} XP</span>
+                <span>{(user?.xp ?? 0)} XP</span>
               </div>
             </div>
 

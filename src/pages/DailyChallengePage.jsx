@@ -326,7 +326,7 @@ export default function DailyChallengePage() {
               <h3 className="font-serif text-2xl font-bold text-[#1F1B16]">Daily Practice Completed</h3>
               <div className="flex items-center gap-3 pt-1">
                 <Badge variant="green" size="md">+{challengeResult?.xp || challenge.xpReward} XP Earned</Badge>
-                <Badge variant="amber" size="md">Current Streak: {(user?.streak || 1)} Days</Badge>
+                <Badge variant="amber" size="md">Current Streak: {(user?.streak ?? 0)} Days</Badge>
               </div>
             </div>
 

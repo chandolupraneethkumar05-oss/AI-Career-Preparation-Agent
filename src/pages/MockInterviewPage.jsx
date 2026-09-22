@@ -833,9 +833,16 @@ export default function MockInterviewPage() {
                   </div>
                 </div>
 
-                <Badge variant="navy" size="sm">
-                  {currentQuestion.category || 'Interview Question'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {currentQuestion.generatedSource?.includes('Vault') && (
+                    <Badge variant="amber" size="sm">
+                      🏛️ Community Question Vault
+                    </Badge>
+                  )}
+                  <Badge variant="navy" size="sm">
+                    {currentQuestion.category || 'Interview Question'}
+                  </Badge>
+                </div>
               </div>
 
               {/* Question Text Prompt */}

@@ -262,7 +262,50 @@ export default function InterviewSetupPage() {
                 </div>
               </button>
             ))}
+
+            <button
+              type="button"
+              onClick={() => {
+                setTargetRole('Custom');
+                if (!customRole) setCustomRole(!MOCK_ROLES.includes(targetRole) ? targetRole : '');
+              }}
+              className={`
+                p-3 rounded-md border text-left transition-all text-xs font-semibold
+                ${targetRole === 'Custom' || !MOCK_ROLES.includes(targetRole)
+                  ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
+                  : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
+                }
+              `}
+            >
+              <div className="flex items-center justify-between">
+                <span>+ Other / Custom Role</span>
+                {(targetRole === 'Custom' || !MOCK_ROLES.includes(targetRole)) && (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#1A365D]" />
+                )}
+              </div>
+            </button>
           </div>
+
+          {(targetRole === 'Custom' || !MOCK_ROLES.includes(targetRole)) && (
+            <div className="pt-2 border-t border-[#E5E0D5] space-y-1.5 animate-in fade-in">
+              <label className="block text-xs font-semibold text-[#8C6E54]">
+                Specify Custom Target Role:
+              </label>
+              <input
+                type="text"
+                value={targetRole === 'Custom' ? customRole : targetRole}
+                onChange={(e) => {
+                  setTargetRole('Custom');
+                  setCustomRole(e.target.value);
+                }}
+                placeholder="e.g., Senior iOS Engineer, DevSecOps Specialist, Product Manager, Embedded Systems Lead..."
+                className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#1A365D] text-[#1F1B16] text-sm focus:outline-none ring-1 ring-[#1A365D]"
+              />
+              <p className="text-[11px] text-[#70685E]">
+                Our AI and Gemini LLM will synthesize role-specific questions and evaluation rubrics tailored to this discipline.
+              </p>
+            </div>
+          )}
         </GlassCard>
 
         {/* 2. Interview Type Selection */}

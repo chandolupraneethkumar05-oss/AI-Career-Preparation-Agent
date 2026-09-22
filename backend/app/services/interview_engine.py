@@ -22,6 +22,8 @@ from ..db.models import (
     SkillGap,
     User,
     Profile,
+    InterviewExperience,
+    InterviewExperienceQuestion,
 )
 from ..schemas.interview import (
     InterviewStartRequest,
@@ -46,6 +48,44 @@ from .ai.llm.llm_service import default_llm_service, get_llm_service
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def get_vault_questions_for_role(db: Session, target_role: str, limit: int = 3) -> List[Dict[str, Any]]:
+    """
+    Retrieves approved interview questions contributed by users/community to the Question Vault,
+    prioritizing questions matching the candidate's target role or related tech disciplines.
+    """
+    try:
+        query = db.query(InterviewExperienceQuestion, InterviewExperience).join(
+            InterviewExperience, InterviewExperienceQuestion.experience_id == InterviewExperience.id
+        ).filter(
+            InterviewExperience.moderation_status == "APPROVED"
+        )
+
+        matched = []
+        if target_role:
+            role_pattern = f"%{target_role.strip().lower()}%"
+            matched = query.filter(
+                (InterviewExperience.role.ilike(role_pattern)) |
+                (InterviewExperienceQuestion.topic.ilike(role_pattern))
+            ).order_by(InterviewExperienceQuestion.created_at.desc()).limit(limit).all()
+
+        if not matched:
+            matched = query.order_by(InterviewExperienceQuestion.created_at.desc()).limit(limit).all()
+
+        chunks = []
+        for q, exp in matched:
+            chunks.append({
+                "id": f"vault_{q.id}",
+                "topic": q.topic or target_role,
+                "content": f"[Question Vault • Real Interview Question from {exp.company or 'Leading Tech Firm'} for {exp.role or target_role}]: {q.question_text}",
+                "company": exp.company or "Industry",
+                "difficulty": q.difficulty or "medium",
+                "source": "Question Vault"
+            })
+        return chunks
+    except Exception:
+        return []
 
 
 class InterviewEngine:
@@ -131,6 +171,11 @@ class InterviewEngine:
         fresh_chunks = [c for c in rag_chunks if c.get("topic", "").lower() not in past_skills_lower]
         effective_chunks = fresh_chunks if fresh_chunks else rag_chunks
 
+        # Integrate Question Vault approved questions from real candidate experiences
+        vault_chunks = get_vault_questions_for_role(db, target_role, limit=3)
+        if vault_chunks:
+            effective_chunks = vault_chunks + effective_chunks
+
         session_ctx = {
             "session_id": session_id,
             "role": target_role,
@@ -189,7 +234,7 @@ class InterviewEngine:
             skill=q1_data["skill"],
             difficulty=q1_data["difficulty"],
             question_type=q1_data["question_type"],
-            generated_source=q1_data["source_type"],
+            generated_source="Question Vault (Community Company Question)" if vault_chunks and ("vault" in str(q1_data).lower() or q1_data.get("source_type") == "rag_grounded") else q1_data["source_type"],
             expected_focus=q1_data.get("rubric_guidance") or q1_data.get("rationale") or "",
             rag_chunk_id=rag_chunks[0].get("id") if rag_chunks else None,
             is_follow_up=False,
@@ -530,6 +575,7 @@ class InterviewEngine:
 
             # Ground RAG Retrieval:
             # If doing an adaptive follow-up, retrieve knowledge specifically matching the topic + missing concepts!
+            vault_chunks = []
             if adaptive_action == "follow_up":
                 missing_str = " ".join(missing_concepts[:3])
                 retrieval_query = f"{interview.role} {question.skill} {missing_str}".strip()
@@ -562,6 +608,11 @@ class InterviewEngine:
                 uncovered_chunks = [c for c in rag_chunks if c.get("topic", "").lower() not in covered_topics]
                 effective_chunks = uncovered_chunks if uncovered_chunks else rag_chunks
 
+                # Weave in Question Vault approved questions
+                vault_chunks = get_vault_questions_for_role(db, interview.role, limit=3)
+                if vault_chunks:
+                    effective_chunks = vault_chunks + effective_chunks
+
             session_ctx = {
                 "session_id": session_id,
                 "role": interview.role,
@@ -586,6 +637,10 @@ class InterviewEngine:
             next_seq = next_index + 1
             is_follow_up = bool(adaptive_decision.get("action") == "follow_up" or next_q_data.get("is_follow_up"))
             next_q_id = f"q_{uuid.uuid4().hex[:10]}"
+            next_source = next_q_data["source_type"]
+            if vault_chunks and (next_source == "rag_grounded" or "vault" in str(next_q_data).lower()):
+                next_source = "Question Vault (Community Company Question)"
+
             next_q_model = InterviewQuestion(
                 id=next_q_id,
                 session_id=session_id,
@@ -595,7 +650,7 @@ class InterviewEngine:
                 skill=next_q_data["skill"],
                 difficulty=next_q_data["difficulty"],
                 question_type=next_q_data["question_type"],
-                generated_source=next_q_data["source_type"],
+                generated_source=next_source,
                 expected_focus=next_q_data.get("rubric_guidance") or next_q_data.get("rationale") or "",
                 rag_chunk_id=rag_chunks[0].get("id") if rag_chunks else None,
                 is_follow_up=is_follow_up,

@@ -192,12 +192,12 @@ export const storageService = {
     return this.set(this.scopedKey(STORAGE_KEYS.REMINDER_PREFS, userId), prefs);
   },
 
-  // 10. Theme Preferences (Locked to single official Editorial Scholar theme)
+  // 10. Theme Preferences (System, Warm, White, Dark)
   getTheme() {
-    return 'editorial_scholar';
+    return this.get(STORAGE_KEYS.THEME, 'warm');
   },
   setTheme(themeId) {
-    return this.set(STORAGE_KEYS.THEME, 'editorial_scholar');
+    return this.set(STORAGE_KEYS.THEME, themeId || 'warm');
   },
 
   // 10. Centralized Derived Candidate State (Phase 18)

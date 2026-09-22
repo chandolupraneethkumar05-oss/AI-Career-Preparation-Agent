@@ -4,8 +4,8 @@
    1. EDITORIAL SCHOLAR & ACADEMIC CURATOR — ALEXANDRIA STYLE DESIGN SYSTEM
    ========================================================================= */
 
-:root, [data-theme], [data-theme="editorial_scholar"] {
-  --theme-id: "editorial_scholar";
+:root, [data-theme], [data-theme="warm"], [data-theme="editorial_scholar"] {
+  --theme-id: "warm";
   
   /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
   --theme-bg: #F8F6F0;                /* Warm Archival Canvas */
@@ -61,6 +61,120 @@
   color-scheme: light;
 }
 
+[data-theme="white"] {
+  --theme-id: "white";
+
+  /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
+  --theme-bg: #FFFFFF;                /* Crisp Modern White */
+  --theme-surface: #F8FAFC;           /* Clean Slate Surface */
+  --theme-surface-hover: #F1F5F9;     /* Subtle Surface Hover */
+  --theme-surface-subtle: #F1F5F9;    /* Inset Subdued Surface */
+  --theme-surface-low: #FAFAFA;       /* Secondary Low Surface */
+  --theme-sidebar: #FFFFFF;           /* Crisp Modern Sidebar */
+  --theme-border: #E2E8F0;            /* 1px Hairline Divider */
+  --theme-border-strong: #CBD5E1;     /* Emphasized Divider */
+
+  /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
+  --theme-ink-primary: #0F172A;       /* Primary Headings & Important Text */
+  --theme-ink-secondary: #334155;     /* Body Text & Descriptions */
+  --theme-ink-tertiary: #64748B;      /* Subtitles & Timestamps */
+  --theme-ink-micro: #475569;         /* Tracked Overlines & Micro Labels */
+
+  --theme-text: #0F172A;
+  --theme-text-secondary: #334155;
+  --theme-text-muted: #64748B;
+  --theme-text-micro: #475569;
+
+  /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
+  --theme-primary: #1E40AF;           /* Executive Cobalt Blue */
+  --theme-primary-light: #3B82F6;
+  --theme-cta: #1E40AF;
+  --theme-cta-hover: #1D4ED8;
+  --theme-cta-text: #FFFFFF;
+
+  /* ── Secondary Accent ─────────────────────────────────────────────────── */
+  --theme-bronze: #0284C7;
+  --theme-bronze-hover: #0369A1;
+  --theme-accent: #1E40AF;
+
+  /* ── Semantic System ─────────────────────────────────────────────────── */
+  --theme-success: #15803D;
+  --theme-success-bg: #F0FDF4;
+  --theme-warning: #C2410C;
+  --theme-warning-bg: #FFF7ED;
+  --theme-danger: #B91C1C;
+  --theme-danger-bg: #FEF2F2;
+  --theme-neutral: #475569;
+  --theme-neutral-bg: #F1F5F9;
+
+  /* ── Form Controls & Active States ───────────────────────────────────── */
+  --theme-card-bg: #FFFFFF;
+  --theme-header-bg: rgba(255, 255, 255, 0.98);
+  --theme-input-bg: #FFFFFF;
+  --theme-selected: #E0E7FF;
+  --theme-glow-primary: none;
+  --theme-glow-secondary: none;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"], .dark {
+  --theme-id: "dark";
+
+  /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
+  --theme-bg: #0B0F17;                /* Deep Obsidian Midnight Canvas */
+  --theme-surface: #111827;           /* Midnight Card Surface */
+  --theme-surface-hover: #1E293B;     /* Subtle Surface Hover */
+  --theme-surface-subtle: #1E293B;    /* Inset Subdued Surface */
+  --theme-surface-low: #0F172A;       /* Secondary Low Surface */
+  --theme-sidebar: #0B0F17;           /* Deep Obsidian Sidebar */
+  --theme-border: #1E293B;            /* 1px Hairline Divider */
+  --theme-border-strong: #334155;     /* Emphasized Divider */
+
+  /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
+  --theme-ink-primary: #F8FAFC;       /* Luminescent Primary Headings */
+  --theme-ink-secondary: #E2E8F0;     /* Crisp Body Text */
+  --theme-ink-tertiary: #94A3B8;      /* Subtitles & Timestamps */
+  --theme-ink-micro: #A1A1AA;         /* Tracked Overlines & Micro Labels */
+
+  --theme-text: #F8FAFC;
+  --theme-text-secondary: #E2E8F0;
+  --theme-text-muted: #94A3B8;
+  --theme-text-micro: #A1A1AA;
+
+  /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
+  --theme-primary: #38BDF8;           /* Electric Cyan/Sky */
+  --theme-primary-light: #60A5FA;
+  --theme-cta: #2563EB;
+  --theme-cta-hover: #1D4ED8;
+  --theme-cta-text: #FFFFFF;
+
+  /* ── Secondary Accent ─────────────────────────────────────────────────── */
+  --theme-bronze: #38BDF8;
+  --theme-bronze-hover: #0EA5E9;
+  --theme-accent: #38BDF8;
+
+  /* ── Semantic System ─────────────────────────────────────────────────── */
+  --theme-success: #22C55E;
+  --theme-success-bg: #052E16;
+  --theme-warning: #F97316;
+  --theme-warning-bg: #431407;
+  --theme-danger: #EF4444;
+  --theme-danger-bg: #450A0A;
+  --theme-neutral: #94A3B8;
+  --theme-neutral-bg: #1E293B;
+
+  /* ── Form Controls & Active States ───────────────────────────────────── */
+  --theme-card-bg: #111827;
+  --theme-header-bg: rgba(11, 15, 23, 0.95);
+  --theme-input-bg: #111827;
+  --theme-selected: #1E3A5F;
+  --theme-glow-primary: none;
+  --theme-glow-secondary: none;
+
+  color-scheme: dark;
+}
+
 /* =========================================================================
    2. TAILWIND @THEME BINDINGS
    ========================================================================= */
@@ -88,8 +202,8 @@
 
 @layer base {
   html {
-    background-color: #F8F6F0;
-    color: #1F1B16;
+    background-color: var(--theme-bg, #F8F6F0);
+    color: var(--theme-text, #1F1B16);
   }
 
   body {
