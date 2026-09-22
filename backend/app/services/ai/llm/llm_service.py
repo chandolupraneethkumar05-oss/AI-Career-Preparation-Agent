@@ -1975,11 +1975,29 @@ class OpenAICompatibleLLMService(BaseLLMService):
 
 def get_llm_service() -> BaseLLMService:
     """Factory instantiating configured LLM service provider."""
-    provider = os.getenv("LLM_PROVIDER", "local").lower()
-    if provider in ["openai", "api"] and os.getenv("OPENAI_API_KEY"):
-        return OpenAICompatibleLLMService()
+    provider = os.getenv("LLM_PROVIDER", "").lower()
+    
+    # Priority 1: Explicit Gemini or Gemini API keys present
+    if provider in ["gemini", "google"] or (not provider and (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))):
+        if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+            try:
+                from .gemini_service import GeminiLLMService
+                return GeminiLLMService()
+            except Exception:
+                pass
+
+    # Priority 2: Explicit OpenAI or OpenAI API key present
+    if provider in ["openai", "api"] or (not provider and os.getenv("OPENAI_API_KEY")):
+        if os.getenv("OPENAI_API_KEY"):
+            try:
+                return OpenAICompatibleLLMService()
+            except Exception:
+                pass
+
+    # Priority 3: Local grounded deterministic fallback engine
     return LocalGroundedLLMService()
 
 
 # Shared singleton instance
 default_llm_service = get_llm_service()
+

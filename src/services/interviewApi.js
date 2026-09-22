@@ -5,8 +5,11 @@
 
 import { QUESTION_BANK } from '../data/mockData';
 import { evaluateAnswer } from '../utils/evaluator';
+import { storageService } from '../utils/storage/storageService';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+
+const resolveUserId = (id) => (id && id !== 'user-001') ? id : (storageService.getCurrentUser()?.id || id || 'usr_candidate');
 
 export const interviewApi = {
   /**
@@ -20,17 +23,19 @@ export const interviewApi = {
     interviewLanguage = 'en',
     feedbackLanguage = 'en',
     interviewMode = 'text',
-    userId = 'user-001'
+    userId = null
   }) {
+    const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/start?user_id=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`${API_BASE_URL}/interviews/start?user_id=${encodeURIComponent(effectiveUserId)}`, {
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          user_id: userId,
+          user_id: effectiveUserId,
           role,
           interview_type: interviewType,
           difficulty,
@@ -61,7 +66,7 @@ export const interviewApi = {
 
       return {
         session_id: `offline_int_${Date.now()}`,
-        user_id: userId,
+        user_id: effectiveUserId,
         target_role: role,
         interview_type: interviewType,
         difficulty,
@@ -93,9 +98,10 @@ export const interviewApi = {
   /**
    * Retrieves the active question for a session.
    */
-  async getCurrentQuestion(sessionId, userId = 'user-001') {
+  async getCurrentQuestion(sessionId, userId = null) {
+    const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/current-question?user_id=${encodeURIComponent(userId)}`);
+      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/current-question?user_id=${encodeURIComponent(effectiveUserId)}`);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.detail || `Server error: ${response.status}`);
@@ -114,25 +120,27 @@ export const interviewApi = {
     questionId,
     answer,
     timeSpentSeconds = 0,
-    userId = 'user-001',
+    userId = null,
     currentQuestionMeta = null,
     targetRole = 'Machine Learning Engineer',
     interviewType = 'Technical',
     difficulty = 'Intermediate'
   }) {
+    const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/answer?user_id=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/answer?user_id=${encodeURIComponent(effectiveUserId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          user_id: userId,
+          user_id: effectiveUserId,
           question_id: questionId,
           answer,
           time_spent_seconds: timeSpentSeconds
         })
+
       });
 
       if (!response.ok) {
@@ -190,9 +198,10 @@ export const interviewApi = {
   /**
    * Concludes an interview session and returns final hiring report.
    */
-  async completeSession(sessionId, userId = 'user-001') {
+  async completeSession(sessionId, userId = null) {
+    const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/complete?user_id=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/complete?user_id=${encodeURIComponent(effectiveUserId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,9 +224,10 @@ export const interviewApi = {
   /**
    * Fetches full session transcript.
    */
-  async getSessionDetail(sessionId, userId = 'user-001') {
+  async getSessionDetail(sessionId, userId = null) {
+    const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/detail?user_id=${encodeURIComponent(userId)}`);
+      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/detail?user_id=${encodeURIComponent(effectiveUserId)}`);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.detail || `Server error: ${response.status}`);
@@ -232,14 +242,16 @@ export const interviewApi = {
   /**
    * Fetches candidate past interview sessions.
    */
-  async getHistory(userId = 'user-001', limit = 50) {
+  async getHistory(userId = null, limit = 50) {
+    const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews?user_id=${encodeURIComponent(userId)}&limit=${limit}`);
+      const response = await fetch(`${API_BASE_URL}/interviews?user_id=${encodeURIComponent(effectiveUserId)}&limit=${limit}`);
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
       return await response.json();
     } catch (err) {
+
       console.warn('[interviewApi] getHistory failed:', err);
       return { interviews: [], total_count: 0, average_score: 0 };
     }

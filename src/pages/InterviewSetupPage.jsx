@@ -26,9 +26,12 @@ import Badge from '../components/Badge';
 import { MOCK_ROLES, INTERVIEW_TYPES, DIFFICULTY_LEVELS } from '../data/mockData';
 import { COMPANY_PLAYBOOKS } from '../data/companyPlaybooks';
 import { INTERVIEWER_PERSONAS } from '../data/interviewerPersonas';
+import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
+import { profileApi } from '../services/profileApi';
 
 const FAST_PRESETS = [
+
   {
     id: 'frontend_sde',
     title: 'Frontend Specialist',
@@ -85,12 +88,13 @@ const FAST_PRESETS = [
 
 export default function InterviewSetupPage() {
   const navigate = useNavigate();
+  const { user, updateUser } = useAuth();
   const { setup, updateSetup } = useInterview();
 
   const [selectedPreset, setSelectedPreset] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const [targetRole, setTargetRole] = useState(setup.targetRole || 'Machine Learning Engineer');
+  const [targetRole, setTargetRole] = useState(user?.targetRole || user?.role || setup.targetRole || 'Machine Learning Engineer');
   const [customRole, setCustomRole] = useState('');
   const [interviewType, setInterviewType] = useState(setup.interviewType || 'Technical');
   const [companyPlaybook, setCompanyPlaybook] = useState(setup.companyPlaybook || 'general');
@@ -130,6 +134,7 @@ export default function InterviewSetupPage() {
 
   const handleContinue = () => {
     const finalRole = targetRole === 'Custom' && customRole.trim() ? customRole : targetRole;
+    updateUser({ targetRole: finalRole, role: finalRole });
     updateSetup({
       targetRole: finalRole,
       interviewType,
@@ -143,8 +148,12 @@ export default function InterviewSetupPage() {
       feedbackLanguage,
       totalQuestions
     });
+    if (user?.id) {
+      profileApi.updateProfile({ target_role: finalRole, role: finalRole }, user.id).catch(() => {});
+    }
     navigate('/interview-ready');
   };
+
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-16 font-sans text-[#1F1B16]">

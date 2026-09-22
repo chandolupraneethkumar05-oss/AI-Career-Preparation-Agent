@@ -40,7 +40,8 @@ from .activity_service import record_activity
 from .skill_service import record_skill_evidence, sync_unified_skill_profile
 from .ai.career.career_context_builder import build_user_career_context
 from .ai.rag.retrieval_service import default_retrieval_service
-from .ai.llm.llm_service import default_llm_service
+from .ai.llm.llm_service import default_llm_service, get_llm_service
+
 
 
 def utc_now() -> datetime:
@@ -142,7 +143,7 @@ class InterviewEngine:
         }
 
         # Generate question #1 (0-indexed sequence 1)
-        q1_data = default_llm_service.generate_interview_question(
+        q1_data = get_llm_service().generate_interview_question(
             session_context=session_ctx,
             question_index=0,
             total_questions=total_questions,
@@ -339,7 +340,7 @@ class InterviewEngine:
         rag_eval_chunks = rag_res.get("chunks", []) if isinstance(rag_res, dict) else (rag_res or [])
 
         # 5-Axis Evaluation
-        eval_dict = default_llm_service.evaluate_interview_answer(
+        eval_dict = get_llm_service().evaluate_interview_answer(
             question=q_dict,
             answer_text=request.answer,
             career_context=career_context,
@@ -571,7 +572,7 @@ class InterviewEngine:
                 "resume_text": ""
             }
 
-            next_q_data = default_llm_service.generate_interview_question(
+            next_q_data = get_llm_service().generate_interview_question(
                 session_context=session_ctx,
                 question_index=next_index,
                 total_questions=total_allowed,
@@ -714,7 +715,7 @@ class InterviewEngine:
 
         career_context = build_user_career_context(user_id, db)
 
-        final_data = default_llm_service.generate_final_interview_feedback(
+        final_data = get_llm_service().generate_final_interview_feedback(
             session=interview.as_dict(),
             questions=q_dicts,
             answers=a_dicts,
@@ -962,7 +963,7 @@ class InterviewEngine:
         # 3. Request dynamic quick answer from LLM Service (Local grounded fallback or OpenAI-compatible)
         target_role = request.target_role or career_context.get("target_role", "Machine Learning Engineer")
         retrieved_chunks = rag_context.get("chunks", []) if isinstance(rag_context, dict) else (rag_context or [])
-        result = default_llm_service.generate_quick_answer(
+        result = get_llm_service().generate_quick_answer(
             question=request.question,
             topic=topic,
             difficulty=request.difficulty or "Intermediate",

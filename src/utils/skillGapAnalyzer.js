@@ -93,15 +93,69 @@ export const BASELINE_SKILL_ANALYSIS = {
 import { storageService } from './storage/storageService';
 
 export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = []) {
-  const base = BASELINE_SKILL_ANALYSIS;
-
   // Retrieve persistent interview and ATS context
   const effectiveSummary = sessionSummary || storageService.getInterviews()[0] || null;
   const atsResult = storageService.getATSResult();
+  const hasAnswers = Array.isArray(_sessionAnswers) && _sessionAnswers.length > 0;
+  const hasEvidence = Boolean(effectiveSummary || atsResult || hasAnswers);
+
+  if (!hasEvidence) {
+    return {
+      hasEvidence: false,
+      overallReadiness: 0,
+      previousReadiness: 0,
+      improvementRate: 0,
+      readinessLabel: 'Uncalibrated — Awaiting Initial Assessment',
+      readinessSummary: 'No interview answers or resume evaluations recorded yet. Complete a mock interview or scan your resume to calibrate your readiness index.',
+      skills: [],
+      radarDimensions: [
+        { name: 'Technical Knowledge', score: 0 },
+        { name: 'Problem Solving', score: 0 },
+        { name: 'Communication', score: 0 },
+        { name: 'Confidence', score: 0 },
+        { name: 'Relevance', score: 0 },
+        { name: 'Behavioral', score: 0 }
+      ],
+      topSkillGaps: [],
+      historicalProgress: [],
+      preparationPath: [],
+      recommendedActivities: [
+        {
+          id: 'act_interview',
+          title: '🎙️ Diagnostic Mock Interview',
+          desc: 'Complete your first 5-question mock interview to establish your skill baseline.',
+          specs: '5 questions • 15 mins',
+          xp: '+100 XP',
+          buttonLabel: 'Start Interview',
+          route: '/interview-setup',
+          color: 'navy'
+        },
+        {
+          id: 'act_ats',
+          title: '📄 Resume Skill Audit',
+          desc: 'Scan your resume against industry benchmarks to map your verified skills.',
+          specs: 'Instant ATS scan',
+          xp: '+50 XP',
+          buttonLabel: 'Scan Resume',
+          route: '/ats',
+          color: 'cyan'
+        }
+      ],
+      agentDecision: {
+        weakestSkill: null,
+        insight: 'No performance signals detected yet. Complete an initial interview or upload your resume to generate a personalized skill gap analysis.',
+        primaryActionRoute: '/interview-setup',
+        primaryActionLabel: 'Take First Diagnostic Interview →'
+      }
+    };
+  }
+
+  const base = BASELINE_SKILL_ANALYSIS;
 
   // Clone skills array so we can calculate reactive scores
   let skills = base.skills.map((s) => ({ ...s }));
   let radarDimensions = base.radarDimensions.map((r) => ({ ...r }));
+
 
   // 1. If an interview exists, merge relevant rubric scores
   if (effectiveSummary && effectiveSummary.scores) {

@@ -154,8 +154,22 @@ export function AuthProvider({ children }) {
   }, []);
 
   const updateUser = useCallback((updates) => {
-    setUser(prev => (prev ? { ...prev, ...updates } : prev));
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      if (updates.targetRole) {
+        updated.role = updates.targetRole;
+      } else if (updates.role) {
+        updated.targetRole = updates.role;
+      }
+      storageService.saveCurrentUser(updated);
+      if (updated.id) {
+        storageService.saveProfile(updated, updated.id);
+      }
+      return updated;
+    });
   }, []);
+
 
   return (
     <AuthContext.Provider

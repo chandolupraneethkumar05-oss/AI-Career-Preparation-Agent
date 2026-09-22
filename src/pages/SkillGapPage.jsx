@@ -20,13 +20,18 @@ import CircularScore from '../components/CircularScore';
 import ProgressBar from '../components/ProgressBar';
 import Badge from '../components/Badge';
 import RadarChart from '../components/RadarChart';
+import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
 import { analyzeSkillGaps } from '../utils/skillGapAnalyzer';
 import { skillApi } from '../services/skillApi';
+import { storageService } from '../utils/storage/storageService';
 
 export default function SkillGapPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { session, setup } = useInterview();
+
+  const currentUserId = user?.id || 'usr_candidate';
 
   // Unified backend skill profile state
   const [profileData, setProfileData] = useState(null);
@@ -34,7 +39,7 @@ export default function SkillGapPage() {
 
   useEffect(() => {
     let mounted = true;
-    skillApi.getSkillProfile('user-001')
+    skillApi.getSkillProfile(currentUserId)
       .then((data) => {
         if (mounted && data) {
           setProfileData(data);
@@ -47,20 +52,25 @@ export default function SkillGapPage() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, []);
+  }, [currentUserId]);
 
-  // Run dynamic prototype skill analysis as fallback
+  // Run dynamic skill analysis as fallback
   const analysis = analyzeSkillGaps(session.summaryResult, session.answers);
 
-  const hasUnified = Boolean(profileData && profileData.unified_skills && profileData.unified_skills.length > 0);
+  const storedInterviews = storageService.getInterviews();
+  const storedAts = storageService.getATSResult();
+  const hasLocalEvidence = (storedInterviews && storedInterviews.length > 0) || Boolean(storedAts) || (session.answers && session.answers.length > 0);
   const totalEvidenceCount = profileData?.evidence_summary?.total_evidences || 0;
-  const hasEvidence = totalEvidenceCount > 0 || (session.answers && session.answers.length > 0);
+  const hasEvidence = totalEvidenceCount > 0 || hasLocalEvidence;
 
-  const displayReadiness = hasUnified ? profileData.overall_readiness : analysis.overallReadiness;
-  const displayRole = profileData?.target_role || setup?.targetRole || 'Machine Learning Engineer';
+  const hasUnified = Boolean(profileData && profileData.unified_skills && profileData.unified_skills.length > 0 && hasEvidence);
+
+  const displayReadiness = hasEvidence ? (hasUnified ? profileData.overall_readiness : analysis.overallReadiness) : 0;
+  const displayRole = user?.targetRole || user?.role || profileData?.target_role || setup?.targetRole || 'Machine Learning Engineer';
   const displayRadar = hasUnified && profileData.radar_data?.length > 0
     ? profileData.radar_data.map(r => ({ name: r.subject, score: r.score }))
     : analysis.radarDimensions;
+
 
   const displaySkills = hasUnified
     ? profileData.unified_skills
@@ -188,33 +198,121 @@ export default function SkillGapPage() {
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2.5 HONEST ONBOARDING BANNER (When 0 interviews & 0 resumes exist)       */}
-      {/* ========================================================================= */}
-      {!hasEvidence && (
-        <GlassCard className="p-6 border-[#F0C9B3] bg-[#FFFDF9] space-y-3 shadow-xs">
-          <div className="flex items-center gap-2.5 text-[#9A421A]">
-            <AlertTriangle className="w-5 h-5 shrink-0" />
-            <h3 className="text-base font-serif font-bold">Needs Initial Assessment</h3>
-          </div>
-          <p className="text-xs sm:text-sm text-[#3B352E] leading-relaxed">
-            No interview answers or resume scans recorded yet. Complete a mock interview or scan your resume to see your personalized skill breakdown.
-          </p>
-          <div className="flex flex-wrap gap-3 pt-1">
-            <GradientButton variant="primary" size="sm" onClick={() => navigate('/ats')}>
-              Scan Resume for Skill Gaps
-            </GradientButton>
-            <GradientButton variant="secondary" size="sm" onClick={() => navigate('/interview-setup')}>
-              Start First Mock Interview
-            </GradientButton>
-          </div>
-        </GlassCard>
-      )}
+      {!hasEvidence ? (
+        <div className="space-y-8">
+          {/* Uncalibrated Hero Card */}
+          <GlassCard className="p-8 sm:p-10 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs text-center space-y-6">
+            <div className="w-14 h-14 rounded-full bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center mx-auto text-[#1A365D]">
+              <Brain className="w-7 h-7 text-[#1A365D]" />
+            </div>
 
+            <div className="space-y-2 max-w-xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-[#70685E] text-xs font-semibold uppercase tracking-wider font-mono">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>Status: Awaiting Initial Evidence</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1F1B16] tracking-tight">
+                Skill Profile Uncalibrated
+              </h2>
+              <p className="text-sm sm:text-base text-[#70685E] leading-relaxed">
+                Welcome to your skill analysis center for <span className="font-serif font-bold text-[#1F1B16]">{displayRole}</span>. Because you have not completed any mock interviews or uploaded a résumé yet, no simulated or fabricated scores are shown.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left pt-2 max-w-4xl mx-auto">
+              <div className="p-5 rounded-md border border-[#E5E0D5] bg-[#FAF8F3] flex flex-col justify-between space-y-4 hover:border-[#1A365D] transition-colors">
+                <div className="space-y-2">
+                  <div className="w-9 h-9 rounded-md bg-[#1B2A4A] flex items-center justify-center text-white">
+                    <Mic className="w-4 h-4 text-amber-300" />
+                  </div>
+                  <h4 className="font-serif font-bold text-[#1F1B16] text-base">Diagnostic Interview</h4>
+                  <p className="text-xs text-[#70685E] leading-relaxed">
+                    Complete 5 adaptive questions calibrated for {displayRole} to establish your verbal and technical baseline.
+                  </p>
+                </div>
+                <GradientButton variant="primary" size="sm" onClick={() => navigate('/interview-setup')}>
+                  Start Mock Interview →
+                </GradientButton>
+              </div>
+
+              <div className="p-5 rounded-md border border-[#E5E0D5] bg-[#FAF8F3] flex flex-col justify-between space-y-4 hover:border-[#1A365D] transition-colors">
+                <div className="space-y-2">
+                  <div className="w-9 h-9 rounded-md bg-[#1B2A4A] flex items-center justify-center text-white">
+                    <FileText className="w-4 h-4 text-emerald-300" />
+                  </div>
+                  <h4 className="font-serif font-bold text-[#1F1B16] text-base">ATS Résumé Audit</h4>
+                  <p className="text-xs text-[#70685E] leading-relaxed">
+                    Extract demonstrated competencies and uncover critical keyword gaps against industry job descriptions.
+                  </p>
+                </div>
+                <GradientButton variant="secondary" size="sm" onClick={() => navigate('/ats')}>
+                  Scan Résumé Now →
+                </GradientButton>
+              </div>
+
+              <div className="p-5 rounded-md border border-[#E5E0D5] bg-[#FAF8F3] flex flex-col justify-between space-y-4 hover:border-[#1A365D] transition-colors">
+                <div className="space-y-2">
+                  <div className="w-9 h-9 rounded-md bg-[#1B2A4A] flex items-center justify-center text-white">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <h4 className="font-serif font-bold text-[#1F1B16] text-base">Daily Practice Drill</h4>
+                  <p className="text-xs text-[#70685E] leading-relaxed">
+                    Answer a 5-minute technical challenge to earn +50 XP and log your initial skill proof points.
+                  </p>
+                </div>
+                <GradientButton variant="secondary" size="sm" onClick={() => navigate('/daily-challenge')}>
+                  Take Daily Drill →
+                </GradientButton>
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Transparent Calibration Architecture Card */}
+          <GlassCard className="p-6 sm:p-8 border-[#E5E0D5] bg-[#FFFDF9] space-y-6">
+            <div className="border-b border-[#E5E0D5] pb-4">
+              <span className="editorial-overline">HOW IT WORKS</span>
+              <h3 className="text-lg font-serif font-bold text-[#1F1B16]">
+                Autonomous Skill Calibration Architecture
+              </h3>
+              <p className="text-xs text-[#70685E] mt-1">
+                InterviewAI calculates all scores from genuine evidence. No hardcoded or pre-seeded data is ever shown.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="space-y-2 border-l-2 border-[#1A365D] pl-4">
+                <span className="text-xs font-mono font-bold text-[#1A365D]">STAGE 01</span>
+                <h4 className="text-sm font-serif font-bold text-[#1F1B16]">Evidence Ingestion</h4>
+                <p className="text-xs text-[#70685E] leading-relaxed">
+                  Candidate verbal answers, algorithmic trade-offs, and parsed résumé tokens are recorded as verified evidence items.
+                </p>
+              </div>
+
+              <div className="space-y-2 border-l-2 border-[#1A365D] pl-4">
+                <span className="text-xs font-mono font-bold text-[#1A365D]">STAGE 02</span>
+                <h4 className="text-sm font-serif font-bold text-[#1F1B16]">Multi-Source Fusion</h4>
+                <p className="text-xs text-[#70685E] leading-relaxed">
+                  Demonstrated scores are calibrated: 60% interview demonstration, 25% daily challenges, and 15% résumé presence.
+                </p>
+              </div>
+
+              <div className="space-y-2 border-l-2 border-[#1A365D] pl-4">
+                <span className="text-xs font-mono font-bold text-[#1A365D]">STAGE 03</span>
+                <h4 className="text-sm font-serif font-bold text-[#1F1B16]">Target Role Benchmarks</h4>
+                <p className="text-xs text-[#70685E] leading-relaxed">
+                  Demonstrated proficiencies are benchmarked against industry standards for {displayRole} to rank your top gaps.
+                </p>
+              </div>
+            </div>
+          </GlassCard>
+        </div>
+      ) : (
+        <div className="space-y-10">
       {/* ========================================================================= */}
       {/* 3. OVERALL READINESS SCORE CARD                                          */}
       {/* ========================================================================= */}
       <GlassCard className="p-8 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs relative overflow-hidden">
+
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative">
           <div className="space-y-4 text-center md:text-left">
             <span className="text-xs font-bold text-[#70685E] uppercase tracking-widest font-mono">
@@ -734,7 +832,10 @@ export default function SkillGapPage() {
           </GradientButton>
         </div>
       </GlassCard>
+        </div>
+      )}
 
     </div>
   );
 }
+

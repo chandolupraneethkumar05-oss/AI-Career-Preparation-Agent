@@ -19,7 +19,10 @@ class ProfileBase(BaseModel):
 
 
 class ProfileUpdate(ProfileBase):
-    pass
+    name: Optional[str] = None
+    role: Optional[str] = None
+    target_role: Optional[str] = None
+
 
 
 class ProfileResponse(ProfileBase):

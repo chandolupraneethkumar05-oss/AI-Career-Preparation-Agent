@@ -8,15 +8,18 @@ import { fetchWithTimeout, DEFAULT_TIMEOUT_MS } from '../utils/fetchWithTimeout'
 
 const BACKEND_BASE_URL = 'http://127.0.0.1:8000';
 
+const resolveUserId = (id) => id || storageService.getCurrentUser()?.id || 'usr_candidate';
+
 export const skillApi = {
   /**
    * Fetches unified multi-source skill profile (ATS resume evidence + live mock interview performance).
    * @param {string} userId Candidate user ID
    */
-  async getSkillProfile(userId = 'user-001') {
+  async getSkillProfile(userId = null) {
+    const effectiveId = resolveUserId(userId);
     try {
       const response = await fetchWithTimeout(
-        `${BACKEND_BASE_URL}/api/skills/profile?user_id=${encodeURIComponent(userId)}`,
+        `${BACKEND_BASE_URL}/api/skills/profile?user_id=${encodeURIComponent(effectiveId)}`,
         { headers: { Accept: 'application/json' } },
         DEFAULT_TIMEOUT_MS
       );
@@ -28,12 +31,12 @@ export const skillApi = {
       const data = await response.json();
       // Cache in localStorage for offline resilience and fast reloads
       if (data && data.unified_skills) {
-        storageService.setSkillProfile(data);
+        storageService.setSkillProfile(data, effectiveId);
       }
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.debug('[skillApi] getSkillProfile request failed, using cached profile:', err.message);
-      const cached = storageService.getSkillProfile();
+      const cached = storageService.getSkillProfile(effectiveId);
       if (cached) return cached;
       return null;
     }
@@ -42,17 +45,18 @@ export const skillApi = {
   /**
    * Fetches unified multi-source skill profile (alias for getSkillProfile).
    */
-  async getUnifiedProfile(userId = 'user-001') {
+  async getUnifiedProfile(userId = null) {
     return this.getSkillProfile(userId);
   },
 
   /**
    * Updates or logs a candidate's skill gap score.
    */
-  async updateSkillGap(gapData, userId = 'user-001') {
+  async updateSkillGap(gapData, userId = null) {
+    const effectiveId = resolveUserId(userId);
     try {
       const response = await fetchWithTimeout(
-        `${BACKEND_BASE_URL}/api/skills/gap?user_id=${encodeURIComponent(userId)}`,
+        `${BACKEND_BASE_URL}/api/skills/gap?user_id=${encodeURIComponent(effectiveId)}`,
         {
           method: 'POST',
           headers: {
@@ -61,11 +65,12 @@ export const skillApi = {
           },
           body: JSON.stringify({
             ...gapData,
-            user_id: userId
+            user_id: effectiveId
           })
         },
         DEFAULT_TIMEOUT_MS
       );
+
 
       if (!response.ok) {
         throw new Error(`Server returned status ${response.status}`);

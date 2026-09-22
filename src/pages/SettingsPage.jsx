@@ -50,10 +50,16 @@ export default function SettingsPage() {
   const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || 'Candidate');
-  const [role, setRole] = useState(setup.targetRole || 'Machine Learning Engineer');
+  const [role, setRole] = useState(user?.targetRole || user?.role || setup.targetRole || 'Machine Learning Engineer');
   const [difficulty, setDifficulty] = useState(setup.difficulty || 'Intermediate');
   const [feedbackLanguage, setFeedbackLanguage] = useState(user?.feedbackLanguage || setup.feedbackLanguage || 'en');
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    if (user?.targetRole || user?.role) {
+      setRole(user.targetRole || user.role);
+    }
+  }, [user?.targetRole, user?.role]);
 
   // Proactive Daily Reminders State
   const initialPrefs = storageService.getReminderPrefs();
@@ -95,18 +101,24 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchReminderDetails();
-    profileApi.getProfile('user-001').then((res) => {
+    const currentUserId = user?.id || 'usr_candidate';
+    profileApi.getProfile(currentUserId).then((res) => {
       if (res?.profile?.feedback_language) {
         setFeedbackLanguage(res.profile.feedback_language);
       }
+      if (res?.user?.target_role) {
+        setRole(res.user.target_role);
+      }
     }).catch(() => {});
-  }, []);
+  }, [user?.id]);
 
   const handleSave = async (e) => {
     e.preventDefault();
-    updateUser({ name, role, feedbackLanguage });
+    const currentUserId = user?.id || 'usr_candidate';
+    updateUser({ name, role, targetRole: role, feedbackLanguage });
     updateSetup({ targetRole: role, difficulty, feedbackLanguage });
-    profileApi.updateProfile({ feedback_language: feedbackLanguage }, 'user-001').catch(() => {});
+    profileApi.updateProfile({ target_role: role, role, name, feedback_language: feedbackLanguage }, currentUserId).catch(() => {});
+
 
     const newReminderPrefs = {
       enabled: reminderEnabled,

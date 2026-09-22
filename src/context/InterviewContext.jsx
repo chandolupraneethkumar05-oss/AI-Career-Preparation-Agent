@@ -13,8 +13,10 @@ const InterviewContext = createContext(null);
 export function InterviewProvider({ children }) {
   // Setup preferences
   const initialUser = storageService.getCurrentUser();
+  const getActiveUserId = () => storageService.getCurrentUser()?.id || 'usr_candidate';
+
   const [setup, setSetup] = useState({
-    targetRole: 'Machine Learning Engineer',
+    targetRole: initialUser?.targetRole || initialUser?.role || 'Machine Learning Engineer',
     interviewType: 'Technical',
     difficulty: 'Intermediate',
     companyPlaybook: 'general',
@@ -26,6 +28,7 @@ export function InterviewProvider({ children }) {
     interviewerPersona: 'julian',
     totalQuestions: 5
   });
+
 
   // Active interview session state
   const [session, setSession] = useState({
@@ -61,8 +64,26 @@ export function InterviewProvider({ children }) {
 
   // Update setup parameters
   const updateSetup = (fields) => {
-    setSetup(prev => ({ ...prev, ...fields }));
+    setSetup(prev => {
+      const next = { ...prev, ...fields };
+      if (fields.targetRole) {
+        const currentUser = storageService.getCurrentUser();
+        if (currentUser) {
+          const updatedUser = {
+            ...currentUser,
+            targetRole: fields.targetRole,
+            role: fields.targetRole
+          };
+          storageService.saveCurrentUser(updatedUser);
+          if (updatedUser.id) {
+            storageService.saveProfile(updatedUser, updatedUser.id);
+          }
+        }
+      }
+      return next;
+    });
   };
+
 
   // Start new interview with configured settings
   const startInterview = async (overrideSetup = null) => {
@@ -100,6 +121,7 @@ export function InterviewProvider({ children }) {
     // Asynchronously initialize dynamic session via FastAPI Generative AI Interview Engine
     try {
       const backendSession = await interviewApi.startSession({
+        userId: getActiveUserId(),
         role: config.targetRole,
         interviewType: config.interviewType,
         difficulty: config.difficulty,
@@ -108,6 +130,7 @@ export function InterviewProvider({ children }) {
         feedbackLanguage: config.feedbackLanguage || 'en',
         interviewMode: mode
       });
+
 
       if (backendSession && backendSession.current_question) {
         const firstQ = backendSession.current_question;
@@ -172,12 +195,13 @@ export function InterviewProvider({ children }) {
         const submissionResult = await interviewApi.submitAnswer(session.sessionId, {
           questionId: currentQ.id,
           answer: answerText,
-          userId: 'user-001',
+          userId: getActiveUserId(),
           currentQuestionMeta: currentQ,
           targetRole: setup.targetRole,
           interviewType: setup.interviewType,
           difficulty: session.currentDifficulty
         });
+
 
         if (submissionResult && submissionResult.evaluation) {
           const ev = submissionResult.evaluation;
@@ -459,7 +483,8 @@ export function InterviewProvider({ children }) {
     let backendReport = null;
     if (session.sessionId && session.isAiEngineActive) {
       try {
-        backendReport = await interviewApi.completeSession(session.sessionId, 'user-001');
+        backendReport = await interviewApi.completeSession(session.sessionId, getActiveUserId());
+
         if (backendReport) {
           finalScores = {
             overall: backendReport.overall_score,
@@ -636,7 +661,8 @@ export function InterviewProvider({ children }) {
     setHistory(prev => [historyItem, ...prev]);
 
     // Background sync with FastAPI backend
-    storageService.syncInterviewToBackend(historyItem, initialUser?.id || 'user-001').catch(() => {});
+    storageService.syncInterviewToBackend(historyItem, getActiveUserId()).catch(() => {});
+
 
     // Record immutable activity and update skill gap model
     activityService.recordActivity({

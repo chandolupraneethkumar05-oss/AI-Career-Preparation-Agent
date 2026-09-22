@@ -1,14 +1,14 @@
-/**
- * Profile & Settings API Client
- * AI Career Preparation Agent
- */
+import { storageService } from '../utils/storage/storageService';
 
 const BACKEND_BASE_URL = 'http://127.0.0.1:8000';
 
+const resolveUserId = (id) => id || storageService.getCurrentUser()?.id || 'usr_candidate';
+
 export const profileApi = {
-  async getProfile(userId = 'user-001') {
+  async getProfile(userId = null) {
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${userId}`);
+      const effectiveId = resolveUserId(userId);
+      const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err) {
@@ -17,13 +17,15 @@ export const profileApi = {
     }
   },
 
-  async updateProfile(profileData, userId = 'user-001') {
+  async updateProfile(profileData, userId = null) {
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${userId}`, {
+      const effectiveId = resolveUserId(userId);
+      const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profileData)
       });
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err) {

@@ -52,7 +52,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let mounted = true;
-    skillApi.getSkillProfile('user-001')
+    const currentUserId = user?.id || 'usr_candidate';
+    skillApi.getSkillProfile(currentUserId)
       .then((data) => {
         if (mounted && data) {
           setLiveSkillProfile(data);
@@ -62,7 +63,8 @@ export default function DashboardPage() {
         if (import.meta.env.DEV) console.debug('[DashboardPage] live skill profile fetch error:', err);
       });
     return () => { mounted = false; };
-  }, []);
+  }, [user?.id]);
+
 
   // Next Best Action from Autonomous Agent Decision Engine
   const [liveNextAction, setLiveNextAction] = useState(() => agentDecisionEngine.getNextBestAction());

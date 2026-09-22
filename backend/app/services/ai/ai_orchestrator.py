@@ -57,12 +57,14 @@ class AIOrchestrator:
         retrieved_chunks = retrieval_result.get("chunks", [])
 
         # 3. Grounded LLM Response Generation
+        self.llm_service = get_llm_service()
         raw_output = self.llm_service.generate_grounded_response(
             query=query_text,
             user_context=user_context,
             retrieved_chunks=retrieved_chunks,
             language=lang
         )
+
 
         # 4. Format Pydantic schemas
         sources = [
@@ -134,6 +136,7 @@ class AIOrchestrator:
 
     def get_ai_status(self) -> AIStatusResponse:
         """Returns live status of the AI subsystem."""
+        self.llm_service = get_llm_service()
         return AIStatusResponse(
             status="operational",
             llm_provider=self.llm_service.__class__.__name__,
@@ -142,6 +145,7 @@ class AIOrchestrator:
             supported_languages=["en", "te", "hi", "es"],
             rag_active=True
         )
+
 
 
 # Shared singleton instance

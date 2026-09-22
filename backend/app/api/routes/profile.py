@@ -21,9 +21,25 @@ def get_candidate_profile(
     """Retrieves full candidate profile including academic and career details."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+        # Auto-provision user and profile for new authenticated session
+        sanitized_name = user_id.replace("usr_", "").replace("_", " ").title() if "usr_" in user_id else "Career Candidate"
+        clean_email = f"{user_id}@career-ai.dev" if "@" not in user_id else user_id
+        user = User(
+            id=user_id,
+            email=clean_email,
+            name=sanitized_name,
+            role="Machine Learning Engineer",
+            target_role="Machine Learning Engineer"
+        )
+        db.add(user)
+        profile = Profile(user_id=user_id)
+        db.add(profile)
+        db.commit()
+        db.refresh(user)
+        db.refresh(profile)
+    else:
+        profile = db.query(Profile).filter(Profile.user_id == user_id).first()
 
-    profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     return CandidateFullProfileResponse(
         user=UserResponse.model_validate(user),
         profile=ProfileResponse.model_validate(profile) if profile else None
@@ -36,7 +52,29 @@ def update_candidate_profile(
     user_id: str = Query("user-001", description="Candidate User ID"),
     db: Session = Depends(get_db)
 ):
-    """Updates candidate career preferences and biography."""
+    """Updates candidate career preferences, target role, and biography."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        user = User(
+            id=user_id,
+            email=f"{user_id}@career-ai.dev" if "@" not in user_id else user_id,
+            name=update_data.name or "Career Candidate",
+            role=update_data.role or update_data.target_role or "Machine Learning Engineer",
+            target_role=update_data.target_role or update_data.role or "Machine Learning Engineer"
+        )
+        db.add(user)
+    else:
+        if update_data.name is not None:
+            user.name = update_data.name
+        if update_data.target_role is not None:
+            user.target_role = update_data.target_role
+            if update_data.role is None:
+                user.role = update_data.target_role
+        if update_data.role is not None:
+            user.role = update_data.role
+            if update_data.target_role is None:
+                user.target_role = update_data.role
+
     profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if not profile:
         profile = Profile(user_id=user_id)
@@ -61,3 +99,4 @@ def update_candidate_profile(
     db.commit()
     db.refresh(profile)
     return ProfileResponse.model_validate(profile)
+

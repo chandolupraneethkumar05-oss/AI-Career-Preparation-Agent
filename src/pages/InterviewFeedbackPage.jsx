@@ -36,12 +36,15 @@ import Badge from '../components/Badge';
 import RecordingReview from '../components/video/RecordingReview';
 import { getCompanyPlaybook } from '../data/companyPlaybooks';
 import { useInterview } from '../context/InterviewContext';
+import { useAuth } from '../context/AuthContext';
 import { synthesizeInterviewFeedback } from '../utils/feedbackAgent';
 import { getLanguageDisplayName } from '../data/languages';
 
 export default function InterviewFeedbackPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { session, setup, startInterview } = useInterview();
+
   const [activeTab, setActiveTab] = useState('summary');
 
   // Company Playbook & Hiring Committee Calibration resolution
@@ -1320,8 +1323,9 @@ Candidate: ${user?.name || 'Candidate'}
       {isVideoSession && (
         <RecordingReview
           sessionId={session.sessionId}
-          userId="user-001"
+          userId={user?.id || 'usr_candidate'}
           recordedBlob={session.recordedBlob}
+
           streamUrl={session.recordingData?.stream_url}
           segments={segments}
         />

@@ -47,7 +47,8 @@ export default function MockInterviewPage() {
     setCommunicationAnalysis,
     setRecordedBlob
   } = useInterview();
-  const { addXP } = useAuth();
+  const { user, addXP } = useAuth();
+
 
   const isFaceToFaceMode = setup.interviewMode === 'face_to_face';
   const isVideoMode = setup.interviewMode === 'video' || isFaceToFaceMode;
@@ -460,7 +461,8 @@ export default function MockInterviewPage() {
         interviewType: setup?.interviewType || 'Technical',
         targetRole: setup?.targetRole || 'Machine Learning Engineer',
         language: setup?.interviewLanguage || 'en',
-        userId: 'user-001',
+        userId: user?.id || 'usr_candidate',
+
         sessionId: session?.sessionId,
         questionId: currentQuestion?.id
       });
@@ -596,7 +598,7 @@ export default function MockInterviewPage() {
         durationSeconds: totalDuration,
         questionCount: totalQuestions,
         isBehavioral: setup.interviewType === 'Behavioral',
-        userId: 'user-001'
+        userId: user?.id || 'usr_candidate'
       });
       setCommunicationAnalysis(commMetrics);
     } catch (commErr) {
@@ -613,8 +615,9 @@ export default function MockInterviewPage() {
         mimeType: fullBlob?.type || 'video/webm',
         segments: allSegments,
         communicationMetrics: commMetrics,
-        userId: 'user-001'
+        userId: user?.id || 'usr_candidate'
       });
+
       setRecordingData(recResp);
     } catch (saveErr) {
       console.warn('Save recording notice:', saveErr);
