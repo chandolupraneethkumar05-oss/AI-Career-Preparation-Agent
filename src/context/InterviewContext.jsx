@@ -635,6 +635,9 @@ export function InterviewProvider({ children }) {
 
     setHistory(prev => [historyItem, ...prev]);
 
+    // Background sync with FastAPI backend
+    storageService.syncInterviewToBackend(historyItem, initialUser?.id || 'user-001').catch(() => {});
+
     // Record immutable activity and update skill gap model
     activityService.recordActivity({
       type: ACTIVITY_TYPES.INTERVIEW_COMPLETED,

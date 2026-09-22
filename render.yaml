@@ -1,0 +1,16 @@
+# Render Blueprint Deployment Configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Option 1: Unified Docker Service (Frontend + Backend in one container)
+  - type: web
+    name: ai-career-agent
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: DATABASE_URL
+        value: sqlite:///backend/career_agent.db

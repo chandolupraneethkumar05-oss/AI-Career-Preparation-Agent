@@ -18,27 +18,48 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  // Initial background hydration from backend
+  useEffect(() => {
+    if (user?.id) {
+      storageService.hydrateFromBackend(user.id).catch(() => {});
+    }
+  }, [user?.id]);
+
   const login = useCallback((email, _password) => {
     setIsLoading(true);
     return new Promise((resolve) => {
       setTimeout(() => {
-        const existing = storageService.getCurrentUser();
-        const currentActivities = activityService.getActivities();
-        const realStreak = activityService.calculateCurrentStreak(currentActivities);
-        const loggedUser = {
-          name: email ? email.split('@')[0].replace('.', ' ').toUpperCase() : (existing?.name || 'Career Candidate'),
-          email: email || existing?.email || 'candidate@career-ai.dev',
-          targetRole: existing?.targetRole || 'Machine Learning Engineer',
-          role: existing?.role || 'Machine Learning Engineer',
-          avatar: existing?.avatar || MOCK_USER.avatar,
-          level: existing?.level || 1,
-          title: existing?.title || 'Aspiring Candidate',
-          xp: existing?.xp || 0,
+        const cleanEmail = (email || 'candidate@career-ai.dev').trim().toLowerCase();
+        const userId = `usr_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
+        const nameFromEmail = cleanEmail.split('@')[0].replace(/[._-]/g, ' ').toUpperCase();
+
+        // Check if there is an existing saved profile for this specific user
+        const existingProfile = storageService.getProfile(userId);
+        const userActivities = storageService.getActivities(userId);
+        const realStreak = activityService.calculateCurrentStreak(userActivities);
+
+        const loggedUser = existingProfile ? {
+          ...existingProfile,
+          id: userId,
+          email: cleanEmail,
+          streak: realStreak
+        } : {
+          id: userId,
+          name: nameFromEmail || 'Career Candidate',
+          email: cleanEmail,
+          targetRole: 'Machine Learning Engineer',
+          role: 'Machine Learning Engineer',
+          avatar: MOCK_USER.avatar,
+          level: 1,
+          title: 'Aspiring Candidate',
+          xp: 0,
           streak: realStreak,
-          feedbackLanguage: existing?.feedbackLanguage || 'en'
+          feedbackLanguage: 'en'
         };
+
         setUser(loggedUser);
         storageService.saveCurrentUser(loggedUser);
+        storageService.saveProfile(loggedUser, userId);
         setIsLoading(false);
         resolve(loggedUser);
       }, 300);
@@ -49,23 +70,34 @@ export function AuthProvider({ children }) {
     setIsLoading(true);
     return new Promise((resolve) => {
       setTimeout(() => {
-        const existing = storageService.getCurrentUser();
-        const currentActivities = activityService.getActivities();
-        const realStreak = activityService.calculateCurrentStreak(currentActivities);
-        const demoUser = {
+        const demoEmail = 'alex.rivera@career-ai.dev';
+        const userId = 'usr_demo_alex_rivera';
+        const existingProfile = storageService.getProfile(userId);
+        const userActivities = storageService.getActivities(userId);
+        const realStreak = activityService.calculateCurrentStreak(userActivities);
+
+        const demoUser = existingProfile ? {
+          ...existingProfile,
+          id: userId,
+          email: demoEmail,
+          streak: realStreak
+        } : {
+          id: userId,
           name: 'Alex Rivera',
-          email: 'alex.rivera@career-ai.dev',
-          targetRole: existing?.targetRole || 'Machine Learning Engineer',
-          role: existing?.role || 'Machine Learning Engineer',
+          email: demoEmail,
+          targetRole: 'Machine Learning Engineer',
+          role: 'Machine Learning Engineer',
           avatar: MOCK_USER.avatar,
-          level: existing?.level || 1,
+          level: 1,
           title: 'Career Candidate',
-          xp: existing?.xp || 0,
+          xp: 0,
           streak: realStreak,
-          feedbackLanguage: existing?.feedbackLanguage || 'en'
+          feedbackLanguage: 'en'
         };
+
         setUser(demoUser);
         storageService.saveCurrentUser(demoUser);
+        storageService.saveProfile(demoUser, userId);
         setIsLoading(false);
         resolve(demoUser);
       }, 250);
@@ -76,9 +108,13 @@ export function AuthProvider({ children }) {
     setIsLoading(true);
     return new Promise((resolve) => {
       setTimeout(() => {
+        const cleanEmail = (email || 'candidate@career-ai.dev').trim().toLowerCase();
+        const userId = `usr_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
+
         const newUser = {
-          name: name || 'Career Candidate',
-          email: email || 'candidate@career-ai.dev',
+          id: userId,
+          name: name || cleanEmail.split('@')[0].toUpperCase(),
+          email: cleanEmail,
           targetRole: 'Machine Learning Engineer',
           role: 'Machine Learning Engineer',
           avatar: MOCK_USER.avatar,
@@ -88,8 +124,10 @@ export function AuthProvider({ children }) {
           title: 'New Candidate',
           feedbackLanguage: 'en'
         };
+
         setUser(newUser);
         storageService.saveCurrentUser(newUser);
+        storageService.saveProfile(newUser, userId);
         setIsLoading(false);
         resolve(newUser);
       }, 300);
@@ -98,7 +136,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+    storageService.remove(STORAGE_KEYS.AUTH_USER);
   }, []);
 
   const addXP = useCallback((amount) => {

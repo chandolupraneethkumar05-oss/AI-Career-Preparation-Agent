@@ -42,6 +42,7 @@ import { getLanguageDisplayName } from '../data/languages';
 export default function InterviewFeedbackPage() {
   const navigate = useNavigate();
   const { session, setup, startInterview } = useInterview();
+  const [activeTab, setActiveTab] = useState('summary');
 
   // Company Playbook & Hiring Committee Calibration resolution
   const activePlaybookId = session.summaryResult?.companyPlaybook || setup.companyPlaybook || 'general';
@@ -295,6 +296,68 @@ Candidate: ${user?.name || 'Candidate'}
       )}
 
       {/* ========================================================================= */}
+
+      {/* ========================================================================= */}
+      {/* TAB NAVIGATION STRIP (Executive Review Architecture)                      */}
+      {/* ========================================================================= */}
+      <div className="flex border-b border-[#E5E0D5] gap-1 overflow-x-auto bg-[#FFFDF9] p-1.5 rounded-md border border-[#E5E0D5] shadow-xs sticky top-2 z-30">
+        <button
+          type="button"
+          onClick={() => setActiveTab('summary')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-sm text-xs font-serif font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'summary'
+              ? 'bg-[#1B2A4A] text-white shadow-xs'
+              : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9]'
+          }`}
+        >
+          <Award className="w-3.5 h-3.5" />
+          <span>Executive Verdict & Summary</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('competencies')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-sm text-xs font-serif font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'competencies'
+              ? 'bg-[#1B2A4A] text-white shadow-xs'
+              : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9]'
+          }`}
+        >
+          <Target className="w-3.5 h-3.5" />
+          <span>Competency & Rubrics Matrix</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('questions')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-sm text-xs font-serif font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'questions'
+              ? 'bg-[#1B2A4A] text-white shadow-xs'
+              : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9]'
+          }`}
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span>Question-by-Question Audit ({result.questionPerformance?.length || 0})</span>
+        </button>
+
+        {(commMetrics || isVideoSession) && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('recording')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-sm text-xs font-serif font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'recording'
+                ? 'bg-[#1B2A4A] text-white shadow-xs'
+                : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9]'
+            }`}
+          >
+            <Mic className="w-3.5 h-3.5" />
+            <span>Media & Delivery Review</span>
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'summary' && (
+        <div className="space-y-8 animate-fadeIn">
       {/* 3. OVERALL SCORE CARD                                                    */}
       {/* ========================================================================= */}
       <GlassCard className="p-8 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs relative overflow-hidden">
@@ -486,6 +549,250 @@ Candidate: ${user?.name || 'Candidate'}
       </GlassCard>
 
       {/* ========================================================================= */}
+      {/* 5. AI PERFORMANCE SUMMARY                                                */}
+      {/* ========================================================================= */}
+      <GlassCard className="p-6 sm:p-8 border-[#E5E0D5] bg-[#FFFDF9] space-y-3 shadow-xs">
+        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-center justify-center text-[#1A365D]">
+              <Bot className="w-5 h-5" />
+            </div>
+            <h2 className="text-base font-serif font-bold text-[#1F1B16]">Examination Committee Evaluation Summary</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm bg-[#EBF4EE] text-[#235E3B] border border-[#CDE5D4] flex items-center gap-1 font-mono">
+              <Globe className="w-3 h-3 text-[#235E3B]" />
+              {getLanguageDisplayName(activeLang)}
+            </span>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm bg-[#FAF8F3] text-[#70685E] border border-[#E5E0D5] font-mono">
+              Faculty Audit
+            </span>
+          </div>
+        </div>
+
+        <p className="text-sm sm:text-base text-[#1F1B16] font-serif italic leading-relaxed pt-1">
+          "{result.aiSummary}"
+        </p>
+
+        <div className="pt-2 text-[11px] text-[#70685E] flex items-center gap-1.5 font-mono">
+          <Cpu className="w-3.5 h-3.5 text-[#1A365D] shrink-0" />
+          <span>Synthesized using multi-dimensional token analysis & candidate response rubrics.</span>
+        </div>
+      </GlassCard>
+
+      {/* ========================================================================= */}
+      {/* 8. AGENT RECOMMENDATION (Critical Product Differentiation)                */}
+      {/* ========================================================================= */}
+      <GlassCard className="p-6 sm:p-8 border-[#E5E0D5] bg-[#FFFDF9] space-y-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E0D5] pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-center justify-center text-[#1A365D]">
+              <Bot className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-serif font-bold text-[#1F1B16]">FACULTY ADVISORY DIRECTIVE</h2>
+              <p className="text-xs text-[#70685E]">Prescribed Remediation & Practice Pathway</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#70685E]">Priority Focus:</span>
+            <span className="px-2.5 py-1 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-[#1A365D] font-serif font-bold text-xs">
+              {result.recommendationFocus}
+            </span>
+          </div>
+        </div>
+
+        <p className="text-sm text-[#1F1B16] font-serif leading-relaxed">
+          "{result.recommendationExplanation}"
+        </p>
+
+        {/* 3 Clickable Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          {result.recommendedActions.map((action) => (
+            <div
+              key={action.id}
+              onClick={() => navigate(action.route)}
+              className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer flex flex-col justify-between space-y-3 group"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="w-6 h-6 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] text-xs font-mono font-bold flex items-center justify-center">
+                    {action.num}
+                  </span>
+                  <Badge variant="navy" size="sm">
+                    {action.tag}
+                  </Badge>
+                </div>
+
+                <h3 className="text-sm font-bold text-[#1F1B16] font-serif group-hover:text-[#1A365D] transition-colors">
+                  {action.title}
+                </h3>
+                <p className="text-xs text-[#70685E] mt-1 leading-relaxed">
+                  {action.desc}
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between text-xs font-semibold text-[#1A365D] group-hover:translate-x-1 transition-transform">
+                <span>{action.actionLabel || 'Commence Drill'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* ========================================================================= */}
+      {/* 9. AGENT DECISION TIMELINE                                                */}
+      {/* ========================================================================= */}
+      <GlassCard className="p-6 sm:p-8 space-y-6 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
+        <div>
+          <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider flex items-center gap-2">
+            <Compass className="w-5 h-5 text-[#1A365D]" />
+            Faculty Reasoning & Directive Provenance
+          </h2>
+          <p className="text-xs text-[#70685E] mt-0.5">
+            Transparent algorithmic reasoning pipeline — moving beyond opaque conversational chatbots
+          </p>
+        </div>
+
+        {/* 5-Step Agent Timeline */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 relative pt-2">
+          {result.timelineSteps.map((step) => (
+            <div
+              key={step.step}
+              className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex flex-col justify-between space-y-2 relative"
+            >
+              <div>
+                <div className="w-7 h-7 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] font-mono font-bold text-xs flex items-center justify-center mb-2">
+                  0{step.step}
+                </div>
+                <h3 className="text-xs font-bold text-[#1F1B16] font-serif">{step.title}</h3>
+                <p className="text-[11px] text-[#70685E] mt-1 leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* ========================================================================= */}
+      {/* 11. NEXT BEST ACTION (Live AI Recommendation + 3 Cards)                   */}
+      {/* ========================================================================= */}
+      <div className="space-y-4">
+        <div className="border-b border-[#E5E0D5] pb-2">
+          <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+            RECOMMENDED PRACTICE ACTIONS
+          </h2>
+          <p className="text-xs text-[#70685E]">
+            Suggested exercises tailored to your interview performance
+          </p>
+        </div>
+
+        {/* Live Autonomous Next-Best-Action from Backend */}
+        {session.summaryResult?.backendReport?.next_best_action && (
+          <GlassCard className="p-5 border-[#BAC7D5] bg-[#FFFDF9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#1A365D]" />
+                <span className="text-xs font-bold text-[#1A365D] uppercase tracking-wider font-mono">
+                  Autonomous Next-Best-Action
+                </span>
+                {session.summaryResult.backendReport.feedback_language && session.summaryResult.backendReport.feedback_language !== 'en' && (
+                  <Badge variant="navy" size="sm">
+                    {session.summaryResult.backendReport.feedback_language.toUpperCase()}
+                  </Badge>
+                )}
+              </div>
+              <h3 className="text-base font-serif font-bold text-[#1F1B16]">
+                {session.summaryResult.backendReport.next_best_action.title}
+              </h3>
+              <p className="text-xs text-[#70685E]">
+                {session.summaryResult.backendReport.next_best_action.reason}
+              </p>
+            </div>
+            <GradientButton
+              variant="primary"
+              size="md"
+              onClick={() => navigate(session.summaryResult.backendReport.next_best_action.route || '/daily-challenge')}
+              icon={ArrowRight}
+              className="shrink-0 w-full sm:w-auto"
+            >
+              {session.summaryResult.backendReport.next_best_action.action || 'Execute Directive'}
+            </GradientButton>
+          </GlassCard>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Card 1 */}
+          <GlassCard
+            hoverEffect
+            onClick={() => navigate('/skill-gap')}
+            className="p-6 cursor-pointer flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D] mb-3">
+                <Target className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-serif font-bold text-[#1F1B16]">Competency Gap Matrix</h3>
+              <p className="text-xs text-[#70685E] mt-1 leading-relaxed">
+                Inspect your verified proficiency ratings against target industry benchmarks.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-[#1A365D] flex items-center gap-1 pt-2">
+              Inspect Skill Gaps →
+            </span>
+          </GlassCard>
+
+          {/* Card 2 */}
+          <GlassCard
+            hoverEffect
+            onClick={() => navigate('/daily-challenge')}
+            className="p-6 cursor-pointer flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#9A421A] mb-3">
+                <Flame className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-serif font-bold text-[#1F1B16]">Daily Practice</h3>
+              <p className="text-xs text-[#70685E] mt-1 leading-relaxed">
+                Complete today's drill to sustain your practice streak and earn +20 XP.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-[#9A421A] flex items-center gap-1 pt-2">
+              Start Daily Practice (+20 XP) →
+            </span>
+          </GlassCard>
+
+          {/* Card 3 */}
+          <GlassCard
+            hoverEffect
+            onClick={() => navigate('/interview-setup')}
+            className="p-6 cursor-pointer flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#8C6E54] mb-3">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-serif font-bold text-[#1F1B16]">Practice Another Interview</h3>
+              <p className="text-xs text-[#70685E] mt-1 leading-relaxed">
+                Start a new interview session with adaptive questions tailored to your skill level.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-[#1A365D] flex items-center gap-1 pt-2">
+              Start Practice Session →
+            </span>
+          </GlassCard>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+        </div>
+      )}
+
+      {activeTab === 'competencies' && (
+        <div className="space-y-8 animate-fadeIn">
       {/* 3C. CANONICAL 4-PILLAR INDUSTRY RUBRIC SCORING (Interviewing.io Benchmark) */}
       {/* ========================================================================= */}
       <div className="space-y-4">
@@ -679,6 +986,221 @@ Candidate: ${user?.name || 'Candidate'}
       </div>
 
       {/* ========================================================================= */}
+      {/* 6. STRENGTHS & 7. AREAS TO IMPROVE (Two Columns)                         */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Strengths Card */}
+        <GlassCard className="p-6 space-y-4 border-[#CDE5D4] bg-[#FFFDF9] shadow-xs">
+          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
+            <CheckCircle2 className="w-5 h-5 text-[#235E3B] shrink-0" />
+            <h2 className="text-base font-serif font-bold text-[#235E3B]">Demonstrated Competencies</h2>
+          </div>
+
+          <ul className="space-y-2.5 text-xs text-[#3B352E]">
+            {result.strengths.map((item, idx) => (
+              <li
+                key={idx}
+                className="flex items-start gap-3 p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-[#1F1B16] font-medium"
+              >
+                <span className="text-[#235E3B] font-bold text-sm">✓</span>
+                <span className="leading-relaxed">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </GlassCard>
+
+        {/* Areas to Improve Card */}
+        <GlassCard className="p-6 space-y-4 border-[#F0C9B3] bg-[#FFFDF9] shadow-xs">
+          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
+            <AlertCircle className="w-5 h-5 text-[#9A421A] shrink-0" />
+            <h2 className="text-base font-serif font-bold text-[#9A421A]">Curricular Gaps & Remediation</h2>
+          </div>
+
+          <ul className="space-y-2.5 text-xs text-[#3B352E]">
+            {result.improvements.map((item, idx) => (
+              <li
+                key={idx}
+                className="flex items-start gap-3 p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-[#1F1B16] font-medium"
+              >
+                <span className="text-[#9A421A] font-bold text-sm">•</span>
+                <span className="leading-relaxed">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </GlassCard>
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 7.5 SKILLS OBSERVED IN THIS INTERVIEW                                     */}
+      {/* ========================================================================= */}
+      <GlassCard className="p-6 sm:p-8 space-y-5 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
+        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-4">
+          <div className="flex items-center gap-2.5">
+            <Target className="w-5 h-5 text-[#1A365D]" />
+            <div>
+              <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+                Competencies Tracked in this Examination
+              </h2>
+              <p className="text-xs text-[#70685E]">
+                Live evaluated competencies mapped directly to your Candidate Skill Inventory
+              </p>
+            </div>
+          </div>
+          <Badge variant="navy" size="sm">
+            {observedSkills.length} Verified
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          {observedSkills.map((sk) => (
+            <div
+              key={sk.skill_name}
+              className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] hover:border-[#1A365D] transition-all space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-serif font-bold text-[#1F1B16]">{sk.skill_name}</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant={sk.score >= 80 ? 'forest' : sk.score >= 65 ? 'navy' : 'bronze'} size="xs">
+                    {sk.status}
+                  </Badge>
+                  <span className="text-sm font-bold text-[#1A365D] font-mono">
+                    {sk.score}%
+                  </span>
+                </div>
+              </div>
+
+              <ProgressBar
+                value={sk.score}
+                height="h-1.5"
+              />
+
+              {sk.missing_concepts && sk.missing_concepts.length > 0 && (
+                <div className="text-[11px] text-[#70685E] pt-1">
+                  <span className="font-semibold text-[#9A421A]">Unaddressed Concepts: </span>
+                  <span>{sk.missing_concepts.slice(0, 3).join(', ')}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* ========================================================================= */}
+        </div>
+      )}
+
+      {activeTab === 'questions' && (
+        <div className="space-y-8 animate-fadeIn">
+      {/* 10. QUESTION-BY-QUESTION PERFORMANCE (Expandable Rows)                    */}
+      {/* ========================================================================= */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-2">
+          <div>
+            <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
+              Examination Inquiry Ledger
+            </h2>
+            <p className="text-xs text-[#70685E]">
+              Select any question to inspect candidate discourse, rubric scores, and faculty critique
+            </p>
+          </div>
+          <span className="text-xs text-[#1A365D] font-mono">
+            {result.questionPerformance.length} Inquiries Evaluated
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {result.questionPerformance.map((item) => {
+            const isExpanded = !!expandedQuestions[item.num];
+            return (
+              <GlassCard
+                key={item.num}
+                className={`p-0 overflow-hidden border transition-all ${
+                  isExpanded ? 'border-[#1A365D] shadow-sm' : 'border-[#E5E0D5] hover:border-[#BAC7D5]'
+                }`}
+              >
+                {/* Accordion Row Header */}
+                <button
+                  type="button"
+                  onClick={() => toggleQuestion(item.num)}
+                  className="w-full p-4 sm:p-5 flex items-center justify-between text-left transition-colors hover:bg-[#FAF8F3] cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+                    <span className="w-8 h-8 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] text-xs font-mono font-bold flex items-center justify-center shrink-0">
+                      Q{item.num}
+                    </span>
+                    <div className="truncate">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#8C6E54] uppercase tracking-wider font-mono">
+                          {item.dimension}
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm font-serif font-semibold text-[#1F1B16] truncate mt-0.5">
+                        {item.question}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 shrink-0 ml-2">
+                    <div className="text-right">
+                      <span className="text-[10px] text-[#70685E] block uppercase font-mono">Score</span>
+                      <span className="text-sm sm:text-base font-serif font-bold text-[#1F1B16]">
+                        {item.score}/100
+                      </span>
+                    </div>
+
+                    <div className="p-1 rounded-sm bg-[#FAF8F3] text-[#70685E] border border-[#E5E0D5]">
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
+                  </div>
+                </button>
+
+                {/* Expanded Detailed Breakdown */}
+                {isExpanded && (
+                  <div className="p-5 border-t border-[#E5E0D5] bg-[#FAF8F3] space-y-4 text-xs animate-in fade-in duration-200">
+                    {/* Full Question */}
+                    <div>
+                      <span className="font-bold text-[#70685E] uppercase tracking-wider text-[10px] block mb-1 font-mono">
+                        Prompt As Issued:
+                      </span>
+                      <p className="text-[#1F1B16] font-serif font-medium p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5]">
+                        "{item.question}"
+                      </p>
+                    </div>
+
+                    {/* Candidate Answer */}
+                    <div>
+                      <span className="font-bold text-[#1A365D] uppercase tracking-wider text-[10px] block mb-1 font-mono">
+                        Candidate Answer Submitted:
+                      </span>
+                      <p className="text-[#1F1B16] leading-relaxed p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5]">
+                        {item.userAnswer}
+                      </p>
+                    </div>
+
+                    {/* AI Feedback */}
+                    <div className="p-3 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-start gap-2.5">
+                      <Sparkles className="w-4 h-4 text-[#1A365D] shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-serif font-bold text-[#1A365D] block mb-0.5">Faculty Evaluation Critique:</span>
+                        <p className="text-[#3B352E] leading-relaxed">{item.feedback}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </GlassCard>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+        </div>
+      )}
+
+      {activeTab === 'recording' && (
+        <div className="space-y-8 animate-fadeIn">
       {/* 4.5 COMMUNICATION & DELIVERY ANALYSIS (Verbal Evidence & Cadence)         */}
       {/* ========================================================================= */}
       {commMetrics && (
@@ -806,450 +1328,9 @@ Candidate: ${user?.name || 'Candidate'}
       )}
 
       {/* ========================================================================= */}
-      {/* 5. AI PERFORMANCE SUMMARY                                                */}
-      {/* ========================================================================= */}
-      <GlassCard className="p-6 sm:p-8 border-[#E5E0D5] bg-[#FFFDF9] space-y-3 shadow-xs">
-        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-center justify-center text-[#1A365D]">
-              <Bot className="w-5 h-5" />
-            </div>
-            <h2 className="text-base font-serif font-bold text-[#1F1B16]">Examination Committee Evaluation Summary</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm bg-[#EBF4EE] text-[#235E3B] border border-[#CDE5D4] flex items-center gap-1 font-mono">
-              <Globe className="w-3 h-3 text-[#235E3B]" />
-              {getLanguageDisplayName(activeLang)}
-            </span>
-            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm bg-[#FAF8F3] text-[#70685E] border border-[#E5E0D5] font-mono">
-              Faculty Audit
-            </span>
-          </div>
         </div>
+      )}
 
-        <p className="text-sm sm:text-base text-[#1F1B16] font-serif italic leading-relaxed pt-1">
-          "{result.aiSummary}"
-        </p>
-
-        <div className="pt-2 text-[11px] text-[#70685E] flex items-center gap-1.5 font-mono">
-          <Cpu className="w-3.5 h-3.5 text-[#1A365D] shrink-0" />
-          <span>Synthesized using multi-dimensional token analysis & candidate response rubrics.</span>
-        </div>
-      </GlassCard>
-
-      {/* ========================================================================= */}
-      {/* 6. STRENGTHS & 7. AREAS TO IMPROVE (Two Columns)                         */}
-      {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* Strengths Card */}
-        <GlassCard className="p-6 space-y-4 border-[#CDE5D4] bg-[#FFFDF9] shadow-xs">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <CheckCircle2 className="w-5 h-5 text-[#235E3B] shrink-0" />
-            <h2 className="text-base font-serif font-bold text-[#235E3B]">Demonstrated Competencies</h2>
-          </div>
-
-          <ul className="space-y-2.5 text-xs text-[#3B352E]">
-            {result.strengths.map((item, idx) => (
-              <li
-                key={idx}
-                className="flex items-start gap-3 p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-[#1F1B16] font-medium"
-              >
-                <span className="text-[#235E3B] font-bold text-sm">✓</span>
-                <span className="leading-relaxed">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </GlassCard>
-
-        {/* Areas to Improve Card */}
-        <GlassCard className="p-6 space-y-4 border-[#F0C9B3] bg-[#FFFDF9] shadow-xs">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <AlertCircle className="w-5 h-5 text-[#9A421A] shrink-0" />
-            <h2 className="text-base font-serif font-bold text-[#9A421A]">Curricular Gaps & Remediation</h2>
-          </div>
-
-          <ul className="space-y-2.5 text-xs text-[#3B352E]">
-            {result.improvements.map((item, idx) => (
-              <li
-                key={idx}
-                className="flex items-start gap-3 p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-[#1F1B16] font-medium"
-              >
-                <span className="text-[#9A421A] font-bold text-sm">•</span>
-                <span className="leading-relaxed">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </GlassCard>
-
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 7.5 SKILLS OBSERVED IN THIS INTERVIEW                                     */}
-      {/* ========================================================================= */}
-      <GlassCard className="p-6 sm:p-8 space-y-5 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
-        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-4">
-          <div className="flex items-center gap-2.5">
-            <Target className="w-5 h-5 text-[#1A365D]" />
-            <div>
-              <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
-                Competencies Tracked in this Examination
-              </h2>
-              <p className="text-xs text-[#70685E]">
-                Live evaluated competencies mapped directly to your Candidate Skill Inventory
-              </p>
-            </div>
-          </div>
-          <Badge variant="navy" size="sm">
-            {observedSkills.length} Verified
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-          {observedSkills.map((sk) => (
-            <div
-              key={sk.skill_name}
-              className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] hover:border-[#1A365D] transition-all space-y-2.5"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-serif font-bold text-[#1F1B16]">{sk.skill_name}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant={sk.score >= 80 ? 'forest' : sk.score >= 65 ? 'navy' : 'bronze'} size="xs">
-                    {sk.status}
-                  </Badge>
-                  <span className="text-sm font-bold text-[#1A365D] font-mono">
-                    {sk.score}%
-                  </span>
-                </div>
-              </div>
-
-              <ProgressBar
-                value={sk.score}
-                height="h-1.5"
-              />
-
-              {sk.missing_concepts && sk.missing_concepts.length > 0 && (
-                <div className="text-[11px] text-[#70685E] pt-1">
-                  <span className="font-semibold text-[#9A421A]">Unaddressed Concepts: </span>
-                  <span>{sk.missing_concepts.slice(0, 3).join(', ')}</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-
-      {/* ========================================================================= */}
-      {/* 8. AGENT RECOMMENDATION (Critical Product Differentiation)                */}
-      {/* ========================================================================= */}
-      <GlassCard className="p-6 sm:p-8 border-[#E5E0D5] bg-[#FFFDF9] space-y-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E0D5] pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-center justify-center text-[#1A365D]">
-              <Bot className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-serif font-bold text-[#1F1B16]">FACULTY ADVISORY DIRECTIVE</h2>
-              <p className="text-xs text-[#70685E]">Prescribed Remediation & Practice Pathway</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#70685E]">Priority Focus:</span>
-            <span className="px-2.5 py-1 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] text-[#1A365D] font-serif font-bold text-xs">
-              {result.recommendationFocus}
-            </span>
-          </div>
-        </div>
-
-        <p className="text-sm text-[#1F1B16] font-serif leading-relaxed">
-          "{result.recommendationExplanation}"
-        </p>
-
-        {/* 3 Clickable Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-          {result.recommendedActions.map((action) => (
-            <div
-              key={action.id}
-              onClick={() => navigate(action.route)}
-              className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer flex flex-col justify-between space-y-3 group"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="w-6 h-6 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] text-xs font-mono font-bold flex items-center justify-center">
-                    {action.num}
-                  </span>
-                  <Badge variant="navy" size="sm">
-                    {action.tag}
-                  </Badge>
-                </div>
-
-                <h3 className="text-sm font-bold text-[#1F1B16] font-serif group-hover:text-[#1A365D] transition-colors">
-                  {action.title}
-                </h3>
-                <p className="text-xs text-[#70685E] mt-1 leading-relaxed">
-                  {action.desc}
-                </p>
-              </div>
-
-              <div className="pt-2 flex items-center justify-between text-xs font-semibold text-[#1A365D] group-hover:translate-x-1 transition-transform">
-                <span>{action.actionLabel || 'Commence Drill'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-
-      {/* ========================================================================= */}
-      {/* 9. AGENT DECISION TIMELINE                                                */}
-      {/* ========================================================================= */}
-      <GlassCard className="p-6 sm:p-8 space-y-6 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
-        <div>
-          <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider flex items-center gap-2">
-            <Compass className="w-5 h-5 text-[#1A365D]" />
-            Faculty Reasoning & Directive Provenance
-          </h2>
-          <p className="text-xs text-[#70685E] mt-0.5">
-            Transparent algorithmic reasoning pipeline — moving beyond opaque conversational chatbots
-          </p>
-        </div>
-
-        {/* 5-Step Agent Timeline */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 relative pt-2">
-          {result.timelineSteps.map((step) => (
-            <div
-              key={step.step}
-              className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex flex-col justify-between space-y-2 relative"
-            >
-              <div>
-                <div className="w-7 h-7 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] font-mono font-bold text-xs flex items-center justify-center mb-2">
-                  0{step.step}
-                </div>
-                <h3 className="text-xs font-bold text-[#1F1B16] font-serif">{step.title}</h3>
-                <p className="text-[11px] text-[#70685E] mt-1 leading-relaxed">
-                  {step.desc}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-
-      {/* ========================================================================= */}
-      {/* 10. QUESTION-BY-QUESTION PERFORMANCE (Expandable Rows)                    */}
-      {/* ========================================================================= */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-2">
-          <div>
-            <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
-              Examination Inquiry Ledger
-            </h2>
-            <p className="text-xs text-[#70685E]">
-              Select any question to inspect candidate discourse, rubric scores, and faculty critique
-            </p>
-          </div>
-          <span className="text-xs text-[#1A365D] font-mono">
-            {result.questionPerformance.length} Inquiries Evaluated
-          </span>
-        </div>
-
-        <div className="space-y-3">
-          {result.questionPerformance.map((item) => {
-            const isExpanded = !!expandedQuestions[item.num];
-            return (
-              <GlassCard
-                key={item.num}
-                className={`p-0 overflow-hidden border transition-all ${
-                  isExpanded ? 'border-[#1A365D] shadow-sm' : 'border-[#E5E0D5] hover:border-[#BAC7D5]'
-                }`}
-              >
-                {/* Accordion Row Header */}
-                <button
-                  type="button"
-                  onClick={() => toggleQuestion(item.num)}
-                  className="w-full p-4 sm:p-5 flex items-center justify-between text-left transition-colors hover:bg-[#FAF8F3] cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
-                    <span className="w-8 h-8 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] text-xs font-mono font-bold flex items-center justify-center shrink-0">
-                      Q{item.num}
-                    </span>
-                    <div className="truncate">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#8C6E54] uppercase tracking-wider font-mono">
-                          {item.dimension}
-                        </span>
-                      </div>
-                      <p className="text-xs sm:text-sm font-serif font-semibold text-[#1F1B16] truncate mt-0.5">
-                        {item.question}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0 ml-2">
-                    <div className="text-right">
-                      <span className="text-[10px] text-[#70685E] block uppercase font-mono">Score</span>
-                      <span className="text-sm sm:text-base font-serif font-bold text-[#1F1B16]">
-                        {item.score}/100
-                      </span>
-                    </div>
-
-                    <div className="p-1 rounded-sm bg-[#FAF8F3] text-[#70685E] border border-[#E5E0D5]">
-                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </div>
-                  </div>
-                </button>
-
-                {/* Expanded Detailed Breakdown */}
-                {isExpanded && (
-                  <div className="p-5 border-t border-[#E5E0D5] bg-[#FAF8F3] space-y-4 text-xs animate-in fade-in duration-200">
-                    {/* Full Question */}
-                    <div>
-                      <span className="font-bold text-[#70685E] uppercase tracking-wider text-[10px] block mb-1 font-mono">
-                        Prompt As Issued:
-                      </span>
-                      <p className="text-[#1F1B16] font-serif font-medium p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5]">
-                        "{item.question}"
-                      </p>
-                    </div>
-
-                    {/* Candidate Answer */}
-                    <div>
-                      <span className="font-bold text-[#1A365D] uppercase tracking-wider text-[10px] block mb-1 font-mono">
-                        Candidate Answer Submitted:
-                      </span>
-                      <p className="text-[#1F1B16] leading-relaxed p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5]">
-                        {item.userAnswer}
-                      </p>
-                    </div>
-
-                    {/* AI Feedback */}
-                    <div className="p-3 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-start gap-2.5">
-                      <Sparkles className="w-4 h-4 text-[#1A365D] shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-serif font-bold text-[#1A365D] block mb-0.5">Faculty Evaluation Critique:</span>
-                        <p className="text-[#3B352E] leading-relaxed">{item.feedback}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </GlassCard>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 11. NEXT BEST ACTION (Live AI Recommendation + 3 Cards)                   */}
-      {/* ========================================================================= */}
-      <div className="space-y-4">
-        <div className="border-b border-[#E5E0D5] pb-2">
-          <h2 className="text-base font-serif font-bold text-[#1F1B16] uppercase tracking-wider">
-            RECOMMENDED PRACTICE ACTIONS
-          </h2>
-          <p className="text-xs text-[#70685E]">
-            Suggested exercises tailored to your interview performance
-          </p>
-        </div>
-
-        {/* Live Autonomous Next-Best-Action from Backend */}
-        {session.summaryResult?.backendReport?.next_best_action && (
-          <GlassCard className="p-5 border-[#BAC7D5] bg-[#FFFDF9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#1A365D]" />
-                <span className="text-xs font-bold text-[#1A365D] uppercase tracking-wider font-mono">
-                  Autonomous Next-Best-Action
-                </span>
-                {session.summaryResult.backendReport.feedback_language && session.summaryResult.backendReport.feedback_language !== 'en' && (
-                  <Badge variant="navy" size="sm">
-                    {session.summaryResult.backendReport.feedback_language.toUpperCase()}
-                  </Badge>
-                )}
-              </div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">
-                {session.summaryResult.backendReport.next_best_action.title}
-              </h3>
-              <p className="text-xs text-[#70685E]">
-                {session.summaryResult.backendReport.next_best_action.reason}
-              </p>
-            </div>
-            <GradientButton
-              variant="primary"
-              size="md"
-              onClick={() => navigate(session.summaryResult.backendReport.next_best_action.route || '/daily-challenge')}
-              icon={ArrowRight}
-              className="shrink-0 w-full sm:w-auto"
-            >
-              {session.summaryResult.backendReport.next_best_action.action || 'Execute Directive'}
-            </GradientButton>
-          </GlassCard>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Card 1 */}
-          <GlassCard
-            hoverEffect
-            onClick={() => navigate('/skill-gap')}
-            className="p-6 cursor-pointer flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs"
-          >
-            <div>
-              <div className="w-10 h-10 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D] mb-3">
-                <Target className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">Competency Gap Matrix</h3>
-              <p className="text-xs text-[#70685E] mt-1 leading-relaxed">
-                Inspect your verified proficiency ratings against target industry benchmarks.
-              </p>
-            </div>
-            <span className="text-xs font-bold text-[#1A365D] flex items-center gap-1 pt-2">
-              Inspect Skill Gaps →
-            </span>
-          </GlassCard>
-
-          {/* Card 2 */}
-          <GlassCard
-            hoverEffect
-            onClick={() => navigate('/daily-challenge')}
-            className="p-6 cursor-pointer flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs"
-          >
-            <div>
-              <div className="w-10 h-10 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#9A421A] mb-3">
-                <Flame className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">Daily Practice</h3>
-              <p className="text-xs text-[#70685E] mt-1 leading-relaxed">
-                Complete today's drill to sustain your practice streak and earn +20 XP.
-              </p>
-            </div>
-            <span className="text-xs font-bold text-[#9A421A] flex items-center gap-1 pt-2">
-              Start Daily Practice (+20 XP) →
-            </span>
-          </GlassCard>
-
-          {/* Card 3 */}
-          <GlassCard
-            hoverEffect
-            onClick={() => navigate('/interview-setup')}
-            className="p-6 cursor-pointer flex flex-col justify-between space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs"
-          >
-            <div>
-              <div className="w-10 h-10 rounded-sm bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#8C6E54] mb-3">
-                <RotateCcw className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">Practice Another Interview</h3>
-              <p className="text-xs text-[#70685E] mt-1 leading-relaxed">
-                Start a new interview session with adaptive questions tailored to your skill level.
-              </p>
-            </div>
-            <span className="text-xs font-bold text-[#1A365D] flex items-center gap-1 pt-2">
-              Start Practice Session →
-            </span>
-          </GlassCard>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
       {/* 12. FINAL ACTION BUTTONS                                                  */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-[#E5E0D5]">

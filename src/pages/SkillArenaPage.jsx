@@ -26,6 +26,7 @@ import {
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
+import CodeEditor from '../components/CodeEditor';
 import { useAuth } from '../context/AuthContext';
 import { skillArenaApi } from '../services/skillArenaApi';
 import { skillApi } from '../services/skillApi';
@@ -493,20 +494,18 @@ export default function SkillArenaPage() {
                     </span>
                   </div>
                 ) : (
-                  /* Coding & Debug Textarea */
+                  /* Coding & Debug CodeEditor */
                   <div className="space-y-2">
-                    <textarea
-                      rows={12}
+                    <CodeEditor
                       value={userAnswer}
-                      onChange={(e) => setUserAnswer(e.target.value)}
-                      disabled={evaluationResult !== null}
-                      placeholder="Write your code or structured technical defense here..."
-                      className="w-full bg-[#FAF8F3] text-[#1F1B16] font-mono text-xs p-4 rounded-md border border-[#E5E0D5] focus:outline-none focus:border-[#1A365D] resize-y leading-relaxed"
+                      onChange={setUserAnswer}
+                      readOnly={evaluationResult !== null}
+                      placeholder={activeChallenge.initial_code || "// Write your code or structured technical solution here..."}
+                      minRows={14}
+                      language={activeChallenge.language || 'python'}
+                      starterTemplate={activeChallenge.initial_code || ''}
+                      fileName={`solution_${activeChallenge.id || 'drill'}.${activeChallenge.language === 'javascript' ? 'js' : activeChallenge.language === 'typescript' ? 'ts' : 'py'}`}
                     />
-                    <div className="flex justify-between text-[11px] text-[#70685E] font-mono">
-                      <span>Keywords & syntax patterns analyzed deterministically</span>
-                      <span>{userAnswer.split(/\s+/).filter(Boolean).length} words</span>
-                    </div>
 
                     {/* Interactive Sandbox Test Runner Output */}
                     {sandboxRunResult && (

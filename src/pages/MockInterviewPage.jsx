@@ -1113,15 +1113,18 @@ export default function MockInterviewPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                     <div className="flex flex-col items-start gap-1">
                       <div className="flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={handleQuickAnswer}
-                          disabled={isGeneratingQuickAnswer || !!currentEval}
-                          className="inline-flex items-center gap-1.5 text-xs text-[#1A365D] hover:underline disabled:text-gray-400 font-semibold transition-colors disabled:cursor-not-allowed cursor-pointer"
-                        >
-                          <Sparkles className={`w-3.5 h-3.5 ${isGeneratingQuickAnswer ? 'animate-spin text-[#8C6E54]' : 'text-[#8C6E54]'}`} />
-                          <span>{isGeneratingQuickAnswer ? 'Generating Sample Answer...' : 'Autofill Sample Answer (Quick Test)'}</span>
-                        </button>
+                        {import.meta.env.DEV && (
+                          <button
+                            type="button"
+                            onClick={handleQuickAnswer}
+                            disabled={isGeneratingQuickAnswer || !!currentEval}
+                            className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-[#70685E] hover:text-[#1A365D] opacity-60 hover:opacity-100 font-mono transition-opacity disabled:cursor-not-allowed cursor-pointer"
+                            title="Developer Fast Test Utility (Hidden in production builds)"
+                          >
+                            <Sparkles className={`w-3 h-3 ${isGeneratingQuickAnswer ? 'animate-spin text-[#8C6E54]' : 'text-[#8C6E54]'}`} />
+                            <span>{isGeneratingQuickAnswer ? 'Generating...' : '[Dev] Autofill Answer'}</span>
+                          </button>
+                        )}
 
                         <button
                           type="button"

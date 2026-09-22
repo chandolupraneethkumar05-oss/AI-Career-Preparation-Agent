@@ -51,7 +51,7 @@ export const THEMES = [
       text: '#1F1B16',
       textSecondary: '#3B352E',
       textMuted: '#70685E',
-      textMicro: '#8A8277',
+      textMicro: '#5C554B',
       cardBg: '#FFFDF9',
       headerBg: 'rgba(255, 253, 249, 0.98)',
       inputBg: '#FFFDF9',

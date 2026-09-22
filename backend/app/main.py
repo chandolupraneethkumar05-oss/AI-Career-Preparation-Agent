@@ -108,6 +108,37 @@ def readiness_check():
         }
 
 
+# -------------------------------------------------------------------------
+# Static Frontend Files (Unified Full-Stack Production Deployment)
+# -------------------------------------------------------------------------
+from pathlib import Path
+from fastapi import HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+DIST_DIR = Path(__file__).resolve().parent.parent.parent / "dist"
+
+if DIST_DIR.is_dir():
+    assets_dir = DIST_DIR / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        # Exclude backend API and documentation routes
+        if full_path.startswith(("api", "health", "docs", "redoc", "openapi.json")):
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        target_file = DIST_DIR / full_path
+        if target_file.is_file():
+            return FileResponse(str(target_file))
+        
+        index_file = DIST_DIR / "index.html"
+        if index_file.is_file():
+            return FileResponse(str(index_file))
+        raise HTTPException(status_code=404, detail="Frontend index.html not found")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

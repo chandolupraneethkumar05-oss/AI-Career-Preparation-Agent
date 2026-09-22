@@ -25,19 +25,39 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const navItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/career-journey', label: 'Career Journey', icon: Compass },
-    { to: '/weekly-report', label: 'Weekly Report', icon: FileText },
-    { to: '/interview-setup', label: 'Mock Interview', icon: Mic },
-    { to: '/skill-gap', label: 'Skill Gap', icon: Brain },
-    { to: '/skill-arena', label: 'Skill Arena', icon: Code2 },
-    { to: '/daily-challenge', label: 'Daily Practice', icon: Flame },
-    { to: '/ats', label: 'Resume / ATS', icon: FileSearch },
-    { to: '/progress', label: 'Progress', icon: TrendingUp },
-    { to: '/interview-experiences', label: 'Interview Questions', icon: BookOpen },
-    { to: '/achievements', label: 'Milestones', icon: Award },
-    { to: '/settings', label: 'Settings', icon: Settings },
+  const navSections = [
+    {
+      title: 'Core',
+      items: [
+        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/career-journey', label: 'Career Journey', icon: Compass },
+        { to: '/progress', label: 'Progress Analytics', icon: TrendingUp },
+      ]
+    },
+    {
+      title: 'Practice & Arena',
+      items: [
+        { to: '/interview-setup', label: 'Mock Interview', icon: Mic },
+        { to: '/skill-arena', label: 'Skill Arena', icon: Code2 },
+        { to: '/daily-challenge', label: 'Daily Practice', icon: Flame },
+        { to: '/interview-experiences', label: 'Question Vault', icon: BookOpen },
+      ]
+    },
+    {
+      title: 'Diagnostics',
+      items: [
+        { to: '/ats', label: 'Resume / ATS', icon: FileSearch },
+        { to: '/skill-gap', label: 'Skill Gap', icon: Brain },
+        { to: '/weekly-report', label: 'Weekly Report', icon: FileText },
+      ]
+    },
+    {
+      title: 'Account',
+      items: [
+        { to: '/achievements', label: 'Milestones', icon: Award },
+        { to: '/settings', label: 'Settings', icon: Settings },
+      ]
+    }
   ];
 
   const handleLogout = () => {
@@ -87,7 +107,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
                   <span className="font-serif font-bold text-base tracking-tight text-[#1F1B16] block">
                     TalentPath
                   </span>
-                  <p className="text-[9px] uppercase tracking-widest text-[#70685E] font-bold truncate">
+                  <p className="text-[9px] uppercase tracking-widest text-[#5C554B] font-bold truncate">
                     Career Prep Agent
                   </p>
                 </div>
@@ -101,7 +121,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             {/* Desktop Collapse Toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="p-1 rounded-md border border-[#E5E0D5] text-[#70685E] hover:text-[#1F1B16] hover:bg-[#F2EFE9] transition-colors hidden sm:block cursor-pointer"
+              className="p-1 rounded-md border border-[#E5E0D5] text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9] transition-colors hidden sm:block cursor-pointer"
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -111,39 +131,53 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             {/* Mobile Close Button */}
             <button
               onClick={() => setMobileOpen(false)}
-              className="p-1 rounded-md border border-[#E5E0D5] text-[#70685E] hover:text-[#1F1B16] hover:bg-[#F2EFE9] sm:hidden"
+              className="p-1 rounded-md border border-[#E5E0D5] text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9] sm:hidden"
               title="Close navigation"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="p-2.5 space-y-1 mt-1.5 overflow-y-auto max-h-[calc(100vh-140px)]">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={handleNavClick}
-                  className={({ isActive }) => `
-                    flex items-center gap-2.5 px-3 py-2 rounded-md font-medium text-xs transition-colors duration-150
-                    ${isActive
-                      ? 'bg-[#EAEFF5] text-[#1A365D] font-semibold border border-[#D0DBE7] shadow-none'
-                      : 'text-[#70685E] hover:text-[#1F1B16] hover:bg-[#F2EFE9] border border-transparent'
-                    }
-                    ${collapsed && !mobileOpen ? 'justify-center px-1.5' : ''}
-                  `}
-                  title={collapsed && !mobileOpen ? item.label : undefined}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {(!collapsed || mobileOpen) && (
-                    <span className="truncate">{item.label}</span>
-                  )}
-                </NavLink>
-              );
-            })}
+          {/* Navigation Sections */}
+          <nav className="p-2 space-y-3 mt-1.5 overflow-y-auto max-h-[calc(100vh-140px)]">
+            {navSections.map((section, sIdx) => (
+              <div key={section.title} className="space-y-0.5">
+                {(!collapsed || mobileOpen) ? (
+                  <div className="px-3 pt-1 pb-1">
+                    <span className="text-[9px] font-mono uppercase tracking-widest text-[#5C554B] font-bold select-none">
+                      {section.title}
+                    </span>
+                  </div>
+                ) : sIdx > 0 ? (
+                  <div className="my-1.5 border-t border-[#E5E0D5]/70" />
+                ) : null}
+
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={handleNavClick}
+                      className={({ isActive }) => `
+                        flex items-center gap-2.5 px-3 py-1.5 rounded-md font-medium text-xs transition-colors duration-150
+                        ${isActive
+                          ? 'bg-[#EAEFF5] text-[#1A365D] font-semibold border border-[#D0DBE7] shadow-none'
+                          : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9] border border-transparent'
+                        }
+                        ${collapsed && !mobileOpen ? 'justify-center px-1.5 py-2' : ''}
+                      `}
+                      title={collapsed && !mobileOpen ? item.label : undefined}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      {(!collapsed || mobileOpen) && (
+                        <span className="truncate">{item.label}</span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
         </div>
 
@@ -155,13 +189,13 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
                 <p className="text-xs font-semibold text-[#1F1B16] truncate">
                   {user?.name || 'Candidate'}
                 </p>
-                <p className="text-[10px] text-[#70685E] truncate">
+                <p className="text-[10px] text-[#5C554B] truncate">
                   {user?.targetRole || 'ML Engineer'}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 rounded-md text-[#70685E] hover:text-[#9A421A] hover:bg-[#FDF2E9] transition-colors shrink-0 cursor-pointer"
+                className="p-1.5 rounded-md text-[#5C554B] hover:text-[#9A421A] hover:bg-[#FDF2E9] transition-colors shrink-0 cursor-pointer"
                 title="Log Out"
                 aria-label="Log Out"
               >
@@ -171,7 +205,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
           ) : (
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center p-2 rounded-md text-[#70685E] hover:text-[#9A421A] hover:bg-[#FDF2E9] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center p-2 rounded-md text-[#5C554B] hover:text-[#9A421A] hover:bg-[#FDF2E9] transition-colors cursor-pointer"
               title="Log Out"
               aria-label="Log Out"
             >

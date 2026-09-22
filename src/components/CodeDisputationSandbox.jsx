@@ -15,6 +15,7 @@ import {
 import GlassCard from './GlassCard';
 import GradientButton from './GradientButton';
 import Badge from './Badge';
+import CodeEditor from './CodeEditor';
 
 const STARTER_TEMPLATES = {
   javascript: `/**
@@ -299,41 +300,18 @@ ${code}
         </div>
       </div>
 
-      {/* Editor & Gutter Container */}
-      <div className="relative rounded-md border border-[#E5E0D5] bg-[#FAF8F3] overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#E5E0D5] bg-[#F2EFE9] text-[11px] font-mono text-[#70685E]">
-          <div className="flex items-center gap-2">
-            <FileCode className="w-3.5 h-3.5 text-[#1A365D]" />
-            <span>solution.{language === 'python' ? 'py' : language === 'javascript' ? 'js' : language === 'typescript' ? 'ts' : language === 'java' ? 'java' : 'cpp'}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span>Lines: {lineCount}</span>
-            <span>Tab: 2 Spaces</span>
-          </div>
-        </div>
-
-        <div className="flex">
-          {/* Line Numbers Gutter */}
-          <div className="w-10 py-3 pr-2 text-right font-mono text-[11px] text-[#70685E]/50 select-none bg-[#F7F4EC] border-r border-[#E5E0D5] leading-6">
-            {Array.from({ length: Math.max(lineCount, 12) }, (_, i) => (
-              <div key={i}>{i + 1}</div>
-            ))}
-          </div>
-
-          {/* Textarea Code Surface */}
-          <textarea
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              analyzeComplexity(e.target.value);
-            }}
-            placeholder="// Draft your algorithmic implementation here..."
-            rows={Math.max(lineCount, 12)}
-            className="flex-1 p-3 bg-transparent text-[#1F1B16] font-mono text-xs leading-6 resize-none focus:outline-none selection:bg-[#EAEFF5]"
-            spellCheck="false"
-          />
-        </div>
-      </div>
+      {/* Code Editor Surface */}
+      <CodeEditor
+        value={code}
+        onChange={(newCode) => {
+          setCode(newCode);
+          analyzeComplexity(newCode);
+        }}
+        language={language}
+        onLanguageChange={handleLanguageChange}
+        starterTemplate={STARTER_TEMPLATES[language] || ''}
+        minRows={12}
+      />
 
       {/* Complexity & Telemetry Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-xs font-mono">

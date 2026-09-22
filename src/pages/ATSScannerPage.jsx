@@ -49,6 +49,9 @@ export default function ATSScannerPage() {
   });
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [scanStage, setScanStage] = useState('Ingesting document...');
+  const [inputMode, setInputMode] = useState('file'); // 'file' | 'text'
+  const [pastedResumeText, setPastedResumeText] = useState('');
   const [errorMessage, setErrorMessage] = useState(null);
 
   // Resume Tailor State
@@ -88,44 +91,31 @@ export default function ATSScannerPage() {
   };
 
   const handleAnalyze = async () => {
-    if (!uploadedFile && !results) {
-      setErrorMessage('Please select a PDF or Word document (.docx) to analyze.');
+    const textToAnalyze = inputMode === 'text' ? pastedResumeText.trim() : '';
+    if (inputMode === 'file' && !uploadedFile && !results) {
+      setErrorMessage('Please select a PDF or Word document (.docx) to analyze, or switch to the "Paste Text" tab.');
+      return;
+    }
+    if (inputMode === 'text' && !textToAnalyze) {
+      setErrorMessage('Please paste your resume text before running the ATS diagnostic.');
       return;
     }
 
     setIsScanning(true);
-    setScanProgress(15);
+    setScanProgress(25);
+    setScanStage('Ingesting and parsing document structure...');
     setErrorMessage(null);
-
-    const interval = setInterval(() => {
-      setScanProgress((prev) => {
-        if (prev >= 85) {
-          return 85;
-        }
-        return prev + 20;
-      });
-    }, 250);
 
     try {
       const targetRole = user?.targetRole || 'Machine Learning Engineer';
       const userId = user?.id || 'user-001';
-      const candidateName = user?.name || 'Candidate';
 
       let analysisResult = null;
-      const sampleText = `
-${candidateName} - ${targetRole}
-Experience:
-Software & Systems Engineer. Built production applications, API endpoints, and pipelines.
-Implemented data models, automated test suites, and optimized performance benchmarks.
-Education:
-B.Tech in Computer Science / AIML.
-Skills: Python, SQL, Docker, FastAPI, Git, Algorithms, System Design, Data Structures.
-Projects:
-High-throughput analytics engine, automated data processing pipeline.
-`;
+      setScanProgress(55);
+      setScanStage(`Analyzing competencies, keywords, and relevance for ${targetRole}...`);
 
       try {
-        if (uploadedFile) {
+        if (inputMode === 'file' && uploadedFile) {
           analysisResult = await resumeApi.analyzeResume({
             file: uploadedFile,
             targetRole,
@@ -134,7 +124,7 @@ High-throughput analytics engine, automated data processing pipeline.
           });
         } else {
           analysisResult = await resumeApi.analyzeResume({
-            rawText: sampleText,
+            rawText: textToAnalyze,
             targetRole,
             jobDescription,
             userId
@@ -143,33 +133,35 @@ High-throughput analytics engine, automated data processing pipeline.
       } catch (backendErr) {
         if (import.meta.env.DEV) console.debug('[ATSScanner] Backend offline or returned error, utilizing local parser fallback:', backendErr);
         // Resilient fallback using client-side engine
-        const rawText = uploadedFile ? await extractTextFromFile(uploadedFile) : sampleText;
+        const rawText = inputMode === 'file' && uploadedFile ? await extractTextFromFile(uploadedFile) : textToAnalyze;
+        if (!rawText) {
+          throw new Error('Unable to extract text from the uploaded file. Please switch to the "Paste Text" tab.');
+        }
         analysisResult = analyzeResumeATS({
-          resumeText: rawText || sampleText,
-          fileName: fileName || 'resume_diagnostic.txt',
+          resumeText: rawText,
+          fileName: fileName || (inputMode === 'text' ? 'pasted_resume.txt' : 'resume_diagnostic.txt'),
           targetRole,
           jobDescription
         });
         storageService.setATSResult(analysisResult);
       }
 
-      clearInterval(interval);
-      setScanProgress(100);
-      setIsScanning(false);
-      setResults(analysisResult);
+      setScanProgress(90);
+      setScanStage('Synthesizing ATS match scores and tailored remediation...');
 
-      // Award XP in frontend state
-      addXP(35);
-
-      // Re-evaluate client-side skill gap radar and achievements
-      analyzeSkillGaps();
-      achievementService.evaluateAchievements();
+      setTimeout(() => {
+        setScanProgress(100);
+        setIsScanning(false);
+        setResults(analysisResult);
+        addXP(35);
+        analyzeSkillGaps();
+        achievementService.evaluateAchievements();
+      }, 250);
     } catch (err) {
       if (import.meta.env.DEV) console.debug('[ATSScanner] Analysis error:', err);
-      clearInterval(interval);
       setIsScanning(false);
       setErrorMessage(
-        err.message || 'Failed to analyze resume. Please ensure you uploaded a valid, text-based PDF or DOCX file.'
+        err.message || 'Failed to analyze resume. Please ensure you uploaded a valid, text-based PDF or DOCX file, or paste your text directly.'
       );
     }
   };
@@ -244,37 +236,81 @@ High-throughput analytics engine, automated data processing pipeline.
       {/* Input Section: Upload Resume & Job Description */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left: Resume Dropzone (5 Cols) */}
+        {/* Left: Resume Dropzone / Text Input (5 Cols) */}
         <GlassCard className="lg:col-span-5 p-6 space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
           <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
             <h3 className="text-xs font-bold text-[#1F1B16] uppercase tracking-wider font-mono">1. Select Curriculum Vitæ</h3>
-            <Badge variant="navy" size="sm">PDF / DOCX</Badge>
+            <div className="flex items-center gap-1 bg-[#F4EFE6] p-0.5 rounded border border-[#E5E0D5]">
+              <button
+                type="button"
+                onClick={() => setInputMode('file')}
+                className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors ${
+                  inputMode === 'file'
+                    ? 'bg-[#1A365D] text-white font-bold'
+                    : 'text-[#5C554B] hover:text-[#1F1B16]'
+                }`}
+              >
+                File Upload
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode('text')}
+                className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors ${
+                  inputMode === 'text'
+                    ? 'bg-[#1A365D] text-white font-bold'
+                    : 'text-[#5C554B] hover:text-[#1F1B16]'
+                }`}
+              >
+                Paste Text
+              </button>
+            </div>
           </div>
 
-          <div className="border-2 border-dashed border-[#E5E0D5] hover:border-[#1A365D] rounded-md p-6 text-center transition-all bg-[#FAF8F3]">
-            <input
-              type="file"
-              id="atsUpload"
-              accept=".pdf,.docx,.doc,.txt"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <label htmlFor="atsUpload" className="cursor-pointer block">
-              <div className="w-12 h-12 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-center justify-center mx-auto text-[#1A365D] mb-3">
-                <Upload className="w-6 h-6" />
+          {inputMode === 'file' ? (
+            <>
+              <div className="border-2 border-dashed border-[#E5E0D5] hover:border-[#1A365D] rounded-md p-6 text-center transition-all bg-[#FAF8F3]">
+                <input
+                  type="file"
+                  id="atsUpload"
+                  accept=".pdf,.docx,.doc,.txt"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <label htmlFor="atsUpload" className="cursor-pointer block">
+                  <div className="w-12 h-12 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-center justify-center mx-auto text-[#1A365D] mb-3">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-serif font-bold text-[#1F1B16]">Upload Candidate Résumé</p>
+                  <p className="text-xs text-[#70685E] mt-1">Accepts PDF (.pdf) or Word (.docx)</p>
+                </label>
               </div>
-              <p className="text-sm font-serif font-bold text-[#1F1B16]">Upload Candidate Résumé</p>
-              <p className="text-xs text-[#70685E] mt-1">Accepts PDF (.pdf) or Word (.docx)</p>
-            </label>
-          </div>
 
-          {fileName && (
-            <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-between">
-              <div className="flex items-center gap-2.5 truncate">
-                <FileCheck className="w-4 h-4 text-[#1A365D] shrink-0" />
-                <span className="text-xs font-mono text-[#1F1B16] truncate">{fileName}</span>
+              {fileName && (
+                <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 truncate">
+                    <FileCheck className="w-4 h-4 text-[#1A365D] shrink-0" />
+                    <span className="text-xs font-mono text-[#1F1B16] truncate">{fileName}</span>
+                  </div>
+                  <Badge variant="neutral" size="sm">Loaded</Badge>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-2">
+              <textarea
+                rows={7}
+                value={pastedResumeText}
+                onChange={(e) => {
+                  setPastedResumeText(e.target.value);
+                  setErrorMessage(null);
+                }}
+                placeholder="Paste the full text of your resume here (Summary, Experience, Skills, Education)..."
+                className="w-full p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-xs text-[#1F1B16] placeholder-[#70685E]/50 focus:outline-none focus:border-[#1A365D] transition-colors resize-none leading-relaxed font-mono"
+              />
+              <div className="flex items-center justify-between text-[11px] text-[#70685E] font-mono">
+                <span>Direct text parsing</span>
+                <span>{pastedResumeText.trim() ? `${pastedResumeText.trim().split(/\s+/).length} words` : '0 words'}</span>
               </div>
-              <Badge variant="neutral" size="sm">Loaded</Badge>
             </div>
           )}
         </GlassCard>

@@ -15,7 +15,10 @@ import {
   Shield,
   Briefcase,
   Sparkles,
-  Users
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Zap
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -25,9 +28,67 @@ import { COMPANY_PLAYBOOKS } from '../data/companyPlaybooks';
 import { INTERVIEWER_PERSONAS } from '../data/interviewerPersonas';
 import { useInterview } from '../context/InterviewContext';
 
+const FAST_PRESETS = [
+  {
+    id: 'frontend_sde',
+    title: 'Frontend Specialist',
+    role: 'Frontend Engineer',
+    type: 'Technical',
+    difficulty: 'Intermediate',
+    playbook: 'meta',
+    mode: 'text',
+    persona: 'julian',
+    questions: 5,
+    tag: 'UI & React',
+    desc: 'React lifecycle, state trees, re-rendering optimization & DOM performance.'
+  },
+  {
+    id: 'backend_sde',
+    title: 'Backend & Scalability',
+    role: 'Backend Engineer',
+    type: 'System Design',
+    difficulty: 'Senior',
+    playbook: 'amazon',
+    mode: 'text',
+    persona: 'julian',
+    questions: 5,
+    tag: 'Distributed Scale',
+    desc: 'Distributed caching, database concurrency, idempotency & low-latency APIs.'
+  },
+  {
+    id: 'ml_engineer',
+    title: 'Machine Learning',
+    role: 'Machine Learning Engineer',
+    type: 'Technical',
+    difficulty: 'Senior',
+    playbook: 'google',
+    mode: 'text',
+    persona: 'julian',
+    questions: 5,
+    tag: 'AI & Data Systems',
+    desc: 'Model architectures, transformer embeddings, loss calibration & pipelines.'
+  },
+  {
+    id: 'behavioral_lead',
+    title: 'Behavioral & Leadership',
+    role: 'Engineering Manager',
+    type: 'Behavioral',
+    difficulty: 'Staff',
+    playbook: 'general',
+    mode: 'text',
+    persona: 'elena',
+    questions: 5,
+    tag: 'STAR & Influence',
+    desc: 'Cross-functional ownership, technical dispute mitigation & engineering velocity.'
+  }
+];
+
 export default function InterviewSetupPage() {
   const navigate = useNavigate();
   const { setup, updateSetup } = useInterview();
+
+  const [selectedPreset, setSelectedPreset] = useState(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [targetRole, setTargetRole] = useState(setup.targetRole || 'Machine Learning Engineer');
   const [customRole, setCustomRole] = useState('');
@@ -41,6 +102,18 @@ export default function InterviewSetupPage() {
   const [interviewLanguage, setInterviewLanguage] = useState(setup.interviewLanguage || 'en');
   const [feedbackLanguage, setFeedbackLanguage] = useState(setup.feedbackLanguage || 'en');
   const [totalQuestions, setTotalQuestions] = useState(setup.totalQuestions || 5);
+
+  const handleApplyPreset = (preset) => {
+    setSelectedPreset(preset.id);
+    setTargetRole(preset.role);
+    setCustomRole('');
+    setInterviewType(preset.type);
+    setDifficulty(preset.difficulty);
+    setCompanyPlaybook(preset.playbook);
+    setInterviewMode(preset.mode);
+    setInterviewerPersona(preset.persona);
+    setTotalQuestions(preset.questions);
+  };
 
   const handleRoleSelect = (role) => {
     setTargetRole(role);
@@ -90,6 +163,64 @@ export default function InterviewSetupPage() {
       </div>
 
       <div className="space-y-6">
+        {/* 0. 1-Click Practice Presets */}
+        <GlassCard className="p-5 sm:p-6 space-y-4 border-l-4 border-l-[#1A365D] bg-[#FFFDF9]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E0D5] pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-md bg-[#1B2A4A] flex items-center justify-center text-white">
+                <Zap className="w-4 h-4 text-amber-300" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-serif font-bold text-[#1F1B16] flex items-center gap-2">
+                  <span>1-Click Practice Presets</span>
+                  <Badge variant="navy" size="xs">RECOMMENDED</Badge>
+                </h3>
+                <p className="text-xs text-[#70685E]">Select an industry-calibrated preset to configure your interview in one click</p>
+              </div>
+            </div>
+            {selectedPreset && (
+              <button
+                type="button"
+                onClick={handleContinue}
+                className="px-3.5 py-1.5 rounded-md bg-[#1B2A4A] hover:bg-[#142038] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
+              >
+                <span>Launch Selected Preset</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            {FAST_PRESETS.map((p) => {
+              const isSelected = selectedPreset === p.id;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => handleApplyPreset(p)}
+                  className={`p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between text-left ${
+                    isSelected
+                      ? 'bg-[#EAEFF5] border-[#1A365D] ring-1 ring-[#1A365D] shadow-xs'
+                      : 'bg-[#FAF8F3] border-[#E5E0D5] hover:border-[#1A365D]'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-mono font-bold text-[#1A365D]">{p.tag}</span>
+                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#1A365D]" />}
+                    </div>
+                    <h4 className="font-serif text-xs font-bold text-[#1F1B16] leading-tight">{p.title}</h4>
+                    <p className="text-[11px] text-[#70685E] leading-relaxed line-clamp-2">{p.desc}</p>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-[#E5E0D5] flex items-center justify-between text-[10px] text-[#70685E] font-mono">
+                    <span>{p.difficulty}</span>
+                    <span>{p.questions} Qs</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
+
         {/* 1. Target Role Selection */}
         <GlassCard className="p-6 space-y-4">
           <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
@@ -162,51 +293,33 @@ export default function InterviewSetupPage() {
           </div>
         </GlassCard>
 
-        {/* 3. Company Playbook / Rubric Calibration */}
+        {/* 3. Difficulty Level */}
         <GlassCard className="p-6 space-y-4">
           <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
-              <Briefcase className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] flex items-center justify-center text-[#235E3B]">
+              <BarChart2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">III. Target Employer Interview Playbook</h3>
-              <p className="text-xs text-[#70685E]">Align the AI interviewer's questions and rubrics to specific company standards</p>
+              <h3 className="text-base font-serif font-bold text-[#1F1B16]">III. Difficulty Level</h3>
+              <p className="text-xs text-[#70685E]">Choose how challenging the questions and evaluations will be</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-            {COMPANY_PLAYBOOKS.map((playbook) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            {DIFFICULTY_LEVELS.map((diff) => (
               <div
-                key={playbook.id}
-                onClick={() => setCompanyPlaybook(playbook.id)}
+                key={diff.id}
+                onClick={() => setDifficulty(diff.id)}
                 className={`
-                  p-4 rounded-md border cursor-pointer transition-all flex flex-col justify-between
-                  ${companyPlaybook === playbook.id
+                  p-4 rounded-md border cursor-pointer transition-all text-center
+                  ${difficulty === diff.id
                     ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
                     : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
                   }
                 `}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-serif font-bold text-[#1F1B16] truncate">{playbook.shortName}</span>
-                    <Badge variant={playbook.badgeVariant} size="sm">
-                      {playbook.badge}
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] font-medium text-[#1A365D] mb-1">{playbook.tagline}</p>
-                  <p className="text-[11px] text-[#70685E] leading-relaxed line-clamp-2">{playbook.description}</p>
-                </div>
-                <div className="mt-3 pt-2 border-t border-[#E5E0D5]/70 flex flex-wrap gap-1">
-                  {playbook.competencies.slice(0, 3).map((comp) => (
-                    <span key={comp.id} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#FAF8F3] border border-[#E5E0D5] text-[#70685E]">
-                      {comp.name}
-                    </span>
-                  ))}
-                  {playbook.competencies.length > 3 && (
-                    <span className="text-[9px] font-mono text-[#70685E] self-center">+{playbook.competencies.length - 3}</span>
-                  )}
-                </div>
+                <span className="text-sm font-serif font-bold text-[#1F1B16] block mb-1">{diff.label}</span>
+                <p className="text-[11px] text-[#70685E]">{diff.desc}</p>
               </div>
             ))}
           </div>
@@ -225,7 +338,6 @@ export default function InterviewSetupPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-
             {/* Text Interview */}
             <div
               onClick={() => setInterviewMode('text')}
@@ -282,7 +394,7 @@ export default function InterviewSetupPage() {
               </div>
             </div>
 
-            {/* Face-to-Face AI Chamber (Special) */}
+            {/* Face-to-Face AI Chamber */}
             <div
               onClick={() => setInterviewMode('face_to_face')}
               className={`
@@ -311,226 +423,216 @@ export default function InterviewSetupPage() {
             </div>
           </div>
 
-          {/* Interviewer Persona Selection (Only in Face-to-Face Mode) */}
-          {interviewMode === 'face_to_face' && (
-            <div className="mt-4 p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-3 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-serif font-bold text-[#1F1B16] uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#8C6E54]" />
-                  <span>Choose AI Lead Interviewer Persona</span>
-                </label>
-                <span className="editorial-overline text-[10px]">AI INTERVIEWER</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {INTERVIEWER_PERSONAS.map((p) => {
-                  const isSelected = interviewerPersona === p.id;
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => setInterviewerPersona(p.id)}
-                      className={`p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-[#FFFDF9] border-[#1A365D] shadow-xs ring-1 ring-[#1A365D]'
-                          : 'bg-white border-[#E5E0D5] hover:border-[#1A365D]/50'
-                      }`}
-                    >
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <div className="w-7 h-7 rounded bg-[#1B2A4A] text-white flex items-center justify-center font-serif text-xs font-bold shadow-xs">
-                            {p.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-[#1A365D]" />}
-                        </div>
-                        <div>
-                          <h4 className="font-serif text-xs font-bold text-[#1F1B16]">{p.name}</h4>
-                          <p className="text-[10px] text-[#70685E] font-medium">{p.title}</p>
-                        </div>
-                        <p className="text-[11px] text-[#70685E] leading-relaxed line-clamp-2">
-                          {p.description}
-                        </p>
-                      </div>
-                      <div className="mt-2.5 pt-2 border-t border-[#E5E0D5]">
-                        <Badge variant={p.badgeVariant} size="xs" className="text-[9px]">
-                          {p.archetype}
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center gap-2 text-xs text-[#70685E]">
             <Shield className="w-4 h-4 text-[#1A365D] shrink-0" />
             <span>Data Privacy: Video and audio recordings stay local to your session. You can review or delete session records at any time.</span>
           </div>
         </GlassCard>
 
-        {/* 5. Difficulty Level */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] flex items-center justify-center text-[#235E3B]">
-              <BarChart2 className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">V. Difficulty Level</h3>
-              <p className="text-xs text-[#70685E]">Choose how challenging the questions and evaluations will be</p>
-            </div>
-          </div>
+        {/* Toggle Advanced Configuration Accordion */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full py-3.5 px-4 rounded-md border border-[#D5CFBF] bg-[#FAF8F3] hover:bg-[#F2EFE9] text-xs font-semibold text-[#1A365D] flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+          >
+            <span className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-[#8C6E54]" />
+              <span>
+                {showAdvanced
+                  ? 'Hide Advanced Customization Options'
+                  : 'Show Advanced Options (Target Employer Playbook, Custom Resume & JD, Languages, Question Count)'}
+              </span>
+            </span>
+            {showAdvanced ? <ChevronUp className="w-4 h-4 text-[#1A365D]" /> : <ChevronDown className="w-4 h-4 text-[#1A365D]" />}
+          </button>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            {DIFFICULTY_LEVELS.map((diff) => (
-              <div
-                key={diff.id}
-                onClick={() => setDifficulty(diff.id)}
-                className={`
-                  p-4 rounded-md border cursor-pointer transition-all text-center
-                  ${difficulty === diff.id
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
-                    : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                  }
-                `}
-              >
-                <span className="text-sm font-serif font-bold text-[#1F1B16] block mb-1">{diff.label}</span>
-                <p className="text-[11px] text-[#70685E]">{diff.desc}</p>
+        {showAdvanced && (
+          <div className="space-y-6 pt-1 animate-in fade-in duration-200">
+            {/* 5. Company Playbook / Rubric Calibration */}
+            <GlassCard className="p-6 space-y-4">
+              <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
+                <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
+                  <Briefcase className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">V. Target Employer Interview Playbook</h3>
+                  <p className="text-xs text-[#70685E]">Align the AI interviewer's questions and rubrics to specific company standards</p>
+                </div>
               </div>
-            ))}
-          </div>
-        </GlassCard>
 
-        {/* 6. Resume & Job Description (Optional context) */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#8C6E54]">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">VI. Resume &amp; Job Description (Optional)</h3>
-              <p className="text-xs text-[#70685E]">Upload your resume or paste job requirements to tailor questions to your background</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            {/* Resume Upload UI */}
-            <div>
-              <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Resume File</label>
-              <div className="border border-dashed border-[#E5E0D5] hover:border-[#1A365D] rounded-md p-4 text-center transition-all bg-[#FAF8F3]">
-                <input
-                  type="file"
-                  id="resumeUpload"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <label htmlFor="resumeUpload" className="cursor-pointer block">
-                  <div className="w-9 h-9 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center mx-auto text-[#1A365D] mb-2">
-                    <Upload className="w-4 h-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                {COMPANY_PLAYBOOKS.map((playbook) => (
+                  <div
+                    key={playbook.id}
+                    onClick={() => setCompanyPlaybook(playbook.id)}
+                    className={`
+                      p-4 rounded-md border cursor-pointer transition-all flex flex-col justify-between
+                      ${companyPlaybook === playbook.id
+                        ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
+                        : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
+                      }
+                    `}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-serif font-bold text-[#1F1B16] truncate">{playbook.shortName}</span>
+                        <Badge variant={playbook.badgeVariant} size="sm">
+                          {playbook.badge}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] font-medium text-[#1A365D] mb-1">{playbook.tagline}</p>
+                      <p className="text-[11px] text-[#70685E] leading-relaxed line-clamp-2">{playbook.description}</p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-[#E5E0D5]/70 flex flex-wrap gap-1">
+                      {playbook.competencies.slice(0, 3).map((comp) => (
+                        <span key={comp.id} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#FAF8F3] border border-[#E5E0D5] text-[#70685E]">
+                          {comp.name}
+                        </span>
+                      ))}
+                      {playbook.competencies.length > 3 && (
+                        <span className="text-[9px] font-mono text-[#70685E] self-center">+{playbook.competencies.length - 3}</span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs font-semibold text-[#1F1B16]">Select or drag resume document</p>
-                  <p className="text-[10px] text-[#70685E] mt-0.5">PDF or Word document up to 10MB</p>
-                </label>
-                {resumeName && (
-                  <div className="mt-3 p-2 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-center gap-2 text-xs text-[#1A365D] font-mono">
-                    <FileCheck className="w-3.5 h-3.5 text-[#235E3B]" />
-                    <span className="truncate">{resumeName}</span>
+                ))}
+              </div>
+            </GlassCard>
+
+            {/* 6. Resume & Job Description */}
+            <GlassCard className="p-6 space-y-4">
+              <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
+                <div className="w-8 h-8 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#8C6E54]">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">VI. Resume &amp; Job Description (Optional)</h3>
+                  <p className="text-xs text-[#70685E]">Upload your resume or paste job requirements to tailor questions to your background</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                {/* Resume Upload UI */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Resume File</label>
+                  <div className="border border-dashed border-[#E5E0D5] hover:border-[#1A365D] rounded-md p-4 text-center transition-all bg-[#FAF8F3]">
+                    <input
+                      type="file"
+                      id="resumeUpload"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="resumeUpload" className="cursor-pointer block">
+                      <div className="w-9 h-9 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center mx-auto text-[#1A365D] mb-2">
+                        <Upload className="w-4 h-4" />
+                      </div>
+                      <p className="text-xs font-semibold text-[#1F1B16]">Select or drag resume document</p>
+                      <p className="text-[10px] text-[#70685E] mt-0.5">PDF or Word document up to 10MB</p>
+                    </label>
+                    {resumeName && (
+                      <div className="mt-3 p-2 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-center gap-2 text-xs text-[#1A365D] font-mono">
+                        <FileCheck className="w-3.5 h-3.5 text-[#235E3B]" />
+                        <span className="truncate">{resumeName}</span>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+
+                {/* Job Description Textarea */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Job Description / Competency List</label>
+                  <textarea
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    placeholder="Paste key responsibilities, required tech stack, or employer rubrics..."
+                    rows={4}
+                    className="w-full p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] placeholder-[#70685E]/50 focus:outline-none focus:border-[#1A365D] transition-colors resize-none font-sans"
+                  />
+                </div>
               </div>
-            </div>
+            </GlassCard>
 
-            {/* Job Description Textarea */}
-            <div>
-              <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Job Description / Competency List</label>
-              <textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Paste key responsibilities, required tech stack, or employer rubrics..."
-                rows={4}
-                className="w-full p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] placeholder-[#70685E]/50 focus:outline-none focus:border-[#1A365D] transition-colors resize-none font-sans"
-              />
-            </div>
-          </div>
-        </GlassCard>
-
-        {/* 7. AI Engine & Multilingual Settings */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
-              <Globe className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">VII. Language &amp; Session Length</h3>
-              <p className="text-xs text-[#70685E]">Configure interview question language, feedback presentation, and question count</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-            {/* Interview Question Language */}
-            <div>
-              <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Interview Language</label>
-              <select
-                value={interviewLanguage}
-                onChange={(e) => setInterviewLanguage(e.target.value)}
-                className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] focus:outline-none focus:border-[#1A365D]"
-              >
-                <option value="en">English (Canonical)</option>
-                <option value="te">Telugu (తెలుగు)</option>
-                <option value="hi">Hindi (हिन्दी)</option>
-                <option value="es">Spanish (Español)</option>
-              </select>
-              <p className="text-[10px] text-[#70685E] mt-1">Language for oral / text queries</p>
-            </div>
-
-            {/* Feedback Language */}
-            <div>
-              <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Feedback &amp; Rubric Language</label>
-              <select
-                value={feedbackLanguage}
-                onChange={(e) => setFeedbackLanguage(e.target.value)}
-                className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] focus:outline-none focus:border-[#1A365D]"
-              >
-                <option value="en">English (Canonical)</option>
-                <option value="te">Telugu (తెలుగు)</option>
-                <option value="hi">Hindi (हिन्दी)</option>
-              </select>
-              <p className="text-[10px] text-[#235E3B] mt-1">
-                Scoring is language-independent. Tech nomenclature preserved.
-              </p>
-            </div>
-
-            {/* Session Length */}
-            <div>
-              <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Question Volume</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTotalQuestions(5)}
-                  className={`p-2.5 rounded-md border text-xs font-bold transition-all ${
-                    totalQuestions === 5
-                      ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D]'
-                      : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
-                  }`}
-                >
-                  Concise (5 Qs)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTotalQuestions(10)}
-                  className={`p-2.5 rounded-md border text-xs font-bold transition-all ${
-                    totalQuestions === 10
-                      ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D]'
-                      : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
-                  }`}
-                >
-                  Exhaustive (10 Qs)
-                </button>
+            {/* 7. Multilingual & Session Length */}
+            <GlassCard className="p-6 space-y-4">
+              <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
+                <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
+                  <Globe className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">VII. Language &amp; Session Length</h3>
+                  <p className="text-xs text-[#70685E]">Configure interview question language, feedback presentation, and question count</p>
+                </div>
               </div>
-              <p className="text-[10px] text-[#70685E] mt-1">Number of questions for this session</p>
-            </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                {/* Interview Question Language */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Interview Language</label>
+                  <select
+                    value={interviewLanguage}
+                    onChange={(e) => setInterviewLanguage(e.target.value)}
+                    className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] focus:outline-none focus:border-[#1A365D]"
+                  >
+                    <option value="en">English (Canonical)</option>
+                    <option value="te">Telugu (తెలుగు)</option>
+                    <option value="hi">Hindi (हिन्दी)</option>
+                    <option value="es">Spanish (Español)</option>
+                  </select>
+                  <p className="text-[10px] text-[#70685E] mt-1">Language for oral / text queries</p>
+                </div>
+
+                {/* Feedback Language */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Feedback &amp; Rubric Language</label>
+                  <select
+                    value={feedbackLanguage}
+                    onChange={(e) => setFeedbackLanguage(e.target.value)}
+                    className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] focus:outline-none focus:border-[#1A365D]"
+                  >
+                    <option value="en">English (Canonical)</option>
+                    <option value="te">Telugu (తెలుగు)</option>
+                    <option value="hi">Hindi (हिन्दी)</option>
+                  </select>
+                  <p className="text-[10px] text-[#235E3B] mt-1">
+                    Scoring is language-independent.
+                  </p>
+                </div>
+
+                {/* Session Length */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Question Volume</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTotalQuestions(5)}
+                      className={`p-2.5 rounded-md border text-xs font-bold transition-all ${
+                        totalQuestions === 5
+                          ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D]'
+                          : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
+                      }`}
+                    >
+                      Concise (5 Qs)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTotalQuestions(10)}
+                      className={`p-2.5 rounded-md border text-xs font-bold transition-all ${
+                        totalQuestions === 10
+                          ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D]'
+                          : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
+                      }`}
+                    >
+                      Exhaustive (10 Qs)
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[#70685E] mt-1">Target questions for this session</p>
+                </div>
+              </div>
+            </GlassCard>
           </div>
-        </GlassCard>
+        )}
       </div>
 
       {/* Footer Navigation */}

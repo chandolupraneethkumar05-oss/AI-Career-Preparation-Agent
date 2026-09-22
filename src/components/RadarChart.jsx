@@ -7,11 +7,10 @@ export default function RadarChart({
 }) {
   if (!dimensions || dimensions.length === 0) return null;
 
-  const width = size;
-  const height = size;
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = Math.min(width, height) / 2 - 55; // Leave margin for labels
+  const viewBoxSize = 400;
+  const centerX = viewBoxSize / 2;
+  const centerY = viewBoxSize / 2;
+  const radius = 125; // Ample margin for outer labels within 400x400
   const totalAxes = dimensions.length;
 
   // Compute angle for each dimension (starting from top, clockwise)
@@ -35,12 +34,10 @@ export default function RadarChart({
     .join(' ');
 
   return (
-    <div className={`relative flex flex-col items-center justify-center select-none ${className}`}>
+    <div className={`relative w-full max-w-[360px] mx-auto aspect-square flex flex-col items-center justify-center select-none ${className}`}>
       <svg
-        width={width}
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        className="overflow-visible"
+        viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
+        className="w-full h-full"
       >
         <defs>
           <radialGradient id="radarAcademicBg" cx="50%" cy="50%" r="50%">
@@ -74,7 +71,7 @@ export default function RadarChart({
               <text
                 x={centerX + 4}
                 y={centerY - radius * level + 10}
-                fill="#8A8277"
+                fill="#5C554B"
                 fontSize="9"
                 fontFamily="monospace"
               >

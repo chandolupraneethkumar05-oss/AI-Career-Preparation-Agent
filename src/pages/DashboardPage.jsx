@@ -44,7 +44,7 @@ export default function DashboardPage() {
   const userActivities = useMemo(() => activityService.getActivities(), []);
   const calculatedStreak = useMemo(() => activityService.calculateCurrentStreak(userActivities), [userActivities]);
   const hasPracticedToday = useMemo(() => activityService.hasPracticedToday(userActivities), [userActivities]);
-  const streakCount = user?.streak || (calculatedStreak > 0 ? calculatedStreak : 4);
+  const streakCount = user?.streak || calculatedStreak || 0;
 
   const atsData = useMemo(() => storageService.getATSResult(), []);
   const skillProfile = useMemo(() => storageService.getSkillProfile(), []);
@@ -91,13 +91,13 @@ export default function DashboardPage() {
 
   // Real ATS Metrics
   const hasAts = Boolean(atsData && atsData.overallScore !== undefined);
-  const atsScore = hasAts ? atsData.overallScore : 74;
+  const atsScore = hasAts ? atsData.overallScore : null;
 
   // Real Interview History & Readiness Metrics
   const hasInterviews = Array.isArray(history) && history.length > 0;
   const currentReadiness = hasInterviews
     ? (skillProfile?.overallReadiness ?? Math.round(history.reduce((a, b) => a + b.score, 0) / history.length))
-    : (session.summaryResult?.scores?.overall || 79);
+    : (session.summaryResult?.scores?.overall || null);
 
   // User details
   const firstName = user?.name ? user.name.split(' ')[0] : 'Candidate';
@@ -112,7 +112,7 @@ export default function DashboardPage() {
       title: 'Practice SQL & Database Concurrency',
       subtitle: 'Conceptual query optimization drill',
       xpReward: 50,
-      completed: true,
+      completed: Boolean(isDailyDone),
       route: '/daily-challenge'
     },
     {
@@ -120,7 +120,7 @@ export default function DashboardPage() {
       title: 'Complete Mock Technical Interview',
       subtitle: '15-min structured audio scenario',
       xpReward: 100,
-      completed: isDailyDone && hasInterviews,
+      completed: Boolean(hasInterviews),
       route: '/interview-setup'
     },
     {
@@ -128,7 +128,7 @@ export default function DashboardPage() {
       title: 'Review Communication Feedback Report',
       subtitle: 'Pacing, clarity, and STAR structure audit',
       xpReward: 35,
-      completed: true,
+      completed: Boolean(hasInterviews && session?.summaryResult),
       route: '/interview-feedback'
     }
   ]);
@@ -178,7 +178,8 @@ export default function DashboardPage() {
   // SVG Circular Gauge calculations
   const radius = 32;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (currentReadiness / 100) * circumference;
+  const readinessVal = currentReadiness !== null ? currentReadiness : 0;
+  const strokeDashoffset = circumference - (readinessVal / 100) * circumference;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-16 font-sans">
@@ -203,7 +204,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-[#F5EFEA] border border-[#E8DCD1] text-[#8C6E54] font-semibold">
               <span>🔥</span>
-              <span>{streakCount}-day streak</span>
+              <span>{streakCount > 0 ? `${streakCount}-day streak` : 'Day 0 · Start streak'}</span>
             </span>
           </div>
         </div>
@@ -234,8 +235,8 @@ export default function DashboardPage() {
               I. CAREER READINESS
             </span>
           </div>
-          <Badge variant={currentReadiness >= 75 ? "emerald" : "navy"} size="sm">
-            {hasInterviews ? (currentReadiness >= 75 ? 'Strong Progress' : 'In Progress') : 'Getting Started'}
+          <Badge variant={hasInterviews && currentReadiness >= 75 ? "emerald" : hasInterviews ? "navy" : "neutral"} size="sm">
+            {hasInterviews ? (currentReadiness >= 75 ? 'Strong Progress' : 'In Progress') : 'Calibration Needed'}
           </Badge>
         </div>
 
@@ -256,7 +257,7 @@ export default function DashboardPage() {
                   cx="36"
                   cy="36"
                   r={radius}
-                  stroke="#1A365D"
+                  stroke={currentReadiness !== null ? "#1A365D" : "#BAC7D5"}
                   strokeWidth="5"
                   fill="transparent"
                   strokeDasharray={circumference}
@@ -267,12 +268,12 @@ export default function DashboardPage() {
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-base font-bold text-[#1F1B16] font-mono">
-                  {currentReadiness}%
+                  {currentReadiness !== null ? `${currentReadiness}%` : '--'}
                 </span>
               </div>
             </div>
             <span className="text-[9px] uppercase font-bold tracking-widest text-[#70685E] mt-1.5">
-              Readiness
+              {currentReadiness !== null ? 'Readiness' : 'Uncalibrated'}
             </span>
           </div>
 
@@ -282,12 +283,21 @@ export default function DashboardPage() {
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[#3B352E] font-medium">ATS Resume Match</span>
-                <span className="font-bold text-[#1F1B16] font-mono">{atsScore}%</span>
+                {hasAts ? (
+                  <span className="font-bold text-[#1F1B16] font-mono">{atsScore}%</span>
+                ) : (
+                  <button
+                    onClick={() => navigate('/ats')}
+                    className="text-[11px] font-semibold text-[#1A365D] hover:underline cursor-pointer"
+                  >
+                    Upload Resume to Calibrate →
+                  </button>
+                )}
               </div>
               <div className="w-full h-1.5 rounded-full bg-[#E5E0D5] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-[#1A365D] transition-all duration-500"
-                  style={{ width: `${atsScore}%` }}
+                  style={{ width: `${hasAts ? atsScore : 0}%` }}
                 />
               </div>
             </div>
@@ -310,12 +320,21 @@ export default function DashboardPage() {
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[#3B352E] font-medium">Mock Interview Readiness</span>
-                <span className="font-bold text-[#1F1B16] font-mono">{currentReadiness}%</span>
+                {hasInterviews ? (
+                  <span className="font-bold text-[#1F1B16] font-mono">{currentReadiness}%</span>
+                ) : (
+                  <button
+                    onClick={() => navigate('/interview-setup')}
+                    className="text-[11px] font-semibold text-[#1A365D] hover:underline cursor-pointer"
+                  >
+                    Take First Interview →
+                  </button>
+                )}
               </div>
               <div className="w-full h-1.5 rounded-full bg-[#E5E0D5] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-[#1A365D] transition-all duration-500"
-                  style={{ width: `${currentReadiness}%` }}
+                  style={{ width: `${currentReadiness !== null ? currentReadiness : 0}%` }}
                 />
               </div>
             </div>

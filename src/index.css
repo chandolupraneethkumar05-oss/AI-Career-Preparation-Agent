@@ -21,12 +21,12 @@
   --theme-ink-primary: #1F1B16;       /* Primary Headings & Important Text */
   --theme-ink-secondary: #3B352E;     /* Body Text & Descriptions */
   --theme-ink-tertiary: #70685E;      /* Subtitles & Timestamps */
-  --theme-ink-micro: #8A8277;         /* Tracked Overlines & Micro Labels */
+  --theme-ink-micro: #5C554B;         /* Tracked Overlines & Micro Labels (WCAG AA) */
 
   --theme-text: #1F1B16;
   --theme-text-secondary: #3B352E;
   --theme-text-muted: #70685E;
-  --theme-text-micro: #8A8277;
+  --theme-text-micro: #5C554B;
 
   /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
   --theme-primary: #1A365D;           /* Academic Navy (Active & Key Links) */

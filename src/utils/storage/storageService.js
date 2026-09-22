@@ -58,6 +58,29 @@ export const storageService = {
     }
   },
 
+  // Multi-tenant user scoping for complete candidate data isolation
+  getUserScope(explicitUserId = null) {
+    if (explicitUserId) {
+      return explicitUserId.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    }
+    const u = this.getCurrentUser();
+    if (u?.id) {
+      return u.id.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    }
+    if (u?.email) {
+      return u.email.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    }
+    return 'default';
+  },
+
+  scopedKey(key, explicitUserId = null) {
+    if (key === STORAGE_KEYS.AUTH_USER || key === STORAGE_KEYS.THEME) {
+      return key;
+    }
+    const scope = this.getUserScope(explicitUserId);
+    return `${key}_${scope}`;
+  },
+
   // 1. User & Profile
   getCurrentUser() {
     return this.get(STORAGE_KEYS.AUTH_USER, null);
@@ -72,90 +95,90 @@ export const storageService = {
     return this.saveCurrentUser(user);
   },
 
-  getProfile() {
-    return this.get(STORAGE_KEYS.USER_PROFILE, this.getCurrentUser());
+  getProfile(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.USER_PROFILE, userId), this.getCurrentUser());
   },
-  saveProfile(profile) {
-    return this.set(STORAGE_KEYS.USER_PROFILE, profile);
+  saveProfile(profile, userId = null) {
+    return this.set(this.scopedKey(STORAGE_KEYS.USER_PROFILE, userId), profile);
   },
 
   // 2. Activities
-  getActivities() {
-    return this.get(STORAGE_KEYS.ACTIVITIES, []);
+  getActivities(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.ACTIVITIES, userId), []);
   },
-  saveActivity(activity) {
-    const list = this.getActivities();
+  saveActivity(activity, userId = null) {
+    const list = this.getActivities(userId);
     const updated = [activity, ...list];
-    return this.set(STORAGE_KEYS.ACTIVITIES, updated);
+    return this.set(this.scopedKey(STORAGE_KEYS.ACTIVITIES, userId), updated);
   },
 
   // 3. Interviews
-  getInterviews() {
-    return this.get(STORAGE_KEYS.INTERVIEWS, []);
+  getInterviews(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.INTERVIEWS, userId), []);
   },
-  saveInterview(interview) {
-    const list = this.getInterviews();
+  saveInterview(interview, userId = null) {
+    const list = this.getInterviews(userId);
     const updated = [interview, ...list];
-    return this.set(STORAGE_KEYS.INTERVIEWS, updated);
+    return this.set(this.scopedKey(STORAGE_KEYS.INTERVIEWS, userId), updated);
   },
-  setInterviews(interviews) {
-    return this.set(STORAGE_KEYS.INTERVIEWS, interviews);
+  setInterviews(interviews, userId = null) {
+    return this.set(this.scopedKey(STORAGE_KEYS.INTERVIEWS, userId), interviews);
   },
 
   // 4. ATS Results
-  getATSResult() {
-    return this.get(STORAGE_KEYS.ATS_RESULT, null);
+  getATSResult(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.ATS_RESULT, userId), null);
   },
-  setATSResult(result) {
-    this.set(STORAGE_KEYS.ATS_SCANNED, true);
-    return this.set(STORAGE_KEYS.ATS_RESULT, result);
+  setATSResult(result, userId = null) {
+    this.set(this.scopedKey(STORAGE_KEYS.ATS_SCANNED, userId), true);
+    return this.set(this.scopedKey(STORAGE_KEYS.ATS_RESULT, userId), result);
   },
 
   // 5. Skill Gaps & Profiles
-  getSkillGaps() {
-    return this.get(STORAGE_KEYS.SKILL_PROFILE, null);
+  getSkillGaps(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.SKILL_PROFILE, userId), null);
   },
-  saveSkillGaps(gaps) {
-    return this.set(STORAGE_KEYS.SKILL_PROFILE, gaps);
+  saveSkillGaps(gaps, userId = null) {
+    return this.set(this.scopedKey(STORAGE_KEYS.SKILL_PROFILE, userId), gaps);
   },
-  getSkillProfile() {
-    return this.getSkillGaps();
+  getSkillProfile(userId = null) {
+    return this.getSkillGaps(userId);
   },
-  setSkillProfile(profile) {
-    return this.saveSkillGaps(profile);
+  setSkillProfile(profile, userId = null) {
+    return this.saveSkillGaps(profile, userId);
   },
 
   // 6. Challenges
-  getChallenges() {
-    return this.get(STORAGE_KEYS.CHALLENGES, []);
+  getChallenges(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.CHALLENGES, userId), []);
   },
-  saveChallenge(challenge) {
-    const list = this.getChallenges();
+  saveChallenge(challenge, userId = null) {
+    const list = this.getChallenges(userId);
     const updated = [challenge, ...list];
-    this.set(STORAGE_KEYS.DAILY_CHALLENGE_COMPLETED, true);
-    this.set(STORAGE_KEYS.LAST_CHALLENGE_DATE, new Date().toISOString().split('T')[0]);
-    return this.set(STORAGE_KEYS.CHALLENGES, updated);
+    this.set(this.scopedKey(STORAGE_KEYS.DAILY_CHALLENGE_COMPLETED, userId), true);
+    this.set(this.scopedKey(STORAGE_KEYS.LAST_CHALLENGE_DATE, userId), new Date().toISOString().split('T')[0]);
+    return this.set(this.scopedKey(STORAGE_KEYS.CHALLENGES, userId), updated);
   },
 
   // 7. Achievements
-  getAchievements() {
-    return this.get(STORAGE_KEYS.ACHIEVEMENTS, []);
+  getAchievements(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.ACHIEVEMENTS, userId), []);
   },
-  saveAchievements(achievements) {
-    return this.set(STORAGE_KEYS.ACHIEVEMENTS, achievements);
+  saveAchievements(achievements, userId = null) {
+    return this.set(this.scopedKey(STORAGE_KEYS.ACHIEVEMENTS, userId), achievements);
   },
 
   // 8. Progress
-  getProgress() {
-    return this.get(STORAGE_KEYS.PROGRESS, null);
+  getProgress(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.PROGRESS, userId), null);
   },
-  saveProgress(progress) {
-    return this.set(STORAGE_KEYS.PROGRESS, progress);
+  saveProgress(progress, userId = null) {
+    return this.set(this.scopedKey(STORAGE_KEYS.PROGRESS, userId), progress);
   },
 
   // 9. Reminder Preferences
-  getReminderPrefs() {
-    return this.get(STORAGE_KEYS.REMINDER_PREFS, {
+  getReminderPrefs(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.REMINDER_PREFS, userId), {
       enabled: false,
       time: '19:00',
       preferred_time: '19:00',
@@ -165,8 +188,8 @@ export const storageService = {
       frequency: 'daily'
     });
   },
-  setReminderPrefs(prefs) {
-    return this.set(STORAGE_KEYS.REMINDER_PREFS, prefs);
+  setReminderPrefs(prefs, userId = null) {
+    return this.set(this.scopedKey(STORAGE_KEYS.REMINDER_PREFS, userId), prefs);
   },
 
   // 10. Theme Preferences (Locked to single official Editorial Scholar theme)
@@ -209,6 +232,86 @@ export const storageService = {
       challengeCount: challenges.length,
       skillProfile
     };
+  },
+
+  // 11. Backend Synchronization & Hydration
+  async hydrateFromBackend(userId = 'user-001') {
+    const baseUrl = import.meta.env?.VITE_API_URL || 'http://127.0.0.1:8000/api';
+    const results = { user: null, interviews: 0, ats: false };
+
+    // 1. Profile Hydration
+    try {
+      const pRes = await fetch(`${baseUrl}/profile?user_id=${encodeURIComponent(userId)}`);
+      if (pRes.ok) {
+        const profile = await pRes.json();
+        if (profile && profile.id) {
+          const current = this.getCurrentUser() || {};
+          this.saveCurrentUser({ ...current, ...profile });
+          results.user = profile;
+        }
+      }
+    } catch (e) {
+      if (import.meta.env?.DEV) console.debug('[storageService] Profile hydration skipped:', e.message);
+    }
+
+    // 2. Interviews Hydration
+    try {
+      const iRes = await fetch(`${baseUrl}/interviews?user_id=${encodeURIComponent(userId)}&limit=50`);
+      if (iRes.ok) {
+        const data = await iRes.json();
+        if (data && Array.isArray(data.interviews) && data.interviews.length > 0) {
+          const localInterviews = this.getInterviews();
+          const localIds = new Set(localInterviews.map((i) => i.id));
+          const newFromBackend = data.interviews.filter((i) => !localIds.has(i.id));
+          if (newFromBackend.length > 0) {
+            this.setInterviews([...localInterviews, ...newFromBackend]);
+          }
+          results.interviews = data.interviews.length;
+        }
+      }
+    } catch (e) {
+      if (import.meta.env?.DEV) console.debug('[storageService] Interviews hydration skipped:', e.message);
+    }
+
+    // 3. ATS Analysis Hydration
+    try {
+      const aRes = await fetch(`${baseUrl}/resume/latest/${encodeURIComponent(userId)}`);
+      if (aRes.ok) {
+        const atsData = await aRes.json();
+        if (atsData && (atsData.ats_score !== undefined || atsData.overallScore !== undefined)) {
+          this.setATSResult(atsData);
+          results.ats = true;
+        }
+      }
+    } catch (e) {
+      if (import.meta.env?.DEV) console.debug('[storageService] ATS hydration skipped:', e.message);
+    }
+
+    return results;
+  },
+
+  async syncInterviewToBackend(interview, userId = 'user-001') {
+    const baseUrl = import.meta.env?.VITE_API_URL || 'http://127.0.0.1:8000/api';
+    try {
+      const res = await fetch(`${baseUrl}/interviews?user_id=${encodeURIComponent(userId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role: interview.role || 'Machine Learning Engineer',
+          interview_type: interview.interviewType || interview.type || 'Technical',
+          difficulty: interview.difficulty || 'Intermediate',
+          overall_score: interview.score || interview.overall_score || 75,
+          passed: interview.score ? interview.score >= 70 : true,
+          questions_count: interview.questionsCount || 5,
+          feedback_summary: interview.summary || interview.feedback_summary || 'Mock interview session completed.',
+          rubric_scores: interview.rubricScores || {}
+        })
+      });
+      return res.ok;
+    } catch (e) {
+      if (import.meta.env?.DEV) console.debug('[storageService] Interview sync skipped (offline):', e.message);
+      return false;
+    }
   },
 
   clearAll() {
