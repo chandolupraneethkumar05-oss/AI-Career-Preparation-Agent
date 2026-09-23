@@ -76,7 +76,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 bg-[#1F1B16]/20 backdrop-blur-[1px] z-40 sm:hidden transition-opacity duration-200"
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-200"
           aria-hidden="true"
         />
       )}
@@ -87,12 +87,12 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
           bg-[var(--theme-sidebar,#F8F6F0)] 
           border-r border-[var(--theme-border,#E5E0D5)] 
           flex flex-col justify-between 
-          transition-all duration-150 z-50 
+          transition-all duration-200 z-50 
           h-screen
           fixed inset-y-0 left-0
-          sm:sticky sm:top-0
-          ${mobileOpen ? 'translate-x-0 w-64 shadow-lg' : '-translate-x-full sm:translate-x-0'}
-          ${collapsed ? 'sm:w-16' : 'sm:w-60'}
+          md:sticky md:top-0
+          ${mobileOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0 w-64 md:w-auto'}
+          ${collapsed ? 'md:w-16' : 'md:w-60'}
         `}
       >
         {/* Top Header / Brand Masthead */}
@@ -121,7 +121,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             {/* Desktop Collapse Toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="p-1 rounded-md border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] transition-colors hidden sm:block cursor-pointer"
+              className="p-1 rounded-md border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] transition-colors hidden md:block cursor-pointer"
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -131,7 +131,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             {/* Mobile Close Button */}
             <button
               onClick={() => setMobileOpen(false)}
-              className="p-1 rounded-md border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] sm:hidden"
+              className="p-1 rounded-md border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] md:hidden cursor-pointer"
               title="Close navigation"
             >
               <X className="w-4 h-4" />

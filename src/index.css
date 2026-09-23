@@ -221,6 +221,165 @@
 }
 
 /* =========================================================================
+   DARK THEME CONTRAST & LEGIBILITY RULES (SYSTEM PREFERENCE & MIDNIGHT DARK)
+   Overrides hardcoded light-theme hex tokens to ensure 100% WCAG AAA contrast
+   ========================================================================= */
+
+[data-theme="dark"], .dark {
+  color-scheme: dark;
+}
+
+/* Force dark theme typography on hardcoded dark text classes */
+[data-theme="dark"] .text-\[\#1F1B16\],
+.dark .text-\[\#1F1B16\],
+[data-theme="dark"] .text-\[\#1f1b16\],
+.dark .text-\[\#1f1b16\],
+[data-theme="dark"] .text-slate-900,
+.dark .text-slate-900,
+[data-theme="dark"] .text-gray-900,
+.dark .text-gray-900,
+[data-theme="dark"] .text-neutral-900,
+.dark .text-neutral-900,
+[data-theme="dark"] .text-black,
+.dark .text-black {
+  color: var(--theme-text, #F8FAFC) !important;
+}
+
+[data-theme="dark"] .text-\[\#3B352E\],
+.dark .text-\[\#3B352E\],
+[data-theme="dark"] .text-\[\#3b352e\],
+.dark .text-\[\#3b352e\],
+[data-theme="dark"] .text-slate-800,
+.dark .text-slate-800,
+[data-theme="dark"] .text-gray-800,
+.dark .text-gray-800 {
+  color: var(--theme-text-secondary, #E2E8F0) !important;
+}
+
+[data-theme="dark"] .text-\[\#70685E\],
+.dark .text-\[\#70685E\],
+[data-theme="dark"] .text-\[\#70685e\],
+.dark .text-\[\#70685e\],
+[data-theme="dark"] .text-\[\#5C554B\],
+.dark .text-\[\#5C554B\],
+[data-theme="dark"] .text-\[\#5c554b\],
+.dark .text-\[\#5c554b\],
+[data-theme="dark"] .text-slate-600,
+.dark .text-slate-600,
+[data-theme="dark"] .text-gray-600,
+.dark .text-gray-600 {
+  color: var(--theme-text-muted, #94A3B8) !important;
+}
+
+[data-theme="dark"] .text-\[\#1A365D\],
+.dark .text-\[\#1A365D\],
+[data-theme="dark"] .text-\[\#1a365d\],
+.dark .text-\[\#1a365d\],
+[data-theme="dark"] .text-\[\#1B2A4A\],
+.dark .text-\[\#1B2A4A\],
+[data-theme="dark"] .text-\[\#1b2a4a\],
+.dark .text-\[\#1b2a4a\] {
+  color: var(--theme-primary, #38BDF8) !important;
+}
+
+[data-theme="dark"] .text-\[\#8C6E54\],
+.dark .text-\[\#8C6E54\],
+[data-theme="dark"] .text-\[\#8c6e54\],
+.dark .text-\[\#8c6e54\] {
+  color: #38BDF8 !important;
+}
+
+/* Force dark theme card backgrounds on hardcoded cream/parchment surfaces */
+[data-theme="dark"] .bg-\[\#FFFDF9\],
+.dark .bg-\[\#FFFDF9\],
+[data-theme="dark"] .bg-\[\#fffdf9\],
+.dark .bg-\[\#fffdf9\],
+[data-theme="dark"] .bg-\[\#FAF8F3\],
+.dark .bg-\[\#FAF8F3\],
+[data-theme="dark"] .bg-\[\#faf8f3\],
+.dark .bg-\[\#faf8f3\],
+[data-theme="dark"] .bg-\[\#F8F6F0\],
+.dark .bg-\[\#F8F6F0\],
+[data-theme="dark"] .bg-\[\#f8f6f0\],
+.dark .bg-\[\#f8f6f0\],
+[data-theme="dark"] .bg-white,
+.dark .bg-white {
+  background-color: var(--theme-surface, #111827) !important;
+}
+
+[data-theme="dark"] .bg-\[\#F2EFE9\],
+.dark .bg-\[\#F2EFE9\],
+[data-theme="dark"] .bg-\[\#f2efe9\],
+.dark .bg-\[\#f2efe9\],
+[data-theme="dark"] .bg-\[\#EFECE6\],
+.dark .bg-\[\#EFECE6\],
+[data-theme="dark"] .bg-\[\#efece6\],
+.dark .bg-\[\#efece6\],
+[data-theme="dark"] .bg-\[\#EAEFF5\],
+.dark .bg-\[\#EAEFF5\],
+[data-theme="dark"] .bg-\[\#eaeff5\],
+.dark .bg-\[\#eaeff5\] {
+  background-color: var(--theme-surface-hover, #1E293B) !important;
+}
+
+/* Force dark borders */
+[data-theme="dark"] .border-\[\#E5E0D5\],
+.dark .border-\[\#E5E0D5\],
+[data-theme="dark"] .border-\[\#e5e0d5\],
+.dark .border-\[\#e5e0d5\],
+[data-theme="dark"] .border-\[\#D5CFBF\],
+.dark .border-\[\#D5CFBF\],
+[data-theme="dark"] .border-\[\#d5cfbf\],
+.dark .border-\[\#d5cfbf\],
+[data-theme="dark"] .border-\[\#BAC7D5\],
+.dark .border-\[\#BAC7D5\],
+[data-theme="dark"] .border-\[\#bac7d5\],
+.dark .border-\[\#bac7d5\],
+[data-theme="dark"] .border-\[\#D0DBE7\],
+.dark .border-\[\#D0DBE7\],
+[data-theme="dark"] .border-\[\#d0dbe7\],
+.dark .border-\[\#d0dbe7\] {
+  border-color: var(--theme-border, #1E293B) !important;
+}
+
+/* Form inputs & selects in dark mode */
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+.dark input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] select,
+.dark select,
+[data-theme="dark"] textarea,
+.dark textarea {
+  background-color: var(--theme-input-bg, #111827) !important;
+  color: var(--theme-text, #F8FAFC) !important;
+  border-color: var(--theme-border, #1E293B) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+.dark input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+.dark textarea::placeholder {
+  color: var(--theme-text-muted, #94A3B8) !important;
+}
+
+/* Pure White Theme adjustments */
+[data-theme="white"] .bg-\[\#F8F6F0\],
+[data-theme="white"] .bg-\[\#f8f6f0\] {
+  background-color: #FFFFFF !important;
+}
+[data-theme="white"] .bg-\[\#FFFDF9\],
+[data-theme="white"] .bg-\[\#fffdf9\],
+[data-theme="white"] .bg-\[\#FAF8F3\],
+[data-theme="white"] .bg-\[\#faf8f3\] {
+  background-color: #F8FAFC !important;
+}
+[data-theme="white"] .border-\[\#E5E0D5\],
+[data-theme="white"] .border-\[\#e5e0d5\],
+[data-theme="white"] .border-\[\#D5CFBF\],
+[data-theme="white"] .border-\[\#d5cfbf\] {
+  border-color: #E2E8F0 !important;
+}
+
+/* =========================================================================
    4. EDITORIAL TYPOGRAPHY & HIERARCHY UTILITIES
    ========================================================================= */
 

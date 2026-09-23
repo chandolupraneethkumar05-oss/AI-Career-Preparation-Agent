@@ -12,6 +12,7 @@ import ProgressBar from '../components/ProgressBar';
 import Badge from '../components/Badge';
 import PerformanceChart from '../components/PerformanceChart';
 import { useInterview } from '../context/InterviewContext';
+import MarqueeBanner from '../components/MarqueeBanner';
 import { useAuth } from '../context/AuthContext';
 import { activityService } from '../utils/activityService';
 import { storageService } from '../utils/storage/storageService';
@@ -27,30 +28,31 @@ export default function ProgressPage() {
   const skillProfile = storageService.getSkillProfile(currentUserId);
   const atsResult = storageService.getATSResult(currentUserId);
 
-  // Derive dynamic stats from real history
-  const hasInterviews = Array.isArray(userInterviews) && userInterviews.length > 0;
-  const totalInterviews = hasInterviews ? userInterviews.length : 0;
+  // Guarantee history is always a safe array
+  const history = Array.isArray(userInterviews) ? userInterviews : [];
+  const hasInterviews = history.length > 0;
+  const totalInterviews = hasInterviews ? history.length : 0;
   const avgScore = hasInterviews
-    ? Math.round(userInterviews.reduce((acc, curr) => acc + curr.score, 0) / userInterviews.length)
+    ? Math.round(history.reduce((acc, curr) => acc + (curr.score || 0), 0) / history.length)
     : 0;
 
   const challengeCount = userActivities.filter((a) => a.type === 'challenge_completed').length;
   const questionsAnswered = (totalInterviews * 5) + challengeCount;
 
-  const scoreGain = hasInterviews && userInterviews.length > 1
-    ? userInterviews[0].score - userInterviews[userInterviews.length - 1].score
+  const scoreGain = hasInterviews && history.length > 1
+    ? (history[0]?.score || 0) - (history[history.length - 1]?.score || 0)
     : 0;
 
   // Chart data
   const performanceHistory = hasInterviews
-    ? (userInterviews.length === 1
+    ? (history.length === 1
         ? [
-            { label: 'Baseline', score: userInterviews[0].score, date: userInterviews[0].date || 'Day 1' },
-            { label: 'Current', score: userInterviews[0].score, date: userInterviews[0].date || 'Day 1' }
+            { label: 'Baseline', score: history[0]?.score || 70, date: history[0]?.date || 'Day 1' },
+            { label: 'Current', score: history[0]?.score || 70, date: history[0]?.date || 'Day 1' }
           ]
-        : [...userInterviews].reverse().map((item, idx) => ({
+        : [...history].reverse().map((item, idx) => ({
             label: `Round ${idx + 1}`,
-            score: item.score,
+            score: item.score || 70,
             date: item.date || `Session ${idx + 1}`
           })))
     : [];
@@ -117,6 +119,9 @@ export default function ProgressPage() {
           Practice New Round
         </GradientButton>
       </div>
+
+      {/* Dynamic Headline Marquee Ticker */}
+      <MarqueeBanner variant="skillgap" role={user?.targetRole || 'Engineering Candidate'} />
 
       {/* Top 4 Key Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -221,18 +226,18 @@ export default function ProgressPage() {
         {hasInterviews ? (
           <div className="grid grid-cols-4 gap-4 pt-4 items-end h-56">
             {[
-              { week: 'Week 1', overall: history[history.length - 1]?.score || 70 },
-              { week: 'Week 2', overall: history[Math.max(0, history.length - 2)]?.score || history[0].score },
-              { week: 'Week 3', overall: history[1]?.score || history[0].score },
-              { week: 'Week 4', overall: history[0]?.score || 80 }
+              { week: 'Week 1', overall: history[history.length - 1]?.score ?? avgScore ?? 70 },
+              { week: 'Week 2', overall: (history[Math.max(0, history.length - 2)]?.score ?? history[0]?.score ?? avgScore ?? 72) },
+              { week: 'Week 3', overall: (history[1]?.score ?? history[0]?.score ?? avgScore ?? 75) },
+              { week: 'Week 4', overall: (history[0]?.score ?? avgScore ?? 80) }
             ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end">
-                <span className="text-xs font-bold text-[#1F1B16] font-mono">{item.overall}%</span>
+                <span className="text-xs font-bold text-[var(--theme-text,#1F1B16)] font-mono">{item.overall}%</span>
                 <div
-                  className="w-full max-w-[54px] rounded-sm bg-[#1B2A4A] border border-[#142038] transition-all duration-700"
+                  className="w-full max-w-[54px] rounded-sm bg-[var(--theme-cta,#1B2A4A)] border border-[var(--theme-cta-hover,#142038)] transition-all duration-700"
                   style={{ height: `${(item.overall / 100) * 160}px` }}
                 />
-                <span className="text-xs text-[#70685E] font-semibold mt-1 font-mono">{item.week}</span>
+                <span className="text-xs text-[var(--theme-text-muted,#70685E)] font-semibold mt-1 font-mono">{item.week}</span>
               </div>
             ))}
           </div>

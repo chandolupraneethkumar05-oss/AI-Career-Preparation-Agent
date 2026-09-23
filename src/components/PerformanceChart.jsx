@@ -73,10 +73,10 @@ export default function PerformanceChart({
         className="w-full h-auto overflow-visible"
       >
         <defs>
-          {/* Subtle archival area fill */}
+          {/* Subtle area fill using theme primary accent */}
           <linearGradient id="chartAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#1B2A4A" stopOpacity="0.14" />
-            <stop offset="100%" stopColor="#1B2A4A" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="var(--theme-primary, #1A365D)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="var(--theme-primary, #1A365D)" stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
@@ -91,7 +91,7 @@ export default function PerformanceChart({
                 y1={y}
                 x2={width - paddingX + 10}
                 y2={y}
-                stroke="#E5E0D5"
+                stroke="var(--theme-border, #E5E0D5)"
                 strokeWidth="1"
                 strokeDasharray="3 3"
               />
@@ -99,7 +99,7 @@ export default function PerformanceChart({
                 x={paddingX - 16}
                 y={y + 3.5}
                 textAnchor="end"
-                fill="#70685E"
+                fill="var(--theme-text-muted, #70685E)"
                 fontSize="9.5"
                 fontFamily="ui-monospace, monospace"
               >
@@ -116,7 +116,7 @@ export default function PerformanceChart({
         <path
           d={linePath}
           fill="none"
-          stroke="#1B2A4A"
+          stroke="var(--theme-primary, #1A365D)"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -140,8 +140,8 @@ export default function PerformanceChart({
                   cx={pt.x}
                   cy={pt.y}
                   r="10"
-                  fill="#1B2A4A"
-                  fillOpacity="0.1"
+                  fill="var(--theme-primary, #1A365D)"
+                  fillOpacity="0.15"
                 />
               )}
 
@@ -150,8 +150,8 @@ export default function PerformanceChart({
                 cx={pt.x}
                 cy={pt.y}
                 r={isHovered ? 6 : isCurrent ? 5 : 4}
-                fill={isCurrent ? '#1B2A4A' : '#FFFDF9'}
-                stroke="#1B2A4A"
+                fill={isCurrent ? 'var(--theme-primary, #1A365D)' : 'var(--theme-surface, #FFFDF9)'}
+                stroke="var(--theme-primary, #1A365D)"
                 strokeWidth={isCurrent ? '2' : '1.5'}
                 className="transition-all duration-200"
               />
@@ -164,15 +164,15 @@ export default function PerformanceChart({
                   width="28"
                   height="16"
                   rx="3"
-                  fill="#FFFDF9"
-                  stroke="#E5E0D5"
+                  fill="var(--theme-surface, #FFFDF9)"
+                  stroke="var(--theme-border, #E5E0D5)"
                   strokeWidth="1"
                 />
                 <text
                   x="0"
                   y="0"
                   textAnchor="middle"
-                  fill="#1F1B16"
+                  fill="var(--theme-text, #1F1B16)"
                   fontSize="9.5"
                   fontWeight="bold"
                   fontFamily="ui-monospace, monospace"
@@ -186,7 +186,7 @@ export default function PerformanceChart({
                 x={pt.x}
                 y={height - 12}
                 textAnchor="middle"
-                fill={isCurrent ? '#1B2A4A' : '#70685E'}
+                fill={isCurrent ? 'var(--theme-primary, #1A365D)' : 'var(--theme-text-muted, #70685E)'}
                 fontSize="10"
                 fontFamily="ui-monospace, monospace"
                 fontWeight={isCurrent ? 'bold' : 'normal'}
