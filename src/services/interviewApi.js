@@ -6,8 +6,7 @@
 import { QUESTION_BANK } from '../data/mockData';
 import { evaluateAnswer } from '../utils/evaluator';
 import { storageService } from '../utils/storage/storageService';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+import { API_BASE_URL } from './apiConfig';
 
 const resolveUserId = (id) => (id && id !== 'user-001') ? id : (storageService.getCurrentUser()?.id || id || 'usr_candidate');
 
@@ -180,7 +179,25 @@ export const interviewApi = {
           follow_up_needed: localEval.isAdaptiveFollowUpSuggested || false,
           follow_up_reason: localEval.followUpQuestion || null
         },
-        next_question: null,
+        next_question: (() => {
+          const roleBank = QUESTION_BANK[targetRole] || QUESTION_BANK['Machine Learning Engineer'] || {};
+          const qList = roleBank[interviewType] || roleBank['Technical'] || [];
+          const remaining = qList.filter(q => q.id !== questionId);
+          const nextQ = remaining[Math.floor(Math.random() * remaining.length)] || qList[0] || {
+            id: `q_next_${Date.now()}`,
+            question: `How would you evaluate and optimize architecture trade-offs for ${targetRole}?`,
+            category: 'Architecture',
+            difficulty: score100 >= 80 ? 'Advanced' : 'Intermediate'
+          };
+          return {
+            id: nextQ.id || `q_next_${Date.now()}`,
+            question: nextQ.question,
+            skill: nextQ.category || 'Engineering',
+            difficulty: nextQ.difficulty || difficulty,
+            generated_source: 'adaptive_bank',
+            expected_focus: 'Explain mechanisms, edge cases, and trade-offs.'
+          };
+        })(),
         adaptive_decision: {
           action: score100 >= 80 ? 'escalate' : (score100 < 65 ? 'reinforce' : 'standard'),
           target_skill: currentQuestionMeta?.category || 'Technical',

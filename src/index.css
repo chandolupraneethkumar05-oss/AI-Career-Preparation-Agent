@@ -4,7 +4,7 @@
    1. EDITORIAL SCHOLAR & ACADEMIC CURATOR — ALEXANDRIA STYLE DESIGN SYSTEM
    ========================================================================= */
 
-:root, [data-theme], [data-theme="warm"], [data-theme="editorial_scholar"] {
+:root, [data-theme="warm"], [data-theme="editorial_scholar"] {
   --theme-id: "warm";
   
   /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
@@ -534,3 +534,27 @@ aside nav a:not(.bg-gradient-to-r):hover {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--theme-border-strong, #D5CFBF);
 }
+
+/* =========================================================================
+   12. EDITORIAL TICKER & HORIZONTAL MARQUEE ANIMATIONS
+   ========================================================================= */
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 32s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+

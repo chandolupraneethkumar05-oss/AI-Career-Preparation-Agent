@@ -4,8 +4,7 @@
  */
 
 import { fetchWithTimeout, DEFAULT_TIMEOUT_MS } from '../utils/fetchWithTimeout';
-
-const BACKEND_BASE_URL = 'http://127.0.0.1:8000';
+import { BACKEND_BASE_URL } from './apiConfig';
 
 const FALLBACK_CHALLENGES = [
   {

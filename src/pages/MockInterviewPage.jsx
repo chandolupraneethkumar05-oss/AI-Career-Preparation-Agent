@@ -32,6 +32,7 @@ import { useFaceToFaceDialogue } from '../hooks/useFaceToFaceDialogue';
 import { useInterview } from '../context/InterviewContext';
 import { useAuth } from '../context/AuthContext';
 import { interviewApi } from '../services/interviewApi';
+import MarqueeBanner from '../components/MarqueeBanner';
 
 export default function MockInterviewPage() {
   const navigate = useNavigate();
@@ -762,6 +763,9 @@ export default function MockInterviewPage() {
         gradient="navy"
         height="h-1.5"
       />
+
+      {/* Dynamic Interview Radar Ticker */}
+      <MarqueeBanner variant="interview" role={setup?.targetRole || 'Engineering Candidate'} />
 
       {/* Adaptive Notification Banner if Triggered */}
       {session.adaptiveEvent && !currentEval && (

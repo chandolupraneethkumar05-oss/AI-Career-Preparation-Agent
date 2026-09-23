@@ -327,42 +327,24 @@ export function InterviewProvider({ children }) {
           message: `Solid performance (${score}/10). Maintaining calibrated intermediate difficulty.`
         };
       }
+    }
 
-      if (session.currentIndex + 1 >= newQuestions.length && session.currentIndex + 1 < (session.totalQuestions || 5)) {
-        const roleQuestions = QUESTION_BANK[setup.targetRole] || QUESTION_BANK['Machine Learning Engineer'];
-        let selectedQuestions = roleQuestions[setup.interviewType] || roleQuestions['Technical'] || [];
-        const fallbackQ = selectedQuestions[(session.currentIndex + 1) % (selectedQuestions.length || 1)] || {
-          id: `fallback_${session.currentIndex + 1}`,
-          question: 'Can you describe a challenging technical problem you solved recently and your approach?',
-          category: 'Problem Solving',
-          difficulty: nextDifficulty
-        };
-        newQuestions[session.currentIndex + 1] = {
-          ...fallbackQ,
-          currentDifficulty: nextDifficulty,
-          adaptiveTriggered: adaptiveEvent.type !== 'standard'
-        };
-      } else if (session.currentIndex + 1 < newQuestions.length) {
-        newQuestions[session.currentIndex + 1] = {
-          ...newQuestions[session.currentIndex + 1],
-          currentDifficulty: nextDifficulty,
-          adaptiveTriggered: adaptiveEvent.type !== 'standard'
-        };
-      }
-
-      if (evaluation.isAdaptiveFollowUpSuggested && evaluation.followUpQuestion && !currentQ.isFollowUp && newQuestions.length < 6) {
-        const followUpItem = {
-          id: `${currentQ.id}_adaptive_probe`,
-          question: `[Adaptive ${nextDifficulty} Follow-up] ${evaluation.followUpQuestion}`,
-          category: `Adaptive Probe: ${currentQ.category}`,
-          idealKeywords: currentQ.idealKeywords || ['architecture', 'tradeoffs'],
-          difficulty: nextDifficulty,
-          currentDifficulty: nextDifficulty,
-          isFollowUp: true,
-          adaptiveTriggered: true
-        };
-        newQuestions.splice(session.currentIndex + 1, 0, followUpItem);
-      }
+    // Guarantee that if we have more questions remaining, the next question slot is never empty
+    const totalAllowedQuestions = session.totalQuestions || setup.totalQuestions || 5;
+    if (session.currentIndex + 1 < totalAllowedQuestions && !newQuestions[session.currentIndex + 1]) {
+      const roleQuestions = QUESTION_BANK[setup.targetRole] || QUESTION_BANK['Machine Learning Engineer'] || {};
+      let selectedQuestions = roleQuestions[setup.interviewType] || roleQuestions['Technical'] || [];
+      const fallbackQ = selectedQuestions[(session.currentIndex + 1) % (selectedQuestions.length || 1)] || {
+        id: `q_${session.currentIndex + 2}`,
+        question: `How would you architect and optimize critical engineering workflows for ${setup.targetRole}?`,
+        category: 'Architecture & Strategy',
+        difficulty: nextDifficulty
+      };
+      newQuestions[session.currentIndex + 1] = {
+        ...fallbackQ,
+        currentDifficulty: nextDifficulty,
+        adaptiveTriggered: Boolean(adaptiveEvent && adaptiveEvent.type !== 'standard')
+      };
     }
 
     const qHints = session.hintsPerQuestion?.[currentQ.id] || 0;
@@ -427,15 +409,36 @@ export function InterviewProvider({ children }) {
   // Move to next question or conclude interview
   const advanceQuestion = () => {
     const nextIdx = session.currentIndex + 1;
-    if (nextIdx < session.questions.length) {
-      setSession(prev => ({
-        ...prev,
-        currentIndex: nextIdx
-      }));
-      return false; // More questions remaining
+    const totalAllowed = session.totalQuestions || setup.totalQuestions || 5;
+
+    if (nextIdx < totalAllowed) {
+      setSession(prev => {
+        let updatedQuestions = [...prev.questions];
+        if (!updatedQuestions[nextIdx]) {
+          const roleQuestions = QUESTION_BANK[setup.targetRole] || QUESTION_BANK['Machine Learning Engineer'] || {};
+          let selectedQuestions = roleQuestions[setup.interviewType] || roleQuestions['Technical'] || [];
+          const fallbackQ = selectedQuestions[nextIdx % (selectedQuestions.length || 1)] || {
+            id: `q_${nextIdx + 1}`,
+            question: `How would you architect and optimize critical engineering workflows for ${setup.targetRole}?`,
+            category: 'Architecture & Strategy',
+            difficulty: prev.currentDifficulty || 'Intermediate'
+          };
+          updatedQuestions[nextIdx] = {
+            ...fallbackQ,
+            currentDifficulty: prev.currentDifficulty || 'Intermediate',
+            adaptiveTriggered: false
+          };
+        }
+        return {
+          ...prev,
+          questions: updatedQuestions,
+          currentIndex: nextIdx
+        };
+      });
+      return false; // More questions remaining!
     } else {
       completeInterview();
-      return true; // Finished
+      return true; // Finished!
     }
   };
 

@@ -31,6 +31,7 @@ import { activityService } from '../utils/activityService';
 import { agentDecisionEngine } from '../utils/agentDecisionEngine';
 import { skillApi } from '../services/skillApi';
 import { recommendationApi } from '../services/recommendationApi';
+import MarqueeBanner from '../components/MarqueeBanner';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -225,6 +226,9 @@ export default function DashboardPage() {
             <span className="text-[10px]">→</span>
           </button>
         </div>
+
+        {/* Dynamic Editorial Headline Ticker */}
+        <MarqueeBanner variant="dashboard" role={userRole} />
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}

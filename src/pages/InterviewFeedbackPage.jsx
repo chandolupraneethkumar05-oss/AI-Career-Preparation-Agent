@@ -155,10 +155,10 @@ export default function InterviewFeedbackPage() {
         })
       : [
           {
-            skill_name: 'Machine Learning',
-            score: session.summaryResult?.scores?.overall || 78,
-            status: (session.summaryResult?.scores?.overall || 78) >= 80 ? 'Strong' : 'Needs Practice',
-            question: 'General technical question',
+            skill_name: result.targetRole || 'Core Competency',
+            score: session.summaryResult?.scores?.overall || 75,
+            status: (session.summaryResult?.scores?.overall || 75) >= 80 ? 'Strong' : 'Needs Practice',
+            question: `Diagnostic assessment for ${result.targetRole || 'Engineering'}`,
             missing_concepts: []
           }
         ];

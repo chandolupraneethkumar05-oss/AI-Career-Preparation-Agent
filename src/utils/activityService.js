@@ -52,7 +52,9 @@ export const activityService = {
         return null;
       }
 
-      const activities = this.getActivities();
+      const user = storageService.getCurrentUser();
+      const currentUserId = user?.id || user?.email || 'candidate';
+      const activities = this.getActivities(currentUserId);
       const now = Date.now();
 
       // De-duplication: Prevent duplicate recordings if identical event fires within 2500ms
@@ -63,10 +65,9 @@ export const activityService = {
         return recentDuplicate;
       }
 
-      const user = storageService.getCurrentUser();
       const newActivity = {
         id: `act-${now}-${Math.random().toString(36).substring(2, 7)}`,
-        userId: user?.id || user?.email || 'candidate',
+        userId: currentUserId,
         type,
         relatedModule,
         title,
@@ -77,11 +78,11 @@ export const activityService = {
       };
 
       const updated = [newActivity, ...activities];
-      storageService.set(STORAGE_KEYS.ACTIVITIES, updated);
+      storageService.set(storageService.scopedKey(STORAGE_KEYS.ACTIVITIES, currentUserId), updated);
 
       // Sync deterministic streak into storage
       const currentStreak = this.calculateCurrentStreak(updated);
-      storageService.set(STORAGE_KEYS.STREAK, currentStreak);
+      storageService.setStreak(currentStreak, currentUserId);
 
       // Update user XP and level in storage
       if (user) {
@@ -106,8 +107,9 @@ export const activityService = {
   /**
    * Retrieve all recorded user activities
    */
-  getActivities() {
-    return storageService.get(STORAGE_KEYS.ACTIVITIES, []);
+  getActivities(userId = null) {
+    const effectiveId = userId || storageService.getCurrentUser()?.id;
+    return storageService.getActivities(effectiveId);
   },
 
   /**

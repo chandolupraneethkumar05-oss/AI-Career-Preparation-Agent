@@ -9,6 +9,7 @@ using standard HTTPS JSON protocols. Seamlessly switches from offline local heur
 import os
 import json
 import time
+import random
 import urllib.request
 import urllib.error
 from typing import Dict, Any, List, Optional
@@ -228,22 +229,39 @@ Return valid JSON with exactly these fields:
             )
 
         career_context = career_context or {}
-        session_config = session_config or {}
-        previous_questions = previous_questions or []
+        session_config = session_config or kwargs.get("session_context") or {}
+        if kwargs.get("question_index") is not None:
+            sequence_number = kwargs["question_index"] + 1
+        previous_questions = previous_questions or kwargs.get("previous_qa") or []
         previous_evaluations = previous_evaluations or []
 
-        target_role = session_config.get("target_role") or career_context.get("target_role") or "Machine Learning Engineer"
+        target_role = session_config.get("target_role") or session_config.get("role") or career_context.get("target_role") or "Machine Learning Engineer"
         difficulty = session_config.get("difficulty") or "Intermediate"
-        interview_type = session_config.get("interview_type") or "Technical"
+        interview_type = session_config.get("interview_type") or session_config.get("category") or "Technical"
         company_playbook = session_config.get("company_playbook") or "general"
 
         prev_q_texts = [q.get("question") or q.get("question_text", "") for q in previous_questions]
+        past_q_texts = career_context.get("past_interview_questions", [])
+        all_forbidden = list(set([t for t in (prev_q_texts + past_q_texts) if t]))
         last_eval = previous_evaluations[-1] if previous_evaluations else None
 
+        # Dynamic topic focus seeds to ensure creative variation across sessions
+        subdomain_seeds = [
+            "distributed architecture, scalability tradeoffs, and high availability",
+            "production failure modes, edge-case recovery, and latency optimization",
+            "end-to-end data pipelines, streaming reliability, and consistency models",
+            "modern deep learning paradigms, loss surface dynamics, and quantization",
+            "monitoring metrics, drift detection, and automated canary deployment",
+            "security boundaries, data isolation, and API design trade-offs"
+        ]
+        focus_seed = random.choice(subdomain_seeds) if 'random' in globals() else subdomain_seeds[sequence_number % len(subdomain_seeds)]
+
         system_prompt = (
-            f"You are a Senior Principal Interviewer at a top tier technology company ({company_playbook.title()} playbook). "
-            f"You are conducting a live {difficulty}-level {interview_type} mock interview for the role of {target_role}. "
-            "Generate an authentic, rigorous, and relevant interview question. Do not duplicate previously asked questions."
+            f"You are a Senior Principal Interviewer at a premier technology enterprise ({company_playbook.title()} playbook). "
+            f"You are conducting an authentic {difficulty}-level {interview_type} mock interview for the role of {target_role}. "
+            f"Focus topic inspiration: {focus_seed}. "
+            "Generate an authentic, high-signal, production-realistic interview question. "
+            "STRICT REQUIREMENT: NEVER repeat or closely rephrase any of the previously asked questions."
         )
 
         user_prompt = f"""
@@ -251,13 +269,14 @@ Sequence Number: Question {sequence_number}
 Role: {target_role}
 Difficulty: {difficulty}
 Interview Type: {interview_type}
-Previous Questions Asked: {json.dumps(prev_q_texts)}
-Previous Evaluation Context: {json.dumps(last_eval.get('weaknesses', []) if last_eval else [])}
+Topic Seed: {focus_seed}
+Strictly Do NOT Duplicate Any of These Questions: {json.dumps(all_forbidden[:15])}
+Previous Evaluation Gaps: {json.dumps(last_eval.get('weaknesses', []) if last_eval else [])}
 Target Language: {language}
 
 Return valid JSON with exactly these fields:
 {{
-  "question": "The interview question to read to the candidate",
+  "question": "The fresh, authentic interview question to ask the candidate",
   "skill": "Specific core skill tested (e.g. PyTorch, Distributed Systems, SQL, STAR Leadership)",
   "topic": "Specific technical topic",
   "rationale": "Why this question is critical for this candidate at this stage",
@@ -265,7 +284,7 @@ Return valid JSON with exactly these fields:
   "rubric_guidance": "Evaluation guidance for scoring candidate's answer"
 }}
 """
-        raw_resp = self._call_gemini(user_prompt, system_prompt, temperature=0.35, json_mode=True)
+        raw_resp = self._call_gemini(user_prompt, system_prompt, temperature=0.7, json_mode=True)
         if raw_resp:
             try:
                 parsed = json.loads(self._clean_json_text(raw_resp))

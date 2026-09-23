@@ -4,8 +4,7 @@
  */
 
 import { fetchWithTimeout, AI_TIMEOUT_MS, DEFAULT_TIMEOUT_MS } from '../utils/fetchWithTimeout';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+import { API_BASE_URL } from './apiConfig';
 
 export const aiApi = {
   /**

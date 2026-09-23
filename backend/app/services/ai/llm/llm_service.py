@@ -13,6 +13,7 @@ import os
 import re
 import json
 import time
+import random
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 
@@ -357,19 +358,31 @@ class LocalGroundedLLMService(BaseLLMService):
                 return [
                     "How do L1 and L2 regularization mathematically influence the loss surface and parameter weights in machine learning, and in what scenario would ElasticNet be preferred over pure Lasso or Ridge?",
                     "When architecting gradient boosting trees (e.g. XGBoost, LightGBM), how do histogram-based splitting and gradient-based one-side sampling (GOSS) drastically reduce training latency compared to exact greedy splitting?",
-                    "How do you formulate the bias-variance decomposition mathematically, and how do ensemble methods like Bagging vs Boosting specifically target each component?"
+                    "How do you formulate the bias-variance decomposition mathematically, and how do ensemble methods like Bagging vs Boosting specifically target each component?",
+                    "How do you design a real-time recommendation retrieval system using approximate nearest neighbors (HNSW or ScaNN), and what trade-offs exist between index build latency, memory footprint, and recall at K?",
+                    "In large-scale click-through-rate (CTR) prediction models, how do factorization machines and Deep & Cross Networks (DCN) model high-order sparse feature interactions efficiently without manual combinatorial explosion?",
+                    "How do focal loss and class-balanced loss mathematically reshape cross-entropy gradients when training models under severe class imbalance (e.g. 1:10,000 fraud detection)?",
+                    "When serving large deep learning models under strict p99 latency SLAs (<15ms), what are the architectural trade-offs between dynamic tensor batching, FP16/INT8 quantization, and speculative decoding?"
                 ]
             elif diff == "Beginner":
                 return [
                     "What is the difference between supervised and unsupervised learning, and what are common real-world use cases for each?",
                     "Can you explain the difference between classification and regression in machine learning, and what evaluation metrics you use for each?",
-                    "Why is it essential to split a dataset into training, validation, and test sets, and what happens if you evaluate your final model on the training data?"
+                    "Why is it essential to split a dataset into training, validation, and test sets, and what happens if you evaluate your final model on the training data?",
+                    "What is the curse of dimensionality in machine learning, and how does high dimensionality affect distance-based algorithms like KNN?",
+                    "Can you explain the difference between parameters and hyperparameters in machine learning with concrete examples of each?",
+                    "What are common methods for handling missing values and numerical scaling (MinMaxScaler vs StandardScaler) before training linear models?"
                 ]
             else:  # Intermediate
                 return [
                     "How do you distinguish between high bias and high variance when evaluating machine learning models, and what concrete actions do you take when your model overfits the training dataset?",
                     "What is the difference between Precision, Recall, and ROC-AUC? In what real-world ML application would you prioritize Recall over Precision?",
-                    "How do tree-based models like Random Forests determine feature importance, and what are the limitations of Gini impurity-based importance on high-cardinality features?"
+                    "How do tree-based models like Random Forests determine feature importance, and what are the limitations of Gini impurity-based importance on high-cardinality features?",
+                    "How would you detect and address data drift (covariate shift) versus concept drift when monitoring a deployed machine learning model in production?",
+                    "Can you explain how cross-validation works with k-folds, and why must stratified k-fold or group k-fold be used when evaluating customer churn or patient healthcare datasets?",
+                    "How does gradient descent optimize neural network weights, and what advantages do momentum-based optimizers like Adam have over vanilla stochastic gradient descent (SGD)?",
+                    "What are the mathematical differences between Bagging and Boosting, and why does a Random Forest reduce variance while AdaBoost reduces bias?",
+                    "In NLP and recommendation systems, what are vector embeddings, and how do cosine similarity and dot product differ when comparing semantic document representations?"
                 ]
 
         elif cat == "Deep Learning":
@@ -717,21 +730,27 @@ class LocalGroundedLLMService(BaseLLMService):
             if not candidate_chunks:
                 candidate_chunks = retrieved_knowledge
 
-        target_chunk = candidate_chunks[0] if candidate_chunks else (retrieved_chunk or {})
+        # Randomize candidate chunks order to avoid deterministic repetition
+        shuffled_chunks = list(candidate_chunks) if candidate_chunks else []
+        random.shuffle(shuffled_chunks)
+
+        target_chunk = shuffled_chunks[0] if shuffled_chunks else (retrieved_chunk or {})
         topic = target_chunk.get("topic", "Core Engineering")
         category = target_chunk.get("category", "Technical")
 
         curriculum_questions = self._get_curriculum_questions(category, topic, difficulty, target_role, interview_type)
-        chosen_q = next((cq for cq in curriculum_questions if cq.strip().lower() not in all_forbidden), None)
+        unseen_qs = [cq for cq in curriculum_questions if cq.strip().lower() not in all_forbidden]
+        chosen_q = random.choice(unseen_qs) if unseen_qs else None
 
         # If all questions in this chunk were already asked, rotate to alternate chunks
-        if not chosen_q and len(candidate_chunks) > 1:
-            for alt_chunk in candidate_chunks[1:]:
+        if not chosen_q and len(shuffled_chunks) > 1:
+            for alt_chunk in shuffled_chunks[1:]:
                 alt_topic = alt_chunk.get("topic", topic)
                 alt_cat = alt_chunk.get("category", category)
                 alt_qs = self._get_curriculum_questions(alt_cat, alt_topic, difficulty, target_role, interview_type)
-                chosen_q = next((cq for cq in alt_qs if cq.strip().lower() not in all_forbidden), None)
-                if chosen_q:
+                alt_unseen = [cq for cq in alt_qs if cq.strip().lower() not in all_forbidden]
+                if alt_unseen:
+                    chosen_q = random.choice(alt_unseen)
                     topic, category = alt_topic, alt_cat
                     break
 

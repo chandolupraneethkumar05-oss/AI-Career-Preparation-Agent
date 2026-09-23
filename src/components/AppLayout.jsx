@@ -35,7 +35,7 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F0] text-[#1F1B16] flex flex-row antialiased overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[var(--theme-bg,#F8F6F0)] text-[var(--theme-text,#1F1B16)] flex flex-row antialiased overflow-x-hidden font-sans transition-colors duration-150">
       {/* Editorial Sidebar */}
       <Sidebar
         collapsed={collapsed}
@@ -47,22 +47,22 @@ export default function AppLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Masthead Header Bar */}
-        <header className="sticky top-0 z-30 h-16 bg-[#FFFDF9] border-b border-[#E5E0D5] px-4 sm:px-6 flex items-center justify-between transition-colors shadow-[0_1px_2px_rgba(31,27,22,0.02)]">
+        <header className="sticky top-0 z-30 h-16 bg-[var(--theme-header-bg,rgba(255,253,249,0.98))] border-b border-[var(--theme-border,#E5E0D5)] px-4 sm:px-6 flex items-center justify-between transition-colors shadow-xs">
           <div className="flex items-center gap-3">
             {/* Mobile Hamburger Menu Toggle */}
             <button
               onClick={() => setMobileOpen(true)}
-              className="p-2 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] text-[#70685E] hover:text-[#1F1B16] transition-colors sm:hidden cursor-pointer"
+              className="p-2 rounded-md bg-[var(--theme-surface-subtle,#F2EFE9)] border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] transition-colors sm:hidden cursor-pointer"
               aria-label="Open Navigation Menu"
             >
               <Menu className="w-4 h-4" />
             </button>
 
             {/* Breadcrumb Hierarchy */}
-            <div className="flex items-center gap-2 text-xs text-[#70685E]">
-              <span className="font-serif font-semibold text-[#1F1B16] tracking-tight">TalentPath</span>
-              <span className="text-[#8A8277]">/</span>
-              <span className="text-[#3B352E] font-medium truncate max-w-[150px] sm:max-w-none">
+            <div className="flex items-center gap-2 text-xs text-[var(--theme-text-muted,#70685E)]">
+              <span className="font-serif font-semibold text-[var(--theme-text,#1F1B16)] tracking-tight">TalentPath</span>
+              <span className="opacity-50">/</span>
+              <span className="text-[var(--theme-text-secondary,#3B352E)] font-medium truncate max-w-[150px] sm:max-w-none">
                 {getPageTitle()}
               </span>
             </div>
@@ -73,21 +73,21 @@ export default function AppLayout() {
             <button
               type="button"
               onClick={() => setFeedbackOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] hover:bg-[#F2EFE9] text-[#70685E] hover:text-[#1F1B16] text-xs font-semibold transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--theme-surface-low,#FAF8F3)] border border-[var(--theme-border,#E5E0D5)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] text-xs font-semibold transition-colors cursor-pointer"
               title="Share Product Feedback"
             >
-              <MessageSquare className="w-3.5 h-3.5 text-[#8C6E54]" />
+              <MessageSquare className="w-3.5 h-3.5 text-[var(--theme-bronze,#8C6E54)]" />
               <span>Feedback</span>
             </button>
 
             {/* Streak & XP Metrics */}
             <div className="hidden sm:flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F5EFEA] border border-[#E8DCD1] text-[#8C6E54] text-xs font-semibold">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--theme-surface-subtle,#F2EFE9)] border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-bronze,#8C6E54)] text-xs font-semibold">
                 <span>🔥</span>
                 <span>{(user?.streak ?? 0)}d Streak</span>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] text-[#3B352E] text-xs font-semibold">
-                <Zap className="w-3.5 h-3.5 text-[#70685E]" />
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--theme-surface-subtle,#F2EFE9)] border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-secondary,#3B352E)] text-xs font-semibold">
+                <Zap className="w-3.5 h-3.5 text-[var(--theme-text-muted,#70685E)]" />
                 <span>{(user?.xp ?? 0)} XP</span>
               </div>
             </div>

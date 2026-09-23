@@ -12,47 +12,49 @@ import ProgressBar from '../components/ProgressBar';
 import Badge from '../components/Badge';
 import PerformanceChart from '../components/PerformanceChart';
 import { useInterview } from '../context/InterviewContext';
+import { useAuth } from '../context/AuthContext';
 import { activityService } from '../utils/activityService';
 import { storageService } from '../utils/storage/storageService';
 
 export default function ProgressPage() {
-  const { history } = useInterview();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const userActivities = activityService.getActivities();
+  const currentUserId = user?.id || 'candidate';
+  const userActivities = activityService.getActivities(currentUserId);
   const currentStreak = activityService.calculateCurrentStreak(userActivities);
-  const skillProfile = storageService.getSkillProfile();
+  const userInterviews = storageService.getInterviews(currentUserId);
+  const skillProfile = storageService.getSkillProfile(currentUserId);
+  const atsResult = storageService.getATSResult(currentUserId);
 
   // Derive dynamic stats from real history
-  const hasInterviews = Array.isArray(history) && history.length > 0;
-  const totalInterviews = hasInterviews ? history.length : 0;
+  const hasInterviews = Array.isArray(userInterviews) && userInterviews.length > 0;
+  const totalInterviews = hasInterviews ? userInterviews.length : 0;
   const avgScore = hasInterviews
-    ? Math.round(history.reduce((acc, curr) => acc + curr.score, 0) / history.length)
+    ? Math.round(userInterviews.reduce((acc, curr) => acc + curr.score, 0) / userInterviews.length)
     : 0;
 
   const challengeCount = userActivities.filter((a) => a.type === 'challenge_completed').length;
   const questionsAnswered = (totalInterviews * 5) + challengeCount;
 
-  const scoreGain = hasInterviews && history.length > 1
-    ? history[0].score - history[history.length - 1].score
+  const scoreGain = hasInterviews && userInterviews.length > 1
+    ? userInterviews[0].score - userInterviews[userInterviews.length - 1].score
     : 0;
 
   // Chart data
   const performanceHistory = hasInterviews
-    ? (history.length === 1
+    ? (userInterviews.length === 1
         ? [
-            { label: 'Baseline', score: history[0].score, date: history[0].date || 'Day 1' },
-            { label: 'Current', score: history[0].score, date: history[0].date || 'Day 1' }
+            { label: 'Baseline', score: userInterviews[0].score, date: userInterviews[0].date || 'Day 1' },
+            { label: 'Current', score: userInterviews[0].score, date: userInterviews[0].date || 'Day 1' }
           ]
-        : [...history].reverse().map((item, idx) => ({
+        : [...userInterviews].reverse().map((item, idx) => ({
             label: `Round ${idx + 1}`,
             score: item.score,
             date: item.date || `Session ${idx + 1}`
           })))
     : [];
 
-  // Derive real competency skills from interview history or resume evidence
-  const atsResult = storageService.getATSResult();
   const hasEvidence = hasInterviews || Boolean(atsResult);
 
   let techSkill = 0;
@@ -65,7 +67,7 @@ export default function ProgressPage() {
     let confSum = 0;
     let validCount = 0;
 
-    history.forEach(h => {
+    userInterviews.forEach(h => {
       const s = h.scores || {};
       const t = s.technicalKnowledge || s.technicalAccuracy || s.overall;
       const c = s.communication || s.communicationSTAR || s.clarity;

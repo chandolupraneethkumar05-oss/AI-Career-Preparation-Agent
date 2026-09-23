@@ -25,6 +25,7 @@ import { useInterview } from '../context/InterviewContext';
 import { analyzeSkillGaps } from '../utils/skillGapAnalyzer';
 import { skillApi } from '../services/skillApi';
 import { storageService } from '../utils/storage/storageService';
+import MarqueeBanner from '../components/MarqueeBanner';
 
 export default function SkillGapPage() {
   const navigate = useNavigate();
@@ -54,19 +55,20 @@ export default function SkillGapPage() {
     return () => { mounted = false; };
   }, [currentUserId]);
 
-  // Run dynamic skill analysis as fallback
-  const analysis = analyzeSkillGaps(session.summaryResult, session.answers);
+  const displayRole = user?.targetRole || user?.role || profileData?.target_role || setup?.targetRole || 'Machine Learning Engineer';
 
-  const storedInterviews = storageService.getInterviews();
-  const storedAts = storageService.getATSResult();
+  // Run dynamic skill analysis as fallback, isolated to this candidate and their selected role
+  const analysis = analyzeSkillGaps(session.summaryResult, session.answers, displayRole, currentUserId);
+
+  const storedInterviews = storageService.getInterviews(currentUserId);
+  const storedAts = storageService.getATSResult(currentUserId);
   const hasLocalEvidence = (storedInterviews && storedInterviews.length > 0) || Boolean(storedAts) || (session.answers && session.answers.length > 0);
-  const totalEvidenceCount = profileData?.evidence_summary?.total_evidences || 0;
+  const totalEvidenceCount = profileData?.evidence_summary?.total_evidences || (storedInterviews?.length ? storedInterviews.length + (storedAts ? 1 : 0) : 0);
   const hasEvidence = totalEvidenceCount > 0 || hasLocalEvidence;
 
   const hasUnified = Boolean(profileData && profileData.unified_skills && profileData.unified_skills.length > 0 && hasEvidence);
 
   const displayReadiness = hasEvidence ? (hasUnified ? profileData.overall_readiness : analysis.overallReadiness) : 0;
-  const displayRole = user?.targetRole || user?.role || profileData?.target_role || setup?.targetRole || 'Machine Learning Engineer';
   const displayRadar = hasUnified && profileData.radar_data?.length > 0
     ? profileData.radar_data.map(r => ({ name: r.subject, score: r.score }))
     : analysis.radarDimensions;
@@ -197,6 +199,9 @@ export default function SkillGapPage() {
           <span>● Analysis Up to Date</span>
         </div>
       </div>
+
+      {/* Dynamic Skill Gap Benchmark Ticker */}
+      <MarqueeBanner variant="skillgap" role={displayRole} />
 
       {!hasEvidence ? (
         <div className="space-y-8">

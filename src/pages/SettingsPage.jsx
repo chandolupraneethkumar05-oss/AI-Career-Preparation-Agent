@@ -117,11 +117,11 @@ export default function SettingsPage() {
       if (res?.profile?.feedback_language) {
         setFeedbackLanguage(res.profile.feedback_language);
       }
-      if (res?.user?.target_role) {
+      if (res?.user?.target_role && !user?.targetRole) {
         setRole(res.user.target_role);
       }
     }).catch(() => {});
-  }, [user?.id]);
+  }, [user?.id, user?.targetRole]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -401,8 +401,8 @@ export default function SettingsPage() {
                   className={`
                     p-3.5 rounded-md border text-left cursor-pointer transition-all flex flex-col justify-between
                     ${isSelected
-                      ? 'bg-[#EAEFF5] border-[#1A365D] ring-1 ring-[#1A365D] shadow-xs'
-                      : 'bg-[#FFFDF9] border-[#E5E0D5] hover:border-[#1A365D]'
+                      ? 'bg-[var(--theme-selected,#EAEFF5)] border-[var(--theme-primary,#1A365D)] ring-1 ring-[var(--theme-primary,#1A365D)] shadow-xs'
+                      : 'bg-[var(--theme-surface,#FFFDF9)] border-[var(--theme-border,#E5E0D5)] hover:border-[var(--theme-primary,#1A365D)]'
                     }
                   `}
                 >
@@ -410,21 +410,21 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-1.5">
                         <span className="text-base">{thm.emoji}</span>
-                        <span className="text-sm font-bold font-serif text-[#1F1B16]">{thm.name}</span>
+                        <span className="text-sm font-bold font-serif text-[var(--theme-text,#1F1B16)]">{thm.name}</span>
                       </div>
                       {isSelected && (
-                        <CheckCircle2 className="w-4 h-4 text-[#1A365D]" />
+                        <CheckCircle2 className="w-4 h-4 text-[var(--theme-primary,#1A365D)]" />
                       )}
                     </div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-[#8C6E54] block mb-1">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--theme-bronze,#8C6E54)] block mb-1">
                       {thm.badge}
                     </span>
-                    <p className="text-[11px] text-[#70685E] leading-relaxed">
+                    <p className="text-[11px] text-[var(--theme-text-muted,#70685E)] leading-relaxed">
                       {thm.description}
                     </p>
                   </div>
 
-                  <div className="mt-3 pt-2 border-t border-[#E5E0D5] flex items-center gap-1.5">
+                  <div className="mt-3 pt-2 border-t border-[var(--theme-border,#E5E0D5)] flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.bg }} />
                     <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.card }} />
                     <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.primary }} />

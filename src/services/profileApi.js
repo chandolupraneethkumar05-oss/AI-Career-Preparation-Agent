@@ -1,6 +1,5 @@
 import { storageService } from '../utils/storage/storageService';
-
-const BACKEND_BASE_URL = 'http://127.0.0.1:8000';
+import { BACKEND_BASE_URL } from './apiConfig';
 
 const resolveUserId = (id) => id || storageService.getCurrentUser()?.id || 'usr_candidate';
 

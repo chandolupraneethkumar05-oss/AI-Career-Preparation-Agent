@@ -96,7 +96,10 @@ export const storageService = {
   },
 
   getProfile(userId = null) {
-    return this.get(this.scopedKey(STORAGE_KEYS.USER_PROFILE, userId), this.getCurrentUser());
+    if (userId) {
+      return this.get(this.scopedKey(STORAGE_KEYS.USER_PROFILE, userId), null);
+    }
+    return this.get(this.scopedKey(STORAGE_KEYS.USER_PROFILE), this.getCurrentUser());
   },
   saveProfile(profile, userId = null) {
     return this.set(this.scopedKey(STORAGE_KEYS.USER_PROFILE, userId), profile);
@@ -200,14 +203,23 @@ export const storageService = {
     return this.set(STORAGE_KEYS.THEME, themeId || 'warm');
   },
 
-  // 10. Centralized Derived Candidate State (Phase 18)
-  getUserCareerState() {
+  // 11. Scoped Streak Helper
+  getStreak(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.STREAK, userId), 0);
+  },
+  setStreak(streak, userId = null) {
+    return this.set(this.scopedKey(STORAGE_KEYS.STREAK, userId), streak);
+  },
+
+  // 12. Centralized Derived Candidate State (Phase 18)
+  getUserCareerState(userId = null) {
     const user = this.getCurrentUser();
-    const interviews = this.getInterviews();
-    const atsResult = this.getATSResult();
-    const activities = this.getActivities();
-    const challenges = this.getChallenges();
-    const skillProfile = this.getSkillProfile();
+    const effectiveUserId = userId || user?.id;
+    const interviews = this.getInterviews(effectiveUserId);
+    const atsResult = this.getATSResult(effectiveUserId);
+    const activities = this.getActivities(effectiveUserId);
+    const challenges = this.getChallenges(effectiveUserId);
+    const skillProfile = this.getSkillProfile(effectiveUserId);
 
     const targetRole = user?.targetRole || user?.role || 'Machine Learning Engineer';
     const interviewCount = interviews.length;
@@ -236,7 +248,7 @@ export const storageService = {
 
   // 11. Backend Synchronization & Hydration
   async hydrateFromBackend(userId = 'user-001') {
-    const baseUrl = import.meta.env?.VITE_API_URL || 'http://127.0.0.1:8000/api';
+    const baseUrl = import.meta.env?.VITE_API_URL || '/api';
     const results = { user: null, interviews: 0, ats: false };
 
     // 1. Profile Hydration
@@ -291,7 +303,7 @@ export const storageService = {
   },
 
   async syncInterviewToBackend(interview, userId = 'user-001') {
-    const baseUrl = import.meta.env?.VITE_API_URL || 'http://127.0.0.1:8000/api';
+    const baseUrl = import.meta.env?.VITE_API_URL || '/api';
     try {
       const res = await fetch(`${baseUrl}/interviews?user_id=${encodeURIComponent(userId)}`, {
         method: 'POST',
