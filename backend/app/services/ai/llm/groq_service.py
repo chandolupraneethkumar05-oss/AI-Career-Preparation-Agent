@@ -376,11 +376,16 @@ Return valid JSON with exactly these fields:
   "communication_quality": 74,
   "relevance": 80,
   "completeness": 70,
+  "confidence_indicators": 75,
+  "feedback": "Helpful mentoring paragraph explaining strengths, nuances, and how to reach a staff-level answer",
   "strengths": ["Specific strong point 1", "Specific strong point 2"],
   "weaknesses": ["Specific area for improvement 1", "Specific area for improvement 2"],
   "missing_concepts": ["Key term or mechanism candidate omitted"],
-  "constructive_feedback": "Helpful mentoring paragraph explaining how to reach a staff-level answer",
-  "follow_up_recommendation": "Suggested next probing question topic"
+  "detected_topics": ["{skill}"],
+  "follow_up_needed": false,
+  "follow_up_reason": "Suggested next probing question topic",
+  "recommended_follow_up_type": "conceptual_probe",
+  "recommended_difficulty": "{difficulty or 'Intermediate'}"
 }}
 """
         raw_resp = self._call_groq(user_prompt, system_prompt, temperature=0.2, json_mode=True)
@@ -388,6 +393,36 @@ Return valid JSON with exactly these fields:
             try:
                 parsed = json.loads(self._clean_json_text(raw_resp))
                 if "overall_score" in parsed:
+                    overall = int(parsed.get("overall_score", 70))
+                    tech = int(parsed.get("technical_accuracy", overall))
+                    comm = int(parsed.get("communication_quality", overall))
+                    rel = int(parsed.get("relevance", overall))
+                    comp = int(parsed.get("completeness", overall))
+                    conf = int(parsed.get("confidence_indicators", overall))
+
+                    parsed["overall_score"] = overall
+                    parsed["technical_accuracy"] = tech
+                    parsed["communication_quality"] = comm
+                    parsed["relevance"] = rel
+                    parsed["completeness"] = comp
+                    parsed["confidence_indicators"] = conf
+                    parsed["correctness_score"] = tech
+                    parsed["depth_score"] = comp
+                    parsed["relevance_score"] = rel
+                    parsed["communication_score"] = comm
+                    parsed["technical_score"] = tech
+
+                    parsed["feedback"] = parsed.get("feedback") or parsed.get("constructive_feedback") or "Good technical explanation covering primary mechanisms."
+                    parsed["strengths"] = parsed.get("strengths") or ["Demonstrated solid baseline understanding"]
+                    parsed["weaknesses"] = parsed.get("weaknesses") or ["Could articulate edge-case failure modes in deeper detail"]
+                    parsed["missing_concepts"] = parsed.get("missing_concepts") or []
+                    parsed["detected_topics"] = parsed.get("detected_topics") or [skill]
+                    parsed["follow_up_needed"] = bool(parsed.get("follow_up_needed", False))
+                    parsed["follow_up_reason"] = parsed.get("follow_up_reason") or parsed.get("follow_up_recommendation")
+                    parsed["recommended_follow_up_type"] = parsed.get("recommended_follow_up_type", "conceptual_probe")
+                    parsed["recommended_difficulty"] = parsed.get("recommended_difficulty", difficulty or "Intermediate")
+                    parsed["skill_evidence"] = parsed.get("skill_evidence") or {skill: tech}
+
                     parsed["question_id"] = question.get("id") or question.get("question_id")
                     parsed["skill"] = skill
                     parsed["language"] = language
@@ -416,25 +451,63 @@ Return valid JSON with exactly these fields:
                 session, questions, answers, evaluations, career_context, language
             )
 
-        summary_payload = {
-            "role": session.get("role", "Machine Learning Engineer"),
-            "difficulty": session.get("difficulty", "Intermediate"),
-            "questions_count": len(questions),
-            "evaluations_summary": [
-                {"score": e.get("overall_score"), "strengths": e.get("strengths"), "weaknesses": e.get("weaknesses")}
-                for e in evaluations
-            ]
-        }
+        target_role = session.get("target_role") or session.get("role") or "Software Engineer"
+        valid_evals = [e for e in evaluations if isinstance(e, dict) and e.get("overall_score") is not None]
+        avg_score = int(round(sum(e["overall_score"] for e in valid_evals) / len(valid_evals))) if valid_evals else 75
 
-        system_prompt = "You are a Senior Engineering Hiring Director. Synthesize a comprehensive hiring report in clean JSON."
-        user_prompt = f"Interview Session Summary:\n{json.dumps(summary_payload)}\nLanguage: {language}\nReturn clean JSON."
+        eval_summary = [
+            {
+                "question": q.get("question") if isinstance(q, dict) else str(q),
+                "score": ev.get("overall_score", 70) if isinstance(ev, dict) else 70,
+                "strengths": ev.get("strengths", []) if isinstance(ev, dict) else [],
+                "weaknesses": ev.get("weaknesses", []) if isinstance(ev, dict) else []
+            }
+            for q, ev in zip(questions, evaluations)
+        ]
 
-        raw_resp = self._call_groq(user_prompt, system_prompt, temperature=0.2, json_mode=True)
+        system_prompt = (
+            "You are a Senior Engineering Hiring Committee Lead. Synthesize a comprehensive hiring report in clean JSON. "
+            "Assess candidate readiness with objectivity, actionable guidance, and deep architectural rigor."
+        )
+        user_prompt = f"""
+Target Role: {target_role}
+Average Calibrated Score: {avg_score}
+Round Details: {json.dumps(eval_summary)}
+Language: {language}
+
+Return valid JSON with exactly:
+{{
+  "overall_score": {avg_score},
+  "passed": {str(avg_score >= 75).lower()},
+  "strengths": ["Top overall strength 1", "Top overall strength 2"],
+  "weaknesses": ["Primary growth gap 1", "Primary growth gap 2"],
+  "recommendations": ["Concrete action item 1", "Concrete action item 2"],
+  "feedback_summary": "Comprehensive 2-paragraph executive assessment of candidate competence, architectural trade-offs, and hiring recommendation.",
+  "rubric_scores": {{
+    "technicalKnowledge": {avg_score},
+    "problemSolving": {max(40, avg_score - 2)},
+    "communicationSTAR": {min(98, avg_score + 3)},
+    "systemDesign": {avg_score},
+    "confidenceDelivery": {min(98, avg_score + 1)}
+  }}
+}}
+"""
+
+        raw_resp = self._call_groq(user_prompt, system_prompt, temperature=0.25, json_mode=True)
         if raw_resp:
             try:
                 parsed = json.loads(self._clean_json_text(raw_resp))
                 if "overall_score" in parsed:
-                    parsed["target_role"] = session.get("role", "Machine Learning Engineer")
+                    fallback_res = self._fallback.generate_final_interview_feedback(
+                        session, questions, answers, evaluations, career_context, language
+                    )
+                    parsed["target_role"] = target_role
+                    parsed["passed"] = bool(parsed.get("passed", parsed["overall_score"] >= 75))
+                    parsed["rubric_scores"] = parsed.get("rubric_scores") or fallback_res.get("rubric_scores", {})
+                    parsed["strengths"] = parsed.get("strengths") or fallback_res.get("strengths", [])
+                    parsed["weaknesses"] = parsed.get("weaknesses") or fallback_res.get("weaknesses", [])
+                    parsed["recommendations"] = parsed.get("recommendations") or fallback_res.get("recommendations", [])
+                    parsed["feedback_summary"] = parsed.get("feedback_summary") or fallback_res.get("feedback_summary", "")
                     return multilingual_feedback_service.localize_feedback_report(parsed, target_language=language)
             except Exception:
                 pass
@@ -483,3 +556,58 @@ Return valid JSON with exactly these fields:
         return self._fallback.generate_quick_answer(
             question, topic, difficulty, interview_type, target_role, career_context, retrieved_chunks, language
         )
+
+    def analyze_resume(
+        self,
+        resume_text: str,
+        target_role: str,
+        job_description: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Deep contextual resume evaluation and ATS scoring using Groq."""
+        if not self.api_key and not self.fallback_key:
+            return None
+
+        system_prompt = (
+            "You are a Senior Principal Technical Recruiter and ATS Auditor. "
+            "Analyze the candidate's actual resume text against the target role and job description. "
+            "Extract verified technical skills actually mentioned in the resume. "
+            "Identify missing skills and concepts that are strictly necessary or expected for this specific target role. "
+            "Write 2-3 genuine strengths and 2-3 constructive weaknesses directly citing the candidate's resume content. "
+            "Provide an executive summary and realistic ATS match score (0-100). "
+            "Return valid JSON matching the exact schema."
+        )
+
+        user_prompt = f"""
+Target Role: {target_role}
+Job Description: {job_description or ("Standard industry requirements for " + target_role)}
+Candidate Resume Text:
+{resume_text[:4000]}
+
+Return valid JSON with exactly these fields:
+{{
+  "ats_score": 75,
+  "extracted_skills": ["Python", "FastAPI", "Docker", "PostgreSQL"],
+  "matched_skills": ["Python", "Docker", "PostgreSQL"],
+  "missing_skills": ["Kubernetes", "System Design"],
+  "strengths": ["Specific strong point citing candidate project/experience 1", "Specific strong point 2"],
+  "weaknesses": ["Specific actionable gap for this target role 1", "Specific actionable gap 2"],
+  "summary": "Professional executive summary of candidate suitability for {target_role}.",
+  "score_breakdown": {{
+    "keyword_match_score": 75,
+    "section_completeness_score": 85,
+    "quantifiable_impact_score": 70,
+    "format_readability_score": 80
+  }}
+}}
+"""
+
+        raw_resp = self._call_groq(user_prompt, system_prompt, temperature=0.2, json_mode=True)
+        if raw_resp:
+            try:
+                parsed = json.loads(self._clean_json_text(raw_resp))
+                if "ats_score" in parsed and "extracted_skills" in parsed:
+                    return parsed
+            except Exception:
+                pass
+        return None
+

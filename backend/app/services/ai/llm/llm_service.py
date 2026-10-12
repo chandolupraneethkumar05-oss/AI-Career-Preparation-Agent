@@ -94,6 +94,14 @@ class BaseLLMService(ABC):
     ) -> Dict[str, Any]:
         pass
 
+    def analyze_resume(
+        self,
+        resume_text: str,
+        target_role: str,
+        job_description: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        return None
+
 
 
 class LocalGroundedLLMService(BaseLLMService):

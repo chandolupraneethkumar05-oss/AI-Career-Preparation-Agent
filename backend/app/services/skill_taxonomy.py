@@ -202,6 +202,55 @@ ROLE_REQUIREMENTS: Dict[str, Dict[str, List[str]]] = {
         "optional_skills": [
             "GCP", "Azure", "Apache Kafka", "Redis", "Go", "Security"
         ]
+    },
+    "Backend Engineer": {
+        "core_skills": [
+            "Python", "SQL", "PostgreSQL", "REST API", "Microservices",
+            "System Design", "Git", "Docker"
+        ],
+        "important_skills": [
+            "FastAPI", "Node.js", "Redis", "Linux", "CI/CD",
+            "Unit Testing", "Java", "Go", "Database Optimization"
+        ],
+        "optional_skills": [
+            "Kubernetes", "Apache Kafka", "GraphQL", "AWS", "gRPC", "RabbitMQ"
+        ]
+    },
+    "Data Engineer": {
+        "core_skills": [
+            "Python", "SQL", "Apache Spark", "Airflow", "Data Warehousing",
+            "ETL Pipelines", "Git"
+        ],
+        "important_skills": [
+            "PostgreSQL", "BigQuery", "Docker", "Kafka", "Linux", "Data Modeling"
+        ],
+        "optional_skills": [
+            "AWS", "GCP", "Snowflake", "dbt", "Kubernetes", "Scala"
+        ]
+    },
+    "Mobile Developer": {
+        "core_skills": [
+            "JavaScript", "TypeScript", "React Native", "Git", "REST API",
+            "Mobile UI/UX"
+        ],
+        "important_skills": [
+            "Flutter", "iOS", "Android", "State Management", "Unit Testing"
+        ],
+        "optional_skills": [
+            "GraphQL", "CI/CD", "Swift", "Kotlin", "Firebase"
+        ]
+    },
+    "Security Engineer": {
+        "core_skills": [
+            "Linux", "Security", "Network Protocols", "Python", "Git",
+            "Vulnerability Assessment"
+        ],
+        "important_skills": [
+            "Docker", "AWS", "CI/CD", "Penetration Testing", "Cryptography"
+        ],
+        "optional_skills": [
+            "Kubernetes", "SIEM", "Go", "Reverse Engineering"
+        ]
     }
 }
 
@@ -213,11 +262,28 @@ ROLE_ALIASES = {
     "ai/ml engineer": "Machine Learning Engineer",
     "sde": "Software Engineer",
     "software development engineer": "Software Engineer",
+    "backend": "Backend Engineer",
+    "backend engineer": "Backend Engineer",
+    "backend developer": "Backend Engineer",
+    "backend software engineer": "Backend Engineer",
+    "frontend": "Frontend Developer",
+    "frontend developer": "Frontend Developer",
+    "frontend engineer": "Frontend Developer",
     "full stack developer": "Full Stack Web Developer",
     "full stack web developer": "Full Stack Web Developer",
     "fullstack": "Full Stack Web Developer",
+    "full stack": "Full Stack Web Developer",
     "devops engineer": "DevOps & Cloud Engineer",
-    "cloud engineer": "DevOps & Cloud Engineer"
+    "devops": "DevOps & Cloud Engineer",
+    "cloud engineer": "DevOps & Cloud Engineer",
+    "data engineer": "Data Engineer",
+    "data engineering": "Data Engineer",
+    "mobile developer": "Mobile Developer",
+    "mobile engineer": "Mobile Developer",
+    "android developer": "Mobile Developer",
+    "ios developer": "Mobile Developer",
+    "security engineer": "Security Engineer",
+    "cybersecurity": "Security Engineer"
 }
 
 

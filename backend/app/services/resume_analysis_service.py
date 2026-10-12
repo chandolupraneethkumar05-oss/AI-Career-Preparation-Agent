@@ -25,8 +25,10 @@ from .resume_extractor import extract_resume_text, ResumeExtractionError
 from .skill_taxonomy import (
     default_skill_extractor,
     ROLE_REQUIREMENTS,
-    get_canonical_role
+    get_canonical_role,
+    normalize_skill
 )
+from .ai.llm.llm_service import get_llm_service
 from .skill_service import upsert_skill_gap, record_skill_evidence, sync_unified_skill_profile
 from .activity_service import record_activity
 from .recommendation_service import evaluate_next_best_action
@@ -351,6 +353,37 @@ class ResumeAnalysisService:
             f"ATS-style resume score of {ats_score}/100 evaluated for {canonical_role}. "
             f"Identified {len(all_matched)} matching technical skills and {len(all_missing_important)} priority skill gaps."
         )
+
+        # 7b. Dynamic AI LLM Deep Contextual Resume Analysis (Groq LPU / Gemini)
+        try:
+            llm_service = get_llm_service()
+            if hasattr(llm_service, "analyze_resume"):
+                llm_analysis = llm_service.analyze_resume(
+                    resume_text=cleaned_text,
+                    target_role=canonical_role,
+                    job_description=job_description
+                )
+                if llm_analysis and isinstance(llm_analysis, dict):
+                    if llm_analysis.get("ats_score"):
+                        ats_score = int(llm_analysis["ats_score"])
+                    if llm_analysis.get("extracted_skills"):
+                        ai_extracted = [normalize_skill(s) for s in llm_analysis["extracted_skills"]]
+                        extracted_skills = sorted(list(set(extracted_skills + ai_extracted)))
+                    if llm_analysis.get("matched_skills"):
+                        ai_matched = [normalize_skill(s) for s in llm_analysis["matched_skills"]]
+                        all_matched = sorted(list(set(all_matched + ai_matched)))
+                    if llm_analysis.get("missing_skills"):
+                        all_missing_important = [normalize_skill(s) for s in llm_analysis["missing_skills"]]
+                    if llm_analysis.get("strengths") and len(llm_analysis["strengths"]) > 0:
+                        strengths = llm_analysis["strengths"]
+                    if llm_analysis.get("weaknesses") and len(llm_analysis["weaknesses"]) > 0:
+                        weaknesses = llm_analysis["weaknesses"]
+                    if llm_analysis.get("summary"):
+                        summary_text = llm_analysis["summary"]
+                    if llm_analysis.get("score_breakdown"):
+                        breakdown_data.update(llm_analysis["score_breakdown"])
+        except Exception:
+            pass
 
         # 8. Persist to Database & Update Career State (if DB session active)
         analysis_id = f"ats-{uuid.uuid4().hex[:12]}"

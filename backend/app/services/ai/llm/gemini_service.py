@@ -547,3 +547,57 @@ Return JSON with:
         return self._fallback.generate_quick_answer(
             question, topic, difficulty, interview_type, target_role, career_context, retrieved_chunks, language
         )
+
+    def analyze_resume(
+        self,
+        resume_text: str,
+        target_role: str,
+        job_description: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Deep contextual resume evaluation and ATS scoring via Gemini."""
+        if not self.api_key:
+            return None
+
+        system_prompt = (
+            "You are a Senior Principal Technical Recruiter and ATS Auditor. "
+            "Analyze the candidate's actual resume text against the target role and job description. "
+            "Extract verified technical skills actually mentioned in the resume. "
+            "Identify missing skills and concepts that are strictly necessary or expected for this specific target role. "
+            "Write 2-3 genuine strengths and 2-3 constructive weaknesses directly citing the candidate's resume content. "
+            "Provide an executive summary and realistic ATS match score (0-100). "
+            "Return valid JSON matching the exact schema."
+        )
+
+        user_prompt = f"""
+Target Role: {target_role}
+Job Description: {job_description or ("Standard industry requirements for " + target_role)}
+Candidate Resume Text:
+{resume_text[:4000]}
+
+Return valid JSON with exactly these fields:
+{{
+  "ats_score": 75,
+  "extracted_skills": ["Python", "FastAPI", "Docker", "PostgreSQL"],
+  "matched_skills": ["Python", "Docker", "PostgreSQL"],
+  "missing_skills": ["Kubernetes", "System Design"],
+  "strengths": ["Specific strong point citing candidate project/experience 1", "Specific strong point 2"],
+  "weaknesses": ["Specific actionable gap for this target role 1", "Specific actionable gap 2"],
+  "summary": "Professional executive summary of candidate suitability for {target_role}.",
+  "score_breakdown": {{
+    "keyword_match_score": 75,
+    "section_completeness_score": 85,
+    "quantifiable_impact_score": 70,
+    "format_readability_score": 80
+  }}
+}}
+"""
+
+        raw_resp = self._call_gemini(user_prompt, system_prompt, temperature=0.2, json_mode=True)
+        if raw_resp:
+            try:
+                parsed = json.loads(self._clean_json_text(raw_resp))
+                if "ats_score" in parsed and "extracted_skills" in parsed:
+                    return parsed
+            except Exception:
+                pass
+        return None

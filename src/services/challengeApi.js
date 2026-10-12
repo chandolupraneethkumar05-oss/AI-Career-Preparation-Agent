@@ -4,6 +4,7 @@
  */
 
 import { fetchWithTimeout, DEFAULT_TIMEOUT_MS } from '../utils/fetchWithTimeout';
+import { storageService } from '../utils/storage/storageService';
 import { BACKEND_BASE_URL } from './apiConfig';
 
 export const challengeApi = {
@@ -15,7 +16,12 @@ export const challengeApi = {
     try {
       const response = await fetchWithTimeout(
         `${BACKEND_BASE_URL}/api/challenges/daily?user_id=${encodeURIComponent(userId)}`,
-        { headers: { Accept: 'application/json' } },
+        {
+          headers: {
+            Accept: 'application/json',
+            ...storageService.getAuthHeaders()
+          }
+        },
         DEFAULT_TIMEOUT_MS
       );
 
@@ -45,7 +51,8 @@ export const challengeApi = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Accept: 'application/json'
+            Accept: 'application/json',
+            ...storageService.getAuthHeaders()
           },
           body: JSON.stringify(submissionData)
         },
