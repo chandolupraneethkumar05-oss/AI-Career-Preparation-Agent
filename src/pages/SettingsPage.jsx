@@ -639,7 +639,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h3 className="text-base font-serif font-bold text-[#1F1B16]">
-                  V. Official Visual Identity &amp; Aesthetics
+                  VI. Design System Foundation &amp; Aesthetics
                 </h3>
                 <p className="text-xs text-[#70685E]">
                   Authoritative design language across the entire application
@@ -648,7 +648,7 @@ export default function SettingsPage() {
             </div>
 
             <Badge variant="navy" size="sm">
-              Single Official Design System
+              Default Editorial Architecture
             </Badge>
           </div>
 

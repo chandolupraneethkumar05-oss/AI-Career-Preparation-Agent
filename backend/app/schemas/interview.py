@@ -259,4 +259,11 @@ class RecordingMetadataResponse(BaseModel):
     created_at: datetime
 
 
-
+class TranscribeAudioResponse(BaseModel):
+    transcript: str = Field(default="", description="Cleaned transcribed speech text")
+    language: str = Field(default="en", description="Detected or specified speech language")
+    confidence: float = Field(default=1.0, description="ASR confidence or language probability")
+    duration_seconds: float = Field(default=0.0, description="Audio duration in seconds")
+    word_count: int = Field(default=0, description="Total words transcribed")
+    words: List[str] = Field(default_factory=list, description="Transcribed word tokens")
+    source: str = Field(default="whisper_neural", description="Transcription engine source")

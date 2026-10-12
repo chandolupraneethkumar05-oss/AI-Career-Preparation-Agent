@@ -1,0 +1,69 @@
+# ==============================================================================
+# Docker Compose Deployment for AI Career Preparation Agent
+# Architecture: React 19 Frontend (Nginx) + Python 3.13 FastAPI Backend
+# Persistence: SQLite database + Interview recordings volumes
+# ==============================================================================
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: career_agent_backend
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - PORT=8000
+      - DATABASE_URL=sqlite:////app/data/career_agent.db
+      - RECORDINGS_STORAGE_DIR=/app/storage/recordings
+      - HF_HOME=/app/.cache/huggingface
+      - SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence_transformers
+    ports:
+      - "8000:8000"
+    volumes:
+      - career_agent_db_data:/app/data
+      - career_agent_recordings:/app/storage/recordings
+      - career_agent_cache:/app/.cache
+    networks:
+      - career_agent_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: career_agent_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - career_agent_net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  career_agent_net:
+    driver: bridge
+    name: career_agent_net
+
+volumes:
+  career_agent_db_data:
+    name: career_agent_db_data
+  career_agent_recordings:
+    name: career_agent_recordings
+  career_agent_cache:
+    name: career_agent_cache

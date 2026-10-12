@@ -323,20 +323,36 @@ class ProactiveReminderService:
             subject=drill_info["subject"]
         )
 
-        # Log into reminder_logs table in SQLite to ensure audit trail and prevent duplicates
-        log_entry = ReminderLog(
-            user_id=user_id,
-            reminder_date=today_date_str,
-            reminder_type=drill_info["reminder_type"],
-            subject=result["subject"],
-            message=drill_info["drill_prompt"],
-            status=result["status"],
-            sent_at=utc_now(),
-            created_at=utc_now()
-        )
-        db.add(log_entry)
-        db.commit()
-        db.refresh(log_entry)
+        # Log into reminder_logs table in SQLite with concurrency duplicate protection
+        existing_log = db.query(ReminderLog).filter(
+            ReminderLog.user_id == user_id,
+            ReminderLog.reminder_date == today_date_str
+        ).first()
+
+        if existing_log:
+            existing_log.status = result["status"]
+            existing_log.subject = result["subject"]
+            existing_log.message = drill_info["drill_prompt"]
+            existing_log.sent_at = utc_now()
+            db.commit()
+        else:
+            log_entry = ReminderLog(
+                user_id=user_id,
+                reminder_date=today_date_str,
+                reminder_type=drill_info["reminder_type"],
+                subject=result["subject"],
+                message=drill_info["drill_prompt"],
+                status=result["status"],
+                sent_at=utc_now(),
+                created_at=utc_now()
+            )
+            try:
+                db.add(log_entry)
+                db.commit()
+                db.refresh(log_entry)
+            except Exception as insert_exc:
+                db.rollback()
+                logger.warning(f"Concurrent reminder dispatch duplicate caught: {insert_exc}")
 
         return result
 

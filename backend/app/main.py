@@ -5,7 +5,8 @@ AI Career Preparation Agent
 
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import settings
@@ -101,11 +102,14 @@ def readiness_check():
         }
     except Exception as exc:
         logger.error(f"Readiness check failed: {exc}")
-        return {
-            "status": "not_ready",
-            "database": "disconnected",
-            "error": str(exc)
-        }
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not_ready",
+                "database": "disconnected",
+                "error": str(exc)
+            }
+        )
 
 
 # -------------------------------------------------------------------------

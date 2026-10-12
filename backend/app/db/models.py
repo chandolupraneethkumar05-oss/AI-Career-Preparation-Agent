@@ -14,7 +14,8 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Text,
-    Enum as SQLEnum
+    Enum as SQLEnum,
+    UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 
@@ -32,6 +33,7 @@ class User(Base):
     id = Column(String(64), primary_key=True, index=True)
     email = Column(String(128), unique=True, index=True, nullable=False)
     name = Column(String(128), nullable=False)
+    hashed_password = Column(String(256), nullable=True)
     role = Column(String(64), default="AIML Engineer")
     target_role = Column(String(64), default="Machine Learning Engineer")
     xp = Column(Integer, default=0, nullable=False)
@@ -63,6 +65,20 @@ class User(Base):
     weekly_reports = relationship("WeeklyReport", back_populates="user", cascade="all, delete-orphan")
     weekly_goals = relationship("WeeklyGoal", back_populates="user", cascade="all, delete-orphan")
     product_feedbacks = relationship("ProductFeedback", back_populates="user", cascade="all, delete-orphan")
+
+
+class RevokedToken(Base):
+    """
+    Server-side revocation blocklist for invalidated bearer tokens.
+    Stores cryptographic SHA-256 hash of revoked tokens for constant-time rejection upon logout.
+    """
+    __tablename__ = "revoked_tokens"
+
+    id = Column(String(64), primary_key=True, index=True)  # SHA-256 hex digest of the raw bearer token
+    user_id = Column(String(64), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    revoked_at = Column(DateTime, default=utc_now, nullable=False)
+    expires_at = Column(Integer, nullable=False, index=True)  # Token expiration timestamp for pruning
+    token_preview = Column(String(32), nullable=True)  # Safe non-sensitive token prefix for audit logging
 
 
 class Profile(Base):
@@ -603,6 +619,9 @@ class ReminderPreference(Base):
 class ReminderLog(Base):
     """Record of dispatched or simulated daily practice reminders to prevent duplicates."""
     __tablename__ = "reminder_logs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "reminder_date", name="uq_reminder_logs_user_date"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(64), ForeignKey("users.id"), nullable=False, index=True)
@@ -887,6 +906,7 @@ def seed_initial_data(db):
     Seeds default candidate account with honest starting defaults (0 XP, 0 streak)
     and populates initial skill taxonomy.
     """
+    from ..core.security import hash_password
     DEFAULT_USER_ID = "user-001"
     existing_user = db.query(User).filter(User.id == DEFAULT_USER_ID).first()
 
@@ -896,6 +916,7 @@ def seed_initial_data(db):
             id=DEFAULT_USER_ID,
             email="candidate@example.com",
             name="Candidate",
+            hashed_password=hash_password("DemoCandidate123!"),
             role="AI/ML Engineer",
             target_role="Machine Learning Engineer",
             xp=0,
@@ -905,6 +926,9 @@ def seed_initial_data(db):
         )
         db.add(default_user)
         db.flush()
+    elif not existing_user.hashed_password:
+        existing_user.hashed_password = hash_password("DemoCandidate123!")
+        db.commit()
 
         # Create corresponding profile
         default_profile = Profile(

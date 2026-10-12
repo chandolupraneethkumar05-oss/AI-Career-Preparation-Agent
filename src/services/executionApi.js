@@ -13,7 +13,7 @@ import { BACKEND_BASE_URL } from './apiConfig';
 
 export const executionApi = {
   /**
-   * Retrieves host sandbox capabilities (Docker, Firecracker, Process).
+   * Retrieves host sandbox capabilities (Docker, Process).
    */
   async getCapabilities() {
     try {
@@ -30,7 +30,6 @@ export const executionApi = {
       if (import.meta.env.DEV) console.debug('[executionApi] getCapabilities fallback:', err.message);
       return {
         docker_available: false,
-        firecracker_available: false,
         process_available: true,
         supported_languages: ['python'],
         max_timeout_seconds: 15,

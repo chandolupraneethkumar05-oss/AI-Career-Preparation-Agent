@@ -63,6 +63,7 @@ class TestMultilingualAIFeedback(unittest.TestCase):
                 cls.db.commit()
 
         cls.user_id = user.id
+        cls.test_user = user
         profile = cls.db.query(Profile).filter(Profile.user_id == user.id).first()
         if not profile:
             profile = Profile(user_id=user.id, feedback_language="en")
@@ -254,27 +255,30 @@ class TestMultilingualAIFeedback(unittest.TestCase):
         update_candidate_profile(
             update_data=ProfileUpdate(feedback_language="te"),
             user_id=self.user_id,
+            current_user=self.test_user,
             db=self.db
         )
-        profile_res = get_candidate_profile(user_id=self.user_id, db=self.db)
+        profile_res = get_candidate_profile(user_id=self.user_id, current_user=self.test_user, db=self.db)
         self.assertEqual(profile_res.profile.feedback_language, "te")
 
         # 2. Update to Hindi
         update_candidate_profile(
             update_data=ProfileUpdate(feedback_language="hi"),
             user_id=self.user_id,
+            current_user=self.test_user,
             db=self.db
         )
-        profile_res = get_candidate_profile(user_id=self.user_id, db=self.db)
+        profile_res = get_candidate_profile(user_id=self.user_id, current_user=self.test_user, db=self.db)
         self.assertEqual(profile_res.profile.feedback_language, "hi")
 
         # 3. Invalid code normalizes to English
         update_candidate_profile(
             update_data=ProfileUpdate(feedback_language="klingon"),
             user_id=self.user_id,
+            current_user=self.test_user,
             db=self.db
         )
-        profile_res = get_candidate_profile(user_id=self.user_id, db=self.db)
+        profile_res = get_candidate_profile(user_id=self.user_id, current_user=self.test_user, db=self.db)
         self.assertEqual(profile_res.profile.feedback_language, "en")
 
     def test_06_end_to_end_telugu_interview_session(self):

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { QUESTION_BANK } from '../data/mockData';
 import { evaluateAnswer } from '../utils/evaluator';
 import { storageService } from '../utils/storage/storageService';
@@ -6,28 +6,29 @@ import { activityService, ACTIVITY_TYPES } from '../utils/activityService';
 import { analyzeSkillGaps } from '../utils/skillGapAnalyzer';
 import { achievementService } from '../utils/achievementService';
 import { interviewApi } from '../services/interviewApi';
-import { initializeRubricMatrix, getCompanyPlaybook } from '../data/companyPlaybooks';
+import { initializeRubricMatrix } from '../data/companyPlaybooks';
 
 const InterviewContext = createContext(null);
 
 export function InterviewProvider({ children }) {
-  // Setup preferences
   const initialUser = storageService.getCurrentUser();
   const getActiveUserId = () => storageService.getCurrentUser()?.id || 'usr_candidate';
+  const savedSetup = storageService.getActiveSetup(getActiveUserId());
+  const completedSessionsRef = useRef(new Set());
 
-  const [setup, setSetup] = useState({
-    targetRole: initialUser?.targetRole || initialUser?.role || 'Machine Learning Engineer',
-    interviewType: 'Technical',
-    difficulty: 'Intermediate',
-    companyPlaybook: 'general',
-    resumeFileName: initialUser?.name ? `${initialUser.name.replace(/\s+/g, '_')}_Resume.pdf` : 'Candidate_Resume.pdf',
-    jobDescription: '',
-    interviewLanguage: 'en',
-    feedbackLanguage: initialUser?.feedbackLanguage || 'en',
-    interviewMode: 'text', // 'text' | 'video' | 'face_to_face'
-    interviewerPersona: 'julian',
-    totalQuestions: 5
-  });
+  const [setup, setSetup] = useState(() => ({
+    targetRole: savedSetup?.targetRole || initialUser?.targetRole || initialUser?.role || 'Machine Learning Engineer',
+    interviewType: savedSetup?.interviewType || 'Technical',
+    difficulty: savedSetup?.difficulty || 'Intermediate',
+    companyPlaybook: savedSetup?.companyPlaybook || 'general',
+    resumeFileName: savedSetup?.resumeFileName || (initialUser?.name ? `${initialUser.name.replace(/\s+/g, '_')}_Resume.pdf` : 'Candidate_Resume.pdf'),
+    jobDescription: savedSetup?.jobDescription || '',
+    interviewLanguage: savedSetup?.interviewLanguage || 'en',
+    feedbackLanguage: savedSetup?.feedbackLanguage || initialUser?.feedbackLanguage || 'en',
+    interviewMode: savedSetup?.interviewMode || 'text', // 'text' | 'video' | 'face_to_face'
+    interviewerPersona: savedSetup?.interviewerPersona || 'julian',
+    totalQuestions: savedSetup?.totalQuestions || 5
+  }));
 
 
   // Active interview session state
@@ -66,6 +67,8 @@ export function InterviewProvider({ children }) {
   const updateSetup = (fields) => {
     setSetup(prev => {
       const next = { ...prev, ...fields };
+      const currentUid = getActiveUserId();
+      storageService.setActiveSetup(next, currentUid);
       if (fields.targetRole) {
         const currentUser = storageService.getCurrentUser();
         if (currentUser) {
@@ -443,6 +446,13 @@ export function InterviewProvider({ children }) {
   };
 
   const completeInterview = async () => {
+    // Idempotency guard: prevent duplicate completion and XP loops
+    const activeSessionKey = session.sessionId || `session_${session.currentIndex}`;
+    if (completedSessionsRef.current.has(activeSessionKey) || (session.isFinished && session.summaryResult)) {
+      return session.summaryResult;
+    }
+    completedSessionsRef.current.add(activeSessionKey);
+
     const answers = session.answers;
     if (!answers || answers.length === 0) return null;
 

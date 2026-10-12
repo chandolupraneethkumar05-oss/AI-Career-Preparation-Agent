@@ -22,7 +22,9 @@ export const STORAGE_KEYS = {
   PROGRESS: 'interview_ai_progress',
   REMINDER_PREFS: 'interview_ai_reminder_prefs',
   ACTIVE_SETUP: 'interview_ai_active_setup',
-  THEME: 'interview_ai_theme'
+  THEME: 'interview_ai_theme',
+  AUTH_TOKEN: 'interview_ai_auth_token',
+  REWARDED_HABITS: 'interview_ai_rewarded_habits'
 };
 
 export const storageService = {
@@ -74,11 +76,40 @@ export const storageService = {
   },
 
   scopedKey(key, explicitUserId = null) {
-    if (key === STORAGE_KEYS.AUTH_USER || key === STORAGE_KEYS.THEME) {
+    if (key === STORAGE_KEYS.AUTH_USER || key === STORAGE_KEYS.THEME || key === STORAGE_KEYS.AUTH_TOKEN) {
       return key;
     }
     const scope = this.getUserScope(explicitUserId);
     return `${key}_${scope}`;
+  },
+
+  // Auth Token helpers
+  getToken() {
+    return this.get(STORAGE_KEYS.AUTH_TOKEN, null);
+  },
+  setToken(token) {
+    return this.set(STORAGE_KEYS.AUTH_TOKEN, token);
+  },
+  removeToken() {
+    return this.remove(STORAGE_KEYS.AUTH_TOKEN);
+  },
+  getAuthHeaders() {
+    const token = this.getToken();
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  },
+
+  // Rewarded habit tracking for anti-farming
+  getRewardedHabits(dateStr) {
+    const data = this.get(STORAGE_KEYS.REWARDED_HABITS, {});
+    return new Set(data[dateStr] || []);
+  },
+  recordRewardedHabit(dateStr, habitId) {
+    const data = this.get(STORAGE_KEYS.REWARDED_HABITS, {});
+    const dayList = data[dateStr] || [];
+    if (!dayList.includes(habitId)) {
+      data[dateStr] = [...dayList, habitId];
+      this.set(STORAGE_KEYS.REWARDED_HABITS, data);
+    }
   },
 
   // 1. User & Profile
@@ -201,6 +232,14 @@ export const storageService = {
   },
   setTheme(themeId) {
     return this.set(STORAGE_KEYS.THEME, themeId || 'warm');
+  },
+
+  // Active Setup Preferences (role, difficulty, playbook, mode)
+  getActiveSetup(userId = null) {
+    return this.get(this.scopedKey(STORAGE_KEYS.ACTIVE_SETUP, userId), null);
+  },
+  setActiveSetup(setup, userId = null) {
+    return this.set(this.scopedKey(STORAGE_KEYS.ACTIVE_SETUP, userId), setup);
   },
 
   // 11. Scoped Streak Helper

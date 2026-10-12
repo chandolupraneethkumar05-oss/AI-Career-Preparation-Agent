@@ -1,43 +1,68 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ==============================================================================
+# Git Ignore Configuration for AI Career Preparation Agent
+# ==============================================================================
 
-node_modules
-dist
-dist-ssr
+# Environment configurations and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Node dependencies and build artifacts
+node_modules/
+dist/
+dist-ssr/
+.oxlint_cache/
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Python runtime artifacts, caches & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# SQLite databases & test databases
+*.db
+*.sqlite
+*.sqlite3
+career_agent.db
+backend/career_agent.db
+test_ci.db
+
+# Media uploads and recordings (candidate audio/video)
+storage/recordings/*
+!storage/recordings/.gitkeep
+backend/storage/recordings/*
+!backend/storage/recordings/.gitkeep
+*.webm
+*.mp4
+*.mkv
+*.wav
+*.ogg
+*.mp3
+
+# Generated report files and submission deliverables
+*.docx
+*.pdf
+*.pptx
+*.xlsx
+*.log
+
+# Editor and OS clutter
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 ~$*
-
-# Python & SQLite Database
-__pycache__/
-*.py[cod]
-*$py.class
-.env
-.venv/
-*.db
-*.sqlite3
-career_agent.db
-backend/career_agent.db
-
-# Storage & Media
-backend/storage/recordings/
-*.webm
-.pytest_cache/
+.idea/
+.vscode/*
+!.vscode/extensions.json
 scratch/
-

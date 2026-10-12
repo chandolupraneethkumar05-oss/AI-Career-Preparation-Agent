@@ -15,7 +15,8 @@ import {
   FileText,
   Code2,
   Briefcase,
-  Users
+  Users,
+  Loader2
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -90,6 +91,8 @@ export default function MockInterviewPage() {
   const [showTranscript, setShowTranscript] = useState(true);
   const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
+  const [transcriptionEngineNotice, setTranscriptionEngineNotice] = useState('');
 
   // Refs
   const candidateVideoRef = useRef(null);
@@ -98,6 +101,8 @@ export default function MockInterviewPage() {
   const isRecordingAnswerRef = useRef(false);
   const accumulatedTranscriptRef = useRef('');
   const allRecordedChunksRef = useRef([]);
+  const answerAudioRecorderRef = useRef(null);
+  const answerAudioChunksRef = useRef([]);
   const answerTimerIntervalRef = useRef(null);
   const segmentsRef = useRef([]);
   const totalSessionRecordedSecsRef = useRef(0);
@@ -328,10 +333,51 @@ export default function MockInterviewPage() {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // Start verbal answer recording (speech recognition & answer duration counter)
-  const handleStartRecording = () => {
+  // Start verbal answer recording (audio MediaRecorder for Whisper ASR + browser live interim preview)
+  const handleStartRecording = async () => {
     isRecordingAnswerRef.current = true;
     accumulatedTranscriptRef.current = answerInput.trim();
+    answerAudioChunksRef.current = [];
+    setTranscriptionEngineNotice('');
+
+    // Setup dedicated audio recording for neural Whisper ASR
+    try {
+      let streamToUse = mediaStream;
+      if (!streamToUse && navigator.mediaDevices?.getUserMedia) {
+        streamToUse = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+      }
+
+      if (streamToUse && typeof MediaRecorder !== 'undefined') {
+        const audioTracks = streamToUse.getAudioTracks();
+        if (audioTracks.length > 0) {
+          const audioOnlyStream = new MediaStream(audioTracks);
+          const preferredAudioMime = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+            'audio/mp4'
+          ].find(mime => MediaRecorder.isTypeSupported(mime)) || '';
+
+          const audioRec = preferredAudioMime
+            ? new MediaRecorder(audioOnlyStream, { mimeType: preferredAudioMime })
+            : new MediaRecorder(audioOnlyStream);
+
+          audioRec.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              answerAudioChunksRef.current.push(e.data);
+            }
+          };
+
+          audioRec.start(250); // Timeslice into 250ms chunks
+          answerAudioRecorderRef.current = audioRec;
+        }
+      }
+    } catch (recErr) {
+      console.warn('[MockInterviewPage] Audio recorder init notice:', recErr);
+    }
+
     if (speechRecognitionRef.current) {
       try {
         speechRecognitionRef.current.start();
@@ -342,7 +388,7 @@ export default function MockInterviewPage() {
     setIsRecordingAnswer(true);
   };
 
-  // Stop verbal answer recording (stops speech recognition; keeps video stream continuous)
+  // Stop verbal answer recording (triggers server-side Whisper neural transcription)
   const handleStopRecording = () => {
     isRecordingAnswerRef.current = false;
     if (speechRecognitionRef.current) {
@@ -352,6 +398,47 @@ export default function MockInterviewPage() {
         console.debug('SpeechRecognition stop notice');
       }
     }
+
+    if (answerAudioRecorderRef.current && answerAudioRecorderRef.current.state === 'recording') {
+      try {
+        const activeRec = answerAudioRecorderRef.current;
+        activeRec.onstop = async () => {
+          if (answerAudioChunksRef.current.length > 0) {
+            const mimeType = activeRec.mimeType || 'audio/webm';
+            const audioBlob = new Blob(answerAudioChunksRef.current, { type: mimeType });
+            if (audioBlob.size > 1000) {
+              setIsTranscribingAudio(true);
+              setTranscriptionEngineNotice('Transcribing audio via Whisper ASR neural engine...');
+              try {
+                const lang = setup.interviewLanguage || 'en';
+                const result = await interviewApi.transcribeAudio(
+                  audioBlob,
+                  lang,
+                  accumulatedTranscriptRef.current
+                );
+                if (result && result.transcript) {
+                  setAnswerInput(result.transcript);
+                  accumulatedTranscriptRef.current = result.transcript;
+                  setTranscriptionEngineNotice(`Whisper ASR: ${result.word_count} words transcribed (${result.source || 'neural'})`);
+                } else if (!answerInput.trim() && accumulatedTranscriptRef.current) {
+                  setAnswerInput(accumulatedTranscriptRef.current);
+                  setTranscriptionEngineNotice('');
+                }
+              } catch (txErr) {
+                console.warn('[MockInterviewPage] Whisper transcription error:', txErr);
+                setTranscriptionEngineNotice('');
+              } finally {
+                setIsTranscribingAudio(false);
+              }
+            }
+          }
+        };
+        activeRec.stop();
+      } catch (stopErr) {
+        console.warn('[MockInterviewPage] Audio recorder stop notice:', stopErr);
+      }
+    }
+
     setIsRecordingAnswer(false);
   };
 
@@ -375,7 +462,9 @@ export default function MockInterviewPage() {
   // Reset answer recording
   const handleResetRecording = () => {
     handleStopRecording();
+    answerAudioChunksRef.current = [];
     accumulatedTranscriptRef.current = '';
+    setTranscriptionEngineNotice('');
     setAnswerDurationSeconds(0);
     setAnswerInput('');
   };
@@ -1073,16 +1162,28 @@ export default function MockInterviewPage() {
               {/* Answer / Transcript Editor Card */}
               {(!isVideoMode || showTranscript) && (
                 <GlassCard className="p-6 space-y-4 border-[#E5E0D5] bg-[#FFFDF9]">
-                  <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
+                  <div className="flex flex-wrap items-center justify-between border-b border-[#E5E0D5] pb-3 gap-2">
                     <label className="text-xs font-serif font-bold text-[#1F1B16] uppercase tracking-wider flex items-center gap-2">
                       <FileText className="w-3.5 h-3.5 text-[#1A365D]" />
                       <span>{isVideoMode ? 'Spoken Transcript' : 'Your Answer'}</span>
                     </label>
-                    <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-2.5 text-xs">
+                      {isTranscribingAudio && (
+                        <span className="flex items-center gap-1.5 text-[11px] font-mono text-[#8C6E54] bg-[#FAF8F3] border border-[#8C6E54]/30 px-2 py-0.5 rounded animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin text-[#8C6E54]" />
+                          <span>Whisper ASR transcribing...</span>
+                        </span>
+                      )}
+                      {transcriptionEngineNotice && !isTranscribingAudio && (
+                        <span className="flex items-center gap-1 text-[11px] font-mono text-[#235E3B] bg-[#EBF4EE] border border-[#235E3B]/30 px-2 py-0.5 rounded">
+                          <Sparkles className="w-3 h-3 text-[#235E3B]" />
+                          <span>{transcriptionEngineNotice}</span>
+                        </span>
+                      )}
                       <span className={`font-mono font-bold ${wordCount >= 50 ? 'text-[#235E3B]' : 'text-[#70685E]'}`}>
                         {wordCount} words
                       </span>
-                      <span className="text-[#70685E]">(Recommended: 60–150 words)</span>
+                      <span className="text-[#70685E] hidden sm:inline">(Recommended: 60–150 words)</span>
                     </div>
                   </div>
 

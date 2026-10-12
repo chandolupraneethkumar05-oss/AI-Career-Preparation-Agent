@@ -7,7 +7,16 @@
  * Ready for future LLM integration:
  * This logic can ingest real LLM evaluation payloads, resume parse results, and
  * long-term session histories without altering UI contracts.
+/**
+ * Normalizes any rubric or competency score strictly to the 0-100 range.
+ * Clamps negative values, handles non-finite/NaN, and ensures scores never exceed 100.
  */
+export function normalizeScore(val, defaultScore = 70) {
+  if (val === null || val === undefined) return defaultScore;
+  const num = Number(val);
+  if (!Number.isFinite(num) || Number.isNaN(num)) return defaultScore;
+  return Math.min(100, Math.max(0, Math.round(num)));
+}
 
 export const BASELINE_SKILL_ANALYSIS = {
   overallReadiness: 78,
@@ -254,21 +263,24 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
     const sc = effectiveSummary.scores;
     skills = skills.map((s) => {
       const lower = s.name.toLowerCase();
-      if ((lower.includes('problem') || lower.includes('algorithm')) && (sc.structure || sc.problemSolving)) {
-        const val = (sc.structure || sc.problemSolving) > 10 ? (sc.structure || sc.problemSolving) : (sc.structure || sc.problemSolving) * 10;
+      if ((lower.includes('problem') || lower.includes('algorithm')) && (sc.structure !== undefined || sc.problemSolving !== undefined)) {
+        const raw = sc.structure !== undefined ? sc.structure : sc.problemSolving;
+        const val = normalizeScore(raw, s.score);
         return { ...s, score: Math.round((s.score + val) / 2) };
       }
-      if ((lower.includes('comm') || lower.includes('articulation')) && (sc.clarity || sc.communication)) {
-        const val = (sc.clarity || sc.communication) > 10 ? (sc.clarity || sc.communication) : (sc.clarity || sc.communication) * 10;
+      if ((lower.includes('comm') || lower.includes('articulation')) && (sc.clarity !== undefined || sc.communication !== undefined)) {
+        const raw = sc.clarity !== undefined ? sc.clarity : sc.communication;
+        const val = normalizeScore(raw, s.score);
         return { ...s, score: Math.round((s.score + val) / 2) };
       }
-      if ((lower.includes('confid') || lower.includes('delivery')) && (sc.confidence || sc.confidenceDelivery)) {
-        const val = (sc.confidence || sc.confidenceDelivery) > 10 ? (sc.confidence || sc.confidenceDelivery) : (sc.confidence || sc.confidenceDelivery) * 10;
+      if ((lower.includes('confid') || lower.includes('delivery')) && (sc.confidence !== undefined || sc.confidenceDelivery !== undefined)) {
+        const raw = sc.confidence !== undefined ? sc.confidence : sc.confidenceDelivery;
+        const val = normalizeScore(raw, s.score);
         return { ...s, score: Math.round((s.score + val) / 2) };
       }
       if (s.category === 'Core' || s.category === 'Core AI' || s.category === 'Framework' || s.category === 'Architecture') {
-        if (sc.technicalKnowledge) {
-          const val = sc.technicalKnowledge > 10 ? sc.technicalKnowledge : sc.technicalKnowledge * 10;
+        if (sc.technicalKnowledge !== undefined) {
+          const val = normalizeScore(sc.technicalKnowledge, s.score);
           return { ...s, score: Math.round((s.score + val) / 2) };
         }
       }
@@ -276,23 +288,23 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
     });
 
     radarDimensions = radarDimensions.map((r) => {
-      if (r.name === 'Technical Knowledge' && sc.technicalKnowledge) {
-        return { ...r, score: sc.technicalKnowledge > 10 ? sc.technicalKnowledge : Math.round(sc.technicalKnowledge * 10) };
+      if (r.name === 'Technical Knowledge' && sc.technicalKnowledge !== undefined) {
+        return { ...r, score: normalizeScore(sc.technicalKnowledge, r.score) };
       }
-      if (r.name === 'Problem Solving' && (sc.structure || sc.problemSolving)) {
-        const val = sc.structure || sc.problemSolving;
-        return { ...r, score: val > 10 ? val : Math.round(val * 10) };
+      if (r.name === 'Problem Solving' && (sc.structure !== undefined || sc.problemSolving !== undefined)) {
+        const raw = sc.structure !== undefined ? sc.structure : sc.problemSolving;
+        return { ...r, score: normalizeScore(raw, r.score) };
       }
-      if (r.name === 'Communication' && (sc.clarity || sc.communication)) {
-        const val = sc.clarity || sc.communication;
-        return { ...r, score: val > 10 ? val : Math.round(val * 10) };
+      if (r.name === 'Communication' && (sc.clarity !== undefined || sc.communication !== undefined)) {
+        const raw = sc.clarity !== undefined ? sc.clarity : sc.communication;
+        return { ...r, score: normalizeScore(raw, r.score) };
       }
-      if (r.name === 'Confidence' && (sc.confidence || sc.confidenceDelivery)) {
-        const val = sc.confidence || sc.confidenceDelivery;
-        return { ...r, score: val > 10 ? val : Math.round(val * 10) };
+      if (r.name === 'Confidence' && (sc.confidence !== undefined || sc.confidenceDelivery !== undefined)) {
+        const raw = sc.confidence !== undefined ? sc.confidence : sc.confidenceDelivery;
+        return { ...r, score: normalizeScore(raw, r.score) };
       }
-      if (r.name === 'Relevance' && sc.relevance) {
-        return { ...r, score: sc.relevance > 10 ? sc.relevance : Math.round(sc.relevance * 10) };
+      if (r.name === 'Relevance' && sc.relevance !== undefined) {
+        return { ...r, score: normalizeScore(sc.relevance, r.score) };
       }
       return r;
     });

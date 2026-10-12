@@ -3,9 +3,12 @@ Centralized Skill Taxonomy & Canonical Normalization Engine
 AI Career Preparation Agent
 """
 
+import logging
 import re
 from abc import ABC, abstractmethod
 from typing import Dict, List, Set, Tuple, Optional, Any
+
+logger = logging.getLogger(__name__)
 
 
 # ----------------------------------------------------------------------
@@ -218,20 +221,59 @@ ROLE_ALIASES = {
 }
 
 
-def get_canonical_role(role_name: str) -> str:
-    """Normalizes any role input string into a supported canonical role."""
-    if not role_name:
-        return "Machine Learning Engineer"
+def resolve_canonical_role_with_disclosure(role_name: str) -> Tuple[str, bool, Optional[str]]:
+    """
+    Normalizes a role input string into a supported canonical role.
+    Returns:
+        (canonical_role, is_fallback, fallback_reason)
+    When an unknown role is supplied, honestly discloses that the taxonomy
+    is falling back to 'Machine Learning Engineer' rather than falsely claiming
+    an exact domain match.
+    """
+    if not role_name or not role_name.strip():
+        return (
+            "Machine Learning Engineer",
+            True,
+            "No role specified; defaulted to canonical 'Machine Learning Engineer'."
+        )
+
     cleaned = role_name.strip()
     if cleaned in ROLE_REQUIREMENTS:
-        return cleaned
+        return (cleaned, False, None)
+
     cleaned_lower = cleaned.lower()
     if cleaned_lower in ROLE_ALIASES:
-        return ROLE_ALIASES[cleaned_lower]
+        return (ROLE_ALIASES[cleaned_lower], False, None)
+
     for key in ROLE_REQUIREMENTS.keys():
         if key.lower() in cleaned_lower or cleaned_lower in key.lower():
-            return key
-    return "Machine Learning Engineer"
+            return (key, False, None)
+
+    return (
+        "Machine Learning Engineer",
+        True,
+        f"Role '{cleaned}' is not in the canonical taxonomy; falling back to 'Machine Learning Engineer'."
+    )
+
+
+def is_canonical_role_fallback(role_name: str) -> bool:
+    """Returns True if the specified role will trigger a taxonomy fallback."""
+    _, is_fallback, _ = resolve_canonical_role_with_disclosure(role_name)
+    return is_fallback
+
+
+def get_canonical_role(role_name: str) -> str:
+    """
+    Normalizes any role input string into a supported canonical role.
+    Logs an informative warning when a fallback is applied.
+    """
+    canonical_role, is_fallback, reason = resolve_canonical_role_with_disclosure(role_name)
+    if is_fallback and role_name:
+        logger.warning(
+            "Taxonomy fallback triggered: %s",
+            reason
+        )
+    return canonical_role
 
 
 # ----------------------------------------------------------------------

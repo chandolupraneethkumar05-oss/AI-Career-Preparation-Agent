@@ -31,7 +31,8 @@ export const interviewApi = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...storageService.getAuthHeaders()
         },
         body: JSON.stringify({
           user_id: effectiveUserId,
@@ -100,7 +101,12 @@ export const interviewApi = {
   async getCurrentQuestion(sessionId, userId = null) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/current-question?user_id=${encodeURIComponent(effectiveUserId)}`);
+      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/current-question?user_id=${encodeURIComponent(effectiveUserId)}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...storageService.getAuthHeaders()
+        }
+      });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.detail || `Server error: ${response.status}`);
@@ -131,7 +137,8 @@ export const interviewApi = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...storageService.getAuthHeaders()
         },
         body: JSON.stringify({
           user_id: effectiveUserId,
@@ -222,7 +229,8 @@ export const interviewApi = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...storageService.getAuthHeaders()
         }
       });
 
@@ -244,7 +252,12 @@ export const interviewApi = {
   async getSessionDetail(sessionId, userId = null) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/detail?user_id=${encodeURIComponent(effectiveUserId)}`);
+      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/detail?user_id=${encodeURIComponent(effectiveUserId)}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...storageService.getAuthHeaders()
+        }
+      });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.detail || `Server error: ${response.status}`);
@@ -262,7 +275,12 @@ export const interviewApi = {
   async getHistory(userId = null, limit = 50) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews?user_id=${encodeURIComponent(effectiveUserId)}&limit=${limit}`);
+      const response = await fetch(`${API_BASE_URL}/interviews?user_id=${encodeURIComponent(effectiveUserId)}&limit=${limit}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...storageService.getAuthHeaders()
+        }
+      });
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
@@ -349,6 +367,7 @@ export const interviewApi = {
 
       const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
         method: 'POST',
+        headers: storageService.getAuthHeaders(),
         body: formData
       });
 
@@ -390,7 +409,12 @@ export const interviewApi = {
    */
   async getRecording(sessionId, userId = 'user-001') {
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`);
+      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...storageService.getAuthHeaders()
+        }
+      });
       if (!response.ok) {
         if (response.status === 404) return null;
         const err = await response.json().catch(() => ({}));
@@ -409,7 +433,8 @@ export const interviewApi = {
   async deleteRecording(sessionId, userId = 'user-001') {
     try {
       const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: storageService.getAuthHeaders()
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -484,11 +509,36 @@ export const interviewApi = {
   },
 
   /**
+   * Requests a short-lived (120s), scoped playback ticket for HTML5 media streaming.
+   * Prevents leaking long-lived master tokens in streaming URLs or browser history.
+   */
+  async getRecordingStreamTicket(sessionId, userId = 'user-001') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording/stream-ticket?user_id=${encodeURIComponent(userId)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...storageService.getAuthHeaders()
+        }
+      });
+      if (!response.ok) {
+        return null;
+      }
+      return await response.json();
+    } catch (err) {
+      console.warn('[interviewApi] getRecordingStreamTicket notice:', err);
+      return null;
+    }
+  },
+
+  /**
    * Generates secure streaming video URL with tenant isolation query param.
    */
   getRecordingStreamUrl(sessionId, userId = 'user-001') {
     const base = API_BASE_URL.includes(':8000/api') ? '/api' : API_BASE_URL;
-    return `${base}/interviews/${encodeURIComponent(sessionId)}/recording/stream?user_id=${encodeURIComponent(userId)}`;
+    const token = storageService.getToken();
+    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+    return `${base}/interviews/${encodeURIComponent(sessionId)}/recording/stream?user_id=${encodeURIComponent(userId)}${tokenParam}`;
   },
 
   /**
@@ -579,6 +629,59 @@ export const interviewApi = {
     } catch (err) {
       console.warn('[interviewApi] deleteRecording error:', err);
       return { success: true, message: 'Local recording removed' };
+    }
+  },
+
+  /**
+   * Transcribes raw audio blob using faster-whisper neural speech engine on the backend.
+   * Cross-browser compatible (WebM, WAV, OGG, MP4).
+   * @param {Blob} audioBlob - Audio recording blob
+   * @param {string} language - Target language code (e.g. 'en', 'es', 'hi', 'te')
+   * @param {string} [transcriptHint] - Optional browser interim transcript hint
+   */
+  async transcribeAudio(audioBlob, language = 'en', transcriptHint = '') {
+    try {
+      const formData = new FormData();
+      const ext = audioBlob.type?.includes('wav') ? 'wav' : audioBlob.type?.includes('ogg') ? 'ogg' : 'webm';
+      formData.append('file', audioBlob, `speech_input.${ext}`);
+      formData.append('language', language || 'en');
+      if (transcriptHint) {
+        formData.append('transcript_hint', transcriptHint);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/interviews/transcribe-audio`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || `Transcription failed with status ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.warn('[interviewApi] transcribeAudio fallback notice:', err);
+      if (transcriptHint && transcriptHint.trim()) {
+        return {
+          transcript: transcriptHint.trim(),
+          language: language,
+          confidence: 0.8,
+          duration_seconds: 0.0,
+          word_count: transcriptHint.trim().split(/\s+/).length,
+          words: transcriptHint.trim().split(/\s+/),
+          source: 'client_hint_fallback'
+        };
+      }
+      return {
+        transcript: '',
+        language: language,
+        confidence: 0.0,
+        duration_seconds: 0.0,
+        word_count: 0,
+        words: [],
+        source: 'unavailable'
+      };
     }
   }
 };

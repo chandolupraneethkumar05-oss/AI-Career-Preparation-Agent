@@ -65,14 +65,31 @@ class TestRealLLMAndRoleSync(unittest.TestCase):
 
     def test_05_profile_put_updates_target_role_and_role(self):
         """Updating profile via PUT updates target_role and role on the User model in SQLite."""
+        from backend.app.core.security import create_access_token
         test_uid = "usr_role_sync_test"
-        # First ensure user exists or auto-provisions
-        resp = self.client.get(f"/api/profile?user_id={test_uid}")
+        # Ensure user exists in database
+        user = self.db.query(User).filter(User.id == test_uid).first()
+        if not user:
+            user = User(
+                id=test_uid,
+                email="sync@example.com",
+                name="Test Role Candidate",
+                role="AIML Engineer",
+                target_role="Machine Learning Engineer"
+            )
+            self.db.add(user)
+            self.db.commit()
+
+        token = create_access_token({"sub": test_uid, "email": "sync@example.com"})
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = self.client.get(f"/api/profile?user_id={test_uid}", headers=headers)
         self.assertEqual(resp.status_code, 200)
 
         # Update role to Frontend Engineer
         put_resp = self.client.put(
             f"/api/profile?user_id={test_uid}",
+            headers=headers,
             json={
                 "target_role": "Frontend Engineer",
                 "role": "Frontend Engineer",
@@ -82,11 +99,10 @@ class TestRealLLMAndRoleSync(unittest.TestCase):
         self.assertEqual(put_resp.status_code, 200)
 
         # Verify DB directly
-        user_record = self.db.query(User).filter(User.id == test_uid).first()
-        self.assertIsNotNone(user_record)
-        self.assertEqual(user_record.target_role, "Frontend Engineer")
-        self.assertEqual(user_record.role, "Frontend Engineer")
-        self.assertEqual(user_record.name, "Jane Developer")
+        self.db.refresh(user)
+        self.assertEqual(user.target_role, "Frontend Engineer")
+        self.assertEqual(user.role, "Frontend Engineer")
+        self.assertEqual(user.name, "Jane Developer")
 
     def test_06_fresh_user_has_zero_readiness_and_zero_evidences(self):
         """A brand new user with 0 interviews and 0 resumes must have overall_readiness=0 and total_evidences=0."""

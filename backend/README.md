@@ -16,6 +16,7 @@ The backend serves as the persistent intelligence layer for the AI Career Prepar
 │                      FASTAPI BACKEND                      │
 │                                                           │
 │  [Unified Router]                                         │
+│   ├── /api/auth           (User auth, JWT login, registration)
 │   ├── /api/profile        (Candidate profile & targets)   │
 │   ├── /api/activities     (Canonical XP & streak engine)  │
 │   ├── /api/interviews     (Mock interviews & rubrics)     │
@@ -24,7 +25,8 @@ The backend serves as the persistent intelligence layer for the AI Career Prepar
 │   ├── /api/progress       (Dashboard aggregation & NBA)   │
 │   ├── /api/recommendations(Next-Best-Action engine)       │
 │   ├── /api/reminders      (Proactive reminder scheduler)  │
-│   └── /api/resume         (ATS token & keyword extractor) │
+│   ├── /api/resume         (ATS token & keyword extractor) │
+│   └── /api/execution      (Sandboxed safe code executor)  │
 │                                                           │
 │  [Service Layer]                                          │
 │   ├── activity_service.py (Streak & XP calculation)       │

@@ -127,9 +127,13 @@ export default function LoginPage() {
               <label className="text-xs font-semibold text-[#70685E]">
                 Password
               </label>
-              <a href="#forgot" onClick={(e) => { e.preventDefault(); handleDemoLogin(); }} className="text-xs text-[#1A365D] hover:underline">
-                Recover credential?
-              </a>
+              <button
+                type="button"
+                onClick={() => setError('Self-service password recovery is currently disabled. Use the Quick Demo Access button above or contact your administrator.')}
+                className="text-xs text-[#70685E] hover:text-[#1A365D] hover:underline bg-transparent border-none p-0 cursor-pointer"
+              >
+                Forgot password?
+              </button>
             </div>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#70685E]">

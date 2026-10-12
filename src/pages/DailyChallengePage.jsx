@@ -152,24 +152,32 @@ export default function DailyChallengePage() {
     const strengths = serverRes?.strengths || ['Strong coverage of core domain terminology and concepts'];
     const improvements = serverRes?.improvements || [];
 
-    // Record verified activity
-    activityService.recordActivity({
-      type: ACTIVITY_TYPES.CHALLENGE_COMPLETED,
-      relatedModule: 'challenge',
-      title: `Daily Drill: ${challenge.title}`,
-      details: {
-        skill: challenge.skill || challenge.title,
-        challengeId: challenge.id,
-        score: finalScore
-      },
-      xpEarned: challenge.xpReward
-    });
-
+    // Prevent duplicate XP reward farming if already completed today
+    const alreadyCompletedToday = isCompleted || Boolean(storageService.get(STORAGE_KEYS.DAILY_CHALLENGE_COMPLETED));
     const newStreak = serverRes?.streak || activityService.calculateCurrentStreak();
 
-    // Award XP and maintain streak
-    addXP(challenge.xpReward);
-    updateUser({ streak: newStreak });
+    if (!alreadyCompletedToday) {
+      activityService.recordActivity({
+        type: ACTIVITY_TYPES.CHALLENGE_COMPLETED,
+        relatedModule: 'challenge',
+        title: `Daily Drill: ${challenge.title}`,
+        details: {
+          skill: challenge.skill || challenge.title,
+          challengeId: challenge.id,
+          score: finalScore
+        },
+        xpEarned: challenge.xpReward
+      });
+
+      // Update user state cleanly without duplicate XP stacking
+      updateUser({
+        streak: newStreak,
+        xp: (user?.xp || 0) + challenge.xpReward
+      });
+      storageService.set(STORAGE_KEYS.DAILY_CHALLENGE_COMPLETED, true);
+    } else {
+      updateUser({ streak: newStreak });
+    }
 
     // Persist to storage
     storageService.saveChallenge({

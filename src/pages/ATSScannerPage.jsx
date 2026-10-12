@@ -81,12 +81,30 @@ export default function ATSScannerPage() {
     fetchLatest();
   }, [user?.id]);
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleFileSelected = (file) => {
+    if (!file) return;
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+      setErrorMessage('Selected file exceeds the 10MB limit. Please upload a document under 10MB.');
+      return;
+    }
+    const validExts = ['.pdf', '.docx', '.doc', '.txt'];
+    const lowerName = file.name.toLowerCase();
+    const isValidExt = validExts.some(ext => lowerName.endsWith(ext));
+    if (!isValidExt) {
+      setErrorMessage('Unsupported file format. Please upload a PDF (.pdf) or Word document (.docx).');
+      return;
+    }
+    setUploadedFile(file);
+    setFileName(file.name);
+    setErrorMessage(null);
+  };
+
   const handleFileUpload = (e) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setUploadedFile(file);
-      setFileName(file.name);
-      setErrorMessage(null);
+      handleFileSelected(e.target.files[0]);
     }
   };
 
@@ -166,11 +184,13 @@ export default function ATSScannerPage() {
     }
   };
 
+  const [hasAwardedTailorXP, setHasAwardedTailorXP] = useState(false);
+
   const handleTailorResume = () => {
     setIsTailoring(true);
     setTimeout(() => {
       const tailored = resumeTailorEngine.tailorResume({
-        rawResumeText: results?.rawText || '',
+        rawResumeText: results?.rawText || pastedResumeText || '',
         missingKeywords: missingSkillsList,
         matchedKeywords: matchedSkillsList,
         targetRole,
@@ -178,7 +198,10 @@ export default function ATSScannerPage() {
       });
       setTailoredResult(tailored);
       setIsTailoring(false);
-      addXP(40);
+      if (!hasAwardedTailorXP) {
+        addXP(40);
+        setHasAwardedTailorXP(true);
+      }
     }, 450);
   };
 
@@ -268,7 +291,20 @@ export default function ATSScannerPage() {
 
           {inputMode === 'file' ? (
             <>
-              <div className="border-2 border-dashed border-[#E5E0D5] hover:border-[#1A365D] rounded-md p-6 text-center transition-all bg-[#FAF8F3]">
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+                    handleFileSelected(e.dataTransfer.files[0]);
+                  }
+                }}
+                className={`border-2 border-dashed rounded-md p-6 text-center transition-all ${
+                  isDragging ? 'border-[#1A365D] bg-[#EAEFF5]' : 'border-[#E5E0D5] hover:border-[#1A365D] bg-[#FAF8F3]'
+                }`}
+              >
                 <input
                   type="file"
                   id="atsUpload"
@@ -281,7 +317,7 @@ export default function ATSScannerPage() {
                     <Upload className="w-6 h-6" />
                   </div>
                   <p className="text-sm font-serif font-bold text-[#1F1B16]">Upload Candidate Résumé</p>
-                  <p className="text-xs text-[#70685E] mt-1">Accepts PDF (.pdf) or Word (.docx)</p>
+                  <p className="text-xs text-[#70685E] mt-1">Accepts PDF (.pdf) or Word (.docx) up to 10MB</p>
                 </label>
               </div>
 

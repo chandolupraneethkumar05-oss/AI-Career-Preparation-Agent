@@ -3,43 +3,38 @@ Profile & User Routes
 AI Career Preparation Agent
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from ...db.database import get_db
 from ...db.models import User, Profile
 from ...schemas.profile import UserResponse, ProfileResponse, CandidateFullProfileResponse, ProfileUpdate
+from ..deps import get_current_user, verify_user_ownership
 
 router = APIRouter(prefix="/profile", tags=["Profile & Identity"])
 
 
 @router.get("", response_model=CandidateFullProfileResponse)
 def get_candidate_profile(
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Retrieves full candidate profile including academic and career details."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        # Auto-provision user and profile for new authenticated session
-        sanitized_name = user_id.replace("usr_", "").replace("_", " ").title() if "usr_" in user_id else "Career Candidate"
-        clean_email = f"{user_id}@career-ai.dev" if "@" not in user_id else user_id
-        user = User(
-            id=user_id,
-            email=clean_email,
-            name=sanitized_name,
-            role="Machine Learning Engineer",
-            target_role="Machine Learning Engineer"
-        )
-        db.add(user)
-        profile = Profile(user_id=user_id)
-        db.add(profile)
-        db.commit()
-        db.refresh(user)
-        db.refresh(profile)
-    else:
-        profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+    """
+    Retrieves full candidate profile including academic and career details.
+    Guarantees user identity from verified session token, strictly preventing unauthorized cross-user access.
+    """
+    effective_id = verify_user_ownership(user_id, current_user)
 
+    user = db.query(User).filter(User.id == effective_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Candidate account '{effective_id}' was not found. Please register or sign in."
+        )
+
+    profile = db.query(Profile).filter(Profile.user_id == effective_id).first()
     return CandidateFullProfileResponse(
         user=UserResponse.model_validate(user),
         profile=ProfileResponse.model_validate(profile) if profile else None
@@ -49,35 +44,37 @@ def get_candidate_profile(
 @router.put("", response_model=ProfileResponse)
 def update_candidate_profile(
     update_data: ProfileUpdate,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Updates candidate career preferences, target role, and biography."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        user = User(
-            id=user_id,
-            email=f"{user_id}@career-ai.dev" if "@" not in user_id else user_id,
-            name=update_data.name or "Career Candidate",
-            role=update_data.role or update_data.target_role or "Machine Learning Engineer",
-            target_role=update_data.target_role or update_data.role or "Machine Learning Engineer"
-        )
-        db.add(user)
-    else:
-        if update_data.name is not None:
-            user.name = update_data.name
-        if update_data.target_role is not None:
-            user.target_role = update_data.target_role
-            if update_data.role is None:
-                user.role = update_data.target_role
-        if update_data.role is not None:
-            user.role = update_data.role
-            if update_data.target_role is None:
-                user.target_role = update_data.role
+    """
+    Updates candidate career preferences, target role, and biography.
+    Requires verified authentication and strict tenant ownership.
+    """
+    effective_id = verify_user_ownership(user_id, current_user)
 
-    profile = db.query(Profile).filter(Profile.user_id == user_id).first()
+    user = db.query(User).filter(User.id == effective_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Candidate account '{effective_id}' was not found."
+        )
+
+    if update_data.name is not None:
+        user.name = update_data.name
+    if update_data.target_role is not None:
+        user.target_role = update_data.target_role
+        if update_data.role is None:
+            user.role = update_data.target_role
+    if update_data.role is not None:
+        user.role = update_data.role
+        if update_data.target_role is None:
+            user.target_role = update_data.role
+
+    profile = db.query(Profile).filter(Profile.user_id == effective_id).first()
     if not profile:
-        profile = Profile(user_id=user_id)
+        profile = Profile(user_id=effective_id)
         db.add(profile)
 
     if update_data.bio is not None:
@@ -99,4 +96,3 @@ def update_candidate_profile(
     db.commit()
     db.refresh(profile)
     return ProfileResponse.model_validate(profile)
-

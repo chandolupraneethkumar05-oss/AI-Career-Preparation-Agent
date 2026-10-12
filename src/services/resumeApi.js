@@ -32,6 +32,7 @@ export const resumeApi = {
     try {
       const res = await fetch(`${BACKEND_BASE_URL}/api/resume/analyze`, {
         method: 'POST',
+        headers: storageService.getAuthHeaders(),
         body: formData
       });
 
@@ -55,7 +56,12 @@ export const resumeApi = {
    */
   async getLatestAnalysis(userId = 'user-001') {
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/resume/latest/${userId}`);
+      const res = await fetch(`${BACKEND_BASE_URL}/api/resume/latest/${userId}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...storageService.getAuthHeaders()
+        }
+      });
       if (!res.ok) {
         if (res.status === 404) return null;
         throw new Error(`HTTP ${res.status}`);

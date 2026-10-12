@@ -1,11 +1,44 @@
-node_modules
+# Git metadata and CI
 .git
 .gitignore
+.github
+
+# Environment configurations and local secrets
 .env
+.env.*
+!.env.example
+
+# Node dependencies and build artifacts
+node_modules
 dist
+.oxlint_cache
+
+# Python runtime artifacts and caches
 __pycache__
 *.pyc
+*.pyo
+*.pyd
 .pytest_cache
-tests
-storage/recordings/*.webm
-storage/recordings/*.mp4
+venv
+.venv
+env
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Local interview recordings media (mounted via persistent volume in production)
+storage/recordings/*
+!storage/recordings/.gitkeep
+
+# Unit and integration test files (not needed in production runtime container)
+tests/
+
+# Development scratch scripts and documentation artifacts
+scripts/
+*.docx
+*.pdf
+*.log
+brain/
+.system_generated/

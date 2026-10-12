@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { MOCK_USER } from '../data/mockData';
 import { storageService, STORAGE_KEYS } from '../utils/storage/storageService';
-import { activityService } from '../utils/activityService';
+import { API_BASE_URL } from '../services/apiConfig';
 
 const AuthContext = createContext(null);
 
@@ -18,125 +18,203 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
-  // Initial background hydration from backend
+  // Initial background token verification and profile hydration
   useEffect(() => {
+    const token = storageService.getToken();
+    if (token) {
+      fetch(`${API_BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setUser((prev) => ({
+              ...(prev || {}),
+              id: data.id,
+              name: data.name,
+              email: data.email,
+              targetRole: data.target_role || data.role,
+              role: data.role || data.target_role,
+              xp: data.xp,
+              level: data.level,
+              streak: data.streak
+            }));
+          } else if (res.status === 401) {
+            // Token expired, revoked, or invalid on backend
+            storageService.removeToken();
+            storageService.remove(STORAGE_KEYS.AUTH_USER);
+            setUser(null);
+          }
+        })
+        .catch(() => {});
+    }
+
     if (user?.id) {
       storageService.hydrateFromBackend(user.id).catch(() => {});
     }
   }, [user?.id]);
 
-  const login = useCallback((email, _password) => {
+  const login = useCallback(async (email, password) => {
     setIsLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const cleanEmail = (email || 'candidate@career-ai.dev').trim().toLowerCase();
-        const userId = `usr_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
-        const nameFromEmail = cleanEmail.split('@')[0].replace(/[._-]/g, ' ').toUpperCase();
+    try {
+      const cleanEmail = (email || '').trim().toLowerCase();
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password })
+      });
 
-        // Check if there is an existing saved profile for this specific user
-        const existingProfile = storageService.getProfile(userId);
-        const userActivities = storageService.getActivities(userId);
-        const realStreak = activityService.calculateCurrentStreak(userActivities);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Authentication failed. Please verify your credentials.');
+      }
 
-        const loggedUser = existingProfile ? {
-          ...existingProfile,
-          id: userId,
-          email: cleanEmail,
-          streak: realStreak
-        } : {
-          id: userId,
-          name: nameFromEmail || 'Career Candidate',
-          email: cleanEmail,
-          targetRole: 'Machine Learning Engineer',
-          role: 'Machine Learning Engineer',
-          avatar: MOCK_USER.avatar,
-          level: 1,
-          title: 'Aspiring Candidate',
-          xp: 0,
-          streak: realStreak,
-          feedbackLanguage: 'en'
-        };
+      const data = await res.json();
+      storageService.setToken(data.access_token);
 
-        setUser(loggedUser);
-        storageService.saveCurrentUser(loggedUser);
-        storageService.saveProfile(loggedUser, userId);
-        setIsLoading(false);
-        resolve(loggedUser);
-      }, 300);
-    });
+      const authenticatedUser = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        targetRole: data.user.target_role || data.user.role || 'Machine Learning Engineer',
+        role: data.user.role || 'Machine Learning Engineer',
+        xp: data.user.xp || 0,
+        level: data.user.level || 1,
+        streak: data.user.streak || 0,
+        avatar: MOCK_USER.avatar,
+        feedbackLanguage: 'en'
+      };
+
+      setUser(authenticatedUser);
+      storageService.saveCurrentUser(authenticatedUser);
+      storageService.saveProfile(authenticatedUser, authenticatedUser.id);
+      return authenticatedUser;
+    } catch (err) {
+      console.error('[AuthContext] Login error:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const loginAsDemo = useCallback(() => {
+  const loginAsDemo = useCallback(async () => {
     setIsLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const demoEmail = 'alex.rivera@career-ai.dev';
-        const userId = 'usr_demo_alex_rivera';
-        const existingProfile = storageService.getProfile(userId);
-        const userActivities = storageService.getActivities(userId);
-        const realStreak = activityService.calculateCurrentStreak(userActivities);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/demo-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-        const demoUser = existingProfile ? {
-          ...existingProfile,
-          id: userId,
-          email: demoEmail,
-          streak: realStreak
-        } : {
-          id: userId,
-          name: 'Alex Rivera',
-          email: demoEmail,
-          targetRole: 'Machine Learning Engineer',
-          role: 'Machine Learning Engineer',
-          avatar: MOCK_USER.avatar,
-          level: 1,
-          title: 'Career Candidate',
-          xp: 0,
-          streak: realStreak,
-          feedbackLanguage: 'en'
-        };
+      if (!res.ok) {
+        throw new Error('Could not initialize demo sandbox token.');
+      }
 
-        setUser(demoUser);
-        storageService.saveCurrentUser(demoUser);
-        storageService.saveProfile(demoUser, userId);
-        setIsLoading(false);
-        resolve(demoUser);
-      }, 250);
-    });
+      const data = await res.json();
+      storageService.setToken(data.access_token);
+
+      const demoUser = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        targetRole: data.user.target_role || data.user.role || 'Machine Learning Engineer',
+        role: data.user.role || 'Machine Learning Engineer',
+        xp: data.user.xp || 0,
+        level: data.user.level || 1,
+        streak: data.user.streak || 0,
+        avatar: MOCK_USER.avatar,
+        feedbackLanguage: 'en',
+        isDemo: true
+      };
+
+      setUser(demoUser);
+      storageService.saveCurrentUser(demoUser);
+      storageService.saveProfile(demoUser, demoUser.id);
+      return demoUser;
+    } catch (err) {
+      console.warn('[AuthContext] Demo login backend offline fallback:', err);
+      // Offline fallback
+      const fallbackUser = {
+        id: 'user-001',
+        name: 'Demo Candidate',
+        email: 'candidate@example.com',
+        targetRole: 'Machine Learning Engineer',
+        role: 'Machine Learning Engineer',
+        avatar: MOCK_USER.avatar,
+        level: 1,
+        xp: 0,
+        streak: 0,
+        feedbackLanguage: 'en'
+      };
+      setUser(fallbackUser);
+      storageService.saveCurrentUser(fallbackUser);
+      return fallbackUser;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const signup = useCallback((name, email, _password) => {
+  const signup = useCallback(async (name, email, password, targetRole) => {
     setIsLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const cleanEmail = (email || 'candidate@career-ai.dev').trim().toLowerCase();
-        const userId = `usr_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
-
-        const newUser = {
-          id: userId,
-          name: name || cleanEmail.split('@')[0].toUpperCase(),
+    try {
+      const cleanEmail = (email || '').trim().toLowerCase();
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: (name || '').trim(),
           email: cleanEmail,
-          targetRole: 'Machine Learning Engineer',
-          role: 'Machine Learning Engineer',
-          avatar: MOCK_USER.avatar,
-          xp: 0,
-          level: 1,
-          streak: 0,
-          title: 'New Candidate',
-          feedbackLanguage: 'en'
-        };
+          password,
+          target_role: targetRole || 'Machine Learning Engineer'
+        })
+      });
 
-        setUser(newUser);
-        storageService.saveCurrentUser(newUser);
-        storageService.saveProfile(newUser, userId);
-        setIsLoading(false);
-        resolve(newUser);
-      }, 300);
-    });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Registration failed. An account with this email may already exist.');
+      }
+
+      const data = await res.json();
+      storageService.setToken(data.access_token);
+
+      const newUser = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        targetRole: data.user.target_role || targetRole || 'Machine Learning Engineer',
+        role: data.user.role || targetRole || 'Machine Learning Engineer',
+        xp: 0,
+        level: 1,
+        streak: 0,
+        avatar: MOCK_USER.avatar,
+        feedbackLanguage: 'en'
+      };
+
+      setUser(newUser);
+      storageService.saveCurrentUser(newUser);
+      storageService.saveProfile(newUser, newUser.id);
+      return newUser;
+    } catch (err) {
+      console.error('[AuthContext] Registration error:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    storageService.remove(STORAGE_KEYS.AUTH_USER);
+  const logout = useCallback(async () => {
+    try {
+      const headers = storageService.getAuthHeaders();
+      if (headers.Authorization) {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers
+        }).catch(() => {});
+      }
+    } finally {
+      setUser(null);
+      storageService.removeToken();
+      storageService.remove(STORAGE_KEYS.AUTH_USER);
+    }
   }, []);
 
   const addXP = useCallback((amount) => {
@@ -145,11 +223,13 @@ export function AuthProvider({ children }) {
       const newXP = (prev.xp || 0) + amount;
       // 0-499 XP -> Level 1, 500-999 XP -> Level 2, 1000-1499 XP -> Level 3
       const computedLevel = Math.floor(newXP / 500) + 1;
-      return {
+      const updated = {
         ...prev,
         xp: newXP,
         level: Math.max(prev.level || 1, computedLevel)
       };
+      storageService.saveCurrentUser(updated);
+      return updated;
     });
   }, []);
 
@@ -169,7 +249,6 @@ export function AuthProvider({ children }) {
       return updated;
     });
   }, []);
-
 
   return (
     <AuthContext.Provider

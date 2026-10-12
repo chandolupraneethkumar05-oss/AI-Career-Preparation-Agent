@@ -7,7 +7,13 @@ export const profileApi = {
   async getProfile(userId = null) {
     try {
       const effectiveId = resolveUserId(userId);
-      const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`);
+      const headers = {
+        'Accept': 'application/json',
+        ...storageService.getAuthHeaders()
+      };
+      const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`, {
+        headers
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err) {
@@ -19,9 +25,14 @@ export const profileApi = {
   async updateProfile(profileData, userId = null) {
     try {
       const effectiveId = resolveUserId(userId);
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...storageService.getAuthHeaders()
+      };
       const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(profileData)
       });
 

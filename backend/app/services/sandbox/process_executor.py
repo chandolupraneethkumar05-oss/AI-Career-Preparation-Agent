@@ -91,6 +91,15 @@ class ProcessSandboxExecutor(SandboxExecutor):
         max_bytes = job.limits.max_output_bytes
 
         try:
+            # Validate supported language
+            if job.language.lower() not in ("python", "python3", "py"):
+                return ExecutionResult(
+                    job_id=job.id,
+                    status=ExecutionStatus.RUNTIME_ERROR,
+                    error_message=f"Language '{job.language}' is not supported by the local process executor. Only Python 3 is currently supported.",
+                    executor_type="process"
+                )
+
             # Check basic code length / size constraints
             if len(job.code.encode("utf-8")) > job.limits.max_input_bytes:
                 return ExecutionResult(

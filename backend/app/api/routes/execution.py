@@ -23,7 +23,7 @@ class ExecutionSubmitRequest(BaseModel):
     code: str = Field(..., description="Candidate source code")
     challenge_id: Optional[str] = Field(None, description="Optional Skill Arena challenge ID")
     language: str = Field("python", description="Programming language (default: python)")
-    preferred_mode: Optional[str] = Field(None, description="docker | firecracker | process")
+    preferred_mode: Optional[str] = Field(None, description="docker | process")
 
 
 @router.get("/capabilities")
@@ -31,7 +31,6 @@ def get_execution_capabilities():
     """
     Reports host sandbox availability:
     - Docker container sandbox status
-    - Firecracker micro-VM support (Linux/KVM prerequisites)
     - Local isolated process sandbox status
     """
     return default_sandbox_manager.get_system_capabilities()

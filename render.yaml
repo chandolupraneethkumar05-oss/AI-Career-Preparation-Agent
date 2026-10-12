@@ -13,4 +13,4 @@ services:
       - key: PORT
         value: 8000
       - key: DATABASE_URL
-        value: sqlite:///backend/career_agent.db
+        value: sqlite:////app/data/career_agent.db

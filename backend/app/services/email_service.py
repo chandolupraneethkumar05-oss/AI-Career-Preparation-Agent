@@ -332,12 +332,125 @@ class SMTPEmailService(BaseEmailService):
             }
 
 
+class ResendEmailService(BaseEmailService):
+    """
+    Live transactional email service powered by Resend REST API.
+    Sends responsive HTML streak reminders and practice notifications.
+    """
+
+    def __init__(self, api_key: Optional[str] = None, sender: Optional[str] = None):
+        self.api_key = api_key or os.getenv("RESEND_API_KEY")
+        self.sender = sender or os.getenv("RESEND_FROM", "onboarding@resend.dev")
+
+    def send_email(
+        self,
+        recipient_email: str,
+        candidate_name: str,
+        target_role: str,
+        current_streak: int,
+        drill_title: str,
+        drill_prompt: str,
+        primary_skill: str,
+        subject: Optional[str] = None,
+        cta_url: str = "http://localhost:5173/daily-challenge"
+    ) -> Dict[str, Any]:
+        now_iso = datetime.utcnow().isoformat() + "Z"
+        computed_subject = subject or f"🎯 Your Daily {primary_skill} Drill is Ready — Keep Your Streak Alive!"
+        html_content = self.build_html_template(
+            candidate_name=candidate_name,
+            target_role=target_role,
+            current_streak=current_streak,
+            drill_title=drill_title,
+            drill_prompt=drill_prompt,
+            primary_skill=primary_skill,
+            cta_url=cta_url
+        )
+        plain_text = (
+            f"Hi {candidate_name},\n\n"
+            f"Your daily {primary_skill} drill is ready: {drill_title}\n\n"
+            f"Prompt: {drill_prompt}\n\n"
+            f"Practice now: {cta_url}"
+        )
+
+        if not self.api_key:
+            logger.warning("Resend API key missing; falling back to simulated mode.")
+            return {
+                "status": "simulated",
+                "delivered": True,
+                "email_sent": False,
+                "mode": "resend_simulated",
+                "recipient": recipient_email,
+                "subject": computed_subject,
+                "bodyPreview": plain_text[:200] + "...",
+                "htmlContent": html_content,
+                "timestamp": now_iso,
+                "explanation": "Simulated (no RESEND_API_KEY)"
+            }
+
+        try:
+            import urllib.request
+            import json
+
+            url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": "CareerPrep/1.0"
+            }
+            payload = {
+                "from": self.sender,
+                "to": [recipient_email],
+                "subject": computed_subject,
+                "html": html_content
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                email_id = data.get("id", "resend_ok")
+                logger.info(f"Successfully sent Resend email to {recipient_email} (ID: {email_id})")
+                return {
+                    "status": "sent",
+                    "delivered": True,
+                    "email_sent": True,
+                    "mode": "resend",
+                    "id": email_id,
+                    "recipient": recipient_email,
+                    "subject": computed_subject,
+                    "bodyPreview": plain_text[:200] + "...",
+                    "htmlContent": html_content,
+                    "timestamp": now_iso,
+                    "explanation": f"Delivered via Resend REST API (ID: {email_id})"
+                }
+        except Exception as exc:
+            logger.error(f"Resend email dispatch failed: {exc}")
+            return {
+                "status": "failed",
+                "delivered": False,
+                "email_sent": False,
+                "mode": "resend",
+                "recipient": recipient_email,
+                "subject": computed_subject,
+                "bodyPreview": plain_text[:200] + "...",
+                "htmlContent": html_content,
+                "timestamp": now_iso,
+                "explanation": f"Resend dispatch failed: {str(exc)}"
+            }
+
+
 def get_email_service() -> BaseEmailService:
     """Factory selecting EmailService implementation based on environment configuration."""
-    mode = os.getenv("EMAIL_MODE", "development").strip().lower()
+    mode = os.getenv("EMAIL_MODE", "").strip().lower()
+    has_resend = bool(os.getenv("RESEND_API_KEY"))
     has_smtp = bool(os.getenv("SMTP_HOST") and os.getenv("SMTP_USER") and os.getenv("SMTP_PASSWORD"))
 
-    if mode == "smtp" and has_smtp:
+    if mode == "resend" or (not mode and has_resend):
+        return ResendEmailService()
+    if (mode == "smtp" or not mode) and has_smtp:
         return SMTPEmailService()
     return DevelopmentEmailService()
 

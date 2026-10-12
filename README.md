@@ -1,11 +1,11 @@
 # AI Career Preparation Agent 🤖🎯
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB.svg?logo=react&logoColor=black)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Tests](https://img.shields.io/badge/Tests-Passing%20(52%2F52)-brightgreen.svg)]()
+[![Docker](https://img.shields.io/badge/Deployment-Docker%20Compose-2496ED.svg?logo=docker&logoColor=white)](DEPLOYMENT.md)
+[![Tests](https://img.shields.io/badge/Tests-Passing%20(83%2F83)-brightgreen.svg)]()
 [![Status](https://img.shields.io/badge/Status-Production--Ready%20Platform-success.svg)]()
 
 > **An autonomous, full-stack career preparation agent** that unifies ATS resume parsing, multi-turn adaptive generative mock interviews, competency radar profiling, Retrieval-Augmented Generation (RAG) curriculum grounding, and proactive retention scheduling into a single closed-loop career acceleration platform.
@@ -36,7 +36,6 @@ The **AI Career Preparation Agent** resolves these challenges through an **auton
 ### 2. Remote Multi-Tier Secure Sandbox Code Execution
 - **Multi-Tier Isolation Architecture:**
   - *Docker Sandbox (`DockerSandboxExecutor`):* Containerized execution with `--read-only` root filesystem, dropped capabilities (`ALL`), unprivileged user (`1000:1000`), network isolation (`none`), and memory limits (256MB).
-  - *Firecracker Micro-VM (`FirecrackerSandboxExecutor`):* Hypervisor-level hardware virtualization utilizing Linux KVM for multi-tenant kernel boundary security.
   - *Local Process Jail (`ProcessSandboxExecutor`):* Ephemeral directory sandbox with strict secret scrubbing (stripping `GEMINI_API_KEY`, `DATABASE_URL`, `JWT_SECRET`), bounded standard streams, hard process kill timeouts (3s), and resource quotas.
 - **Server-Side Hidden Test Case Evaluation:** Automatically compiles solutions against private unit tests and assert constraints without exposing test inputs or expected outputs to untrusted clients.
 - **Zero Server-Side `exec()` / `eval()`:** Untrusted user code is strictly prohibited from executing within the FastAPI server process, guaranteeing immunity against remote code execution (RCE) vulnerabilities.
@@ -144,7 +143,7 @@ flowchart TD
 | Layer | Technologies | Purpose |
 |---|---|---|
 | **Frontend Framework** | React 19, Vite 8 | Ultra-responsive SPA with rapid Hot Module Replacement |
-| **Code Sandbox Isolation** | Subprocess Jail, Docker, Firecracker | Isolated code execution, memory limits (256MB), timeout kill (3s), secret scrubbing |
+| **Code Sandbox Isolation** | Docker Containers, Subprocess Jail | Isolated containerized execution, memory limits (256MB), timeout kill (3s), secret scrubbing |
 | **Styling & Theming** | Tailwind CSS v4, Lucide Icons | Glassmorphic aesthetics across 6 configurable color palettes |
 | **Data Visualizations** | Custom SVG Components | Zero-dependency, accessible radar charts, score rings, and timelines |
 | **Backend API** | FastAPI, Uvicorn, Python 3.10+ | High-throughput asynchronous REST microservices |
@@ -194,7 +193,7 @@ AI-Career-Preparation-Agent/
 │   │   │   ├── pii_detection_service.py # Pre-flight regex PII scrubber
 │   │   │   ├── resume_analysis_service.py # ATS scoring & keyword analysis
 │   │   │   ├── resume_extractor.py  # Safe multi-format document parser
-│   │   │   ├── sandbox/             # Docker, Firecracker & Process sandbox executors
+│   │   │   ├── sandbox/             # Docker container & isolated Process sandbox executors
 │   │   │   └── scheduler.py         # Asyncio background email reminder worker
 │   │   └── main.py                  # FastAPI application entrypoint with security headers
 │   ├── career_agent.db              # SQLite persistent database file
@@ -232,7 +231,30 @@ AI-Career-Preparation-Agent/
 
 ---
 
-### Method A: Single-Click Launcher (Windows)
+### Method 1: Production Docker Compose Deployment (Recommended)
+
+Run the full production stack (Frontend Nginx reverse proxy + Backend FastAPI + Persistent Volumes):
+
+```bash
+# 1. Clone repository
+git clone https://github.com/chandolupraneethkumar05-oss/AI-Career-Preparation-Agent.git
+cd AI-Career-Preparation-Agent
+
+# 2. Copy and configure environment variables
+cp .env.example .env
+
+# 3. Build and launch services in detached mode
+docker compose up -d --build
+```
+- **Web Application:** `http://localhost/`
+- **Interactive API Docs:** `http://localhost:8000/docs`
+- **Health Check:** `http://localhost/health` or `http://localhost:8000/api/health`
+
+For complete backup, volume management, and production configuration details, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+---
+
+### Method 2: Windows Single-Click Launcher
 
 Simply double-click `start_project.bat` in the repository root. This script:
 1. Validates Python and Node.js environments.
@@ -243,11 +265,11 @@ Simply double-click `start_project.bat` in the repository root. This script:
 
 ---
 
-### Method B: Manual Step-by-Step Setup
+### Method 3: Manual Step-by-Step Local Setup
 
 #### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/AI-Career-Preparation-Agent.git
+git clone https://github.com/chandolupraneethkumar05-oss/AI-Career-Preparation-Agent.git
 cd AI-Career-Preparation-Agent
 ```
 
@@ -331,13 +353,15 @@ The repository includes a comprehensive automated test suite covering all critic
 ```bash
 pytest tests/ -v
 ```
-*Expected Output:* **33 passed** across Multi-tier sandbox code execution, Multilingual localization, Community experiences, Career journey lifecycles, Weekly reports, and Security probes.
+*Expected Output:* **67 passed** across Authentication & tenant isolation, Neural transcription, Multi-tier sandbox code execution, Multilingual localization, Community experiences, Career journey lifecycles, Weekly reports, and Security probes.
 
 ### Run Generative Interview Engine Test
 ```bash
 python tests/test_generative_interview_engine.py
 ```
 *Expected Output:* **16/16 PASSED (100% Success Rate)** validating multi-turn sessions, 5-axis evaluations, adaptive difficulty scaling, tenant isolation, and closed-loop XP/gamification sync.
+
+**Total Verified Backend Tests:** **83/83 Passed (100%)**
 
 ### Run Frontend Verification
 ```bash
@@ -368,7 +392,7 @@ npm run lint
 
 ## 🗺️ Project Roadmap & Capabilities
 
-- [x] **Sandboxed Code Execution Engine:** Remote multi-tier sandbox architecture (Docker, Firecracker micro-VM detection, Process jail) with resource limits, secret scrubbing, and hidden test case evaluation.
+- [x] **Sandboxed Code Execution Engine:** Remote multi-tier sandbox architecture (Docker container isolation, Process jail) with resource limits, secret scrubbing, and hidden test case evaluation.
 - [x] **Deterministic ATS Resume Parser:** Multi-format document parser (PDF/DOCX/TXT) with 5-tier rubric scoring and skill gap synchronization.
 - [x] **Multilingual AI Feedback Engine:** Preserves technical terminology in English while delivering feedback in Telugu and Hindi.
 - [x] **Community Peer Interview Archive:** Community-contributed interview questions with deterministic PII sanitization and moderation pipeline.

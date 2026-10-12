@@ -15,7 +15,6 @@ from .models import (
 )
 from .base_executor import SandboxExecutor
 from .docker_executor import DockerSandboxExecutor
-from .firecracker_executor import FirecrackerSandboxExecutor
 from .process_executor import ProcessSandboxExecutor
 
 logger = logging.getLogger("sandbox.manager")
@@ -29,7 +28,6 @@ class SandboxManager:
 
     def __init__(self):
         self.docker_executor = DockerSandboxExecutor()
-        self.firecracker_executor = FirecrackerSandboxExecutor()
         self.process_executor = ProcessSandboxExecutor()
         self._jobs: Dict[str, ExecutionJob] = {}
         self._results: Dict[str, ExecutionResult] = {}
@@ -37,21 +35,14 @@ class SandboxManager:
     def get_system_capabilities(self) -> Dict[str, Any]:
         """Inspects all execution backends and returns host capability telemetry."""
         docker_caps = self.docker_executor.get_capabilities()
-        firecracker_caps = self.firecracker_executor.get_capabilities()
         process_caps = self.process_executor.get_capabilities()
 
         # Determine active default executor
-        if docker_caps["available"]:
-            default_exec = "docker"
-        elif firecracker_caps["available"]:
-            default_exec = "firecracker"
-        else:
-            default_exec = "process"
+        default_exec = "docker" if docker_caps["available"] else "process"
 
         return {
             "default_executor": default_exec,
             "docker": docker_caps,
-            "firecracker": firecracker_caps,
             "process": process_caps
         }
 
@@ -59,15 +50,12 @@ class SandboxManager:
         """Selects appropriate sandbox executor based on preference and host availability."""
         mode = (preferred_mode or "").lower()
 
-        if mode == "firecracker":
-            if self.firecracker_executor.is_available():
-                return self.firecracker_executor
-            logger.info("Firecracker requested but unavailable on host. Checking Docker.")
-
         if mode in ("docker", "container"):
             if self.docker_executor.is_available():
                 return self.docker_executor
-            logger.info("Docker requested but daemon is not reachable. Falling back to Process sandbox.")
+            raise RuntimeError(
+                "Docker container sandbox was requested, but the Docker daemon is unreachable or not installed. Host execution is not permitted when container isolation is requested."
+            )
 
         # Default fallback hierarchy
         if self.docker_executor.is_available():
@@ -102,7 +90,18 @@ class SandboxManager:
     ) -> ExecutionResult:
         """Synchronously executes the job and stores the result."""
         job.status = ExecutionStatus.RUNNING
-        executor = self.get_executor(preferred_mode)
+        try:
+            executor = self.get_executor(preferred_mode)
+        except RuntimeError as mode_err:
+            res = ExecutionResult(
+                job_id=job.id,
+                status=ExecutionStatus.SANDBOX_ERROR,
+                error_message=str(mode_err),
+                executor_type="docker"
+            )
+            job.status = res.status
+            self._results[job.id] = res
+            return res
 
         try:
             result = executor.execute(job, test_cases=test_cases)

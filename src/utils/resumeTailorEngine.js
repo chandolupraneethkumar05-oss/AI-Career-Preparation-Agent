@@ -1,74 +1,82 @@
 /**
  * Autonomous Resume Tailoring & Scholarly Document Engine
- * 
+ *
  * Re-engineers resume bullet points using Google's XYZ formula:
  * "Accomplished [X] as measured by [Y] by doing [Z]"
- * and seamlessly incorporates missing ATS keywords.
+ * and incorporates missing ATS keywords with clear human-review markers.
+ *
+ * Never fabricates candidate identity or unverified business metrics.
  */
+
+import { storageService } from './storage/storageService';
 
 export const resumeTailorEngine = {
   /**
-   * Transforms raw resume text and ATS findings into an optimized, keyword-calibrated dossier
+   * Transforms candidate resume text and ATS findings into an optimized, keyword-calibrated dossier
    */
-  tailorResume({ rawResumeText, missingKeywords = [], matchedKeywords = [], targetRole = 'Machine Learning Engineer', currentScore = 68 }) {
-    const missing = missingKeywords && missingKeywords.length > 0 ? missingKeywords : ['Docker', 'AWS SageMaker', 'Distributed Training', 'SQL'];
-    const matched = matchedKeywords && matchedKeywords.length > 0 ? matchedKeywords : ['Python', 'PyTorch', 'Scikit-learn', 'FastAPI'];
+  tailorResume({
+    rawResumeText = '',
+    missingKeywords = [],
+    matchedKeywords = [],
+    targetRole = 'Machine Learning Engineer',
+    currentScore = 68
+  }) {
+    const user = storageService.getCurrentUser() || {};
+    const candidateName = user.name || 'Candidate';
+    const candidateEmail = user.email || 'candidate@example.com';
 
-    // Original vs Re-engineered bullet points demonstrating XYZ improvements
-    const bulletTransformations = [
-      {
-        id: 'b1',
-        original: 'Built distributed deep learning pipelines in Python and PyTorch for model training.',
-        tailored: `Architected distributed deep learning pipelines utilizing Python, PyTorch, and ${missing[0] || 'Docker'} containerization, accelerating model training throughput by 42% across multi-node GPU clusters.`,
-        xyzFormula: {
-          x: 'Architected distributed deep learning training pipelines',
-          y: 'Accelerating model training throughput by 42%',
-          z: `Utilizing Python, PyTorch, and ${missing[0] || 'Docker'} containerization`
-        },
-        injectedKeyword: missing[0] || 'Docker'
-      },
-      {
-        id: 'b2',
-        original: 'Deployed ML models with FastAPI and optimized latency.',
-        tailored: `Productionized enterprise ML inference services leveraging FastAPI and ${missing[1] || 'AWS SageMaker'}, reducing p99 response latency from 180ms to 48ms under high-throughput client load.`,
-        xyzFormula: {
-          x: 'Productionized enterprise ML inference services',
-          y: 'Reducing p99 response latency from 180ms to 48ms',
-          z: `Leveraging FastAPI and ${missing[1] || 'AWS SageMaker'}`
-        },
-        injectedKeyword: missing[1] || 'AWS SageMaker'
-      },
-      {
-        id: 'b3',
-        original: 'Worked with team on data feature engineering using pandas and numpy.',
-        tailored: `Streamlined cross-functional feature extraction pipelines with pandas, NumPy, and ${missing[2] || 'SQL'} data warehousing, processing 5M+ daily event records with 99.9% uptime reliability.`,
-        xyzFormula: {
-          x: 'Streamlined cross-functional feature extraction pipelines',
-          y: 'Processing 5M+ daily event records with 99.9% reliability',
-          z: `With pandas, NumPy, and ${missing[2] || 'SQL'} data warehousing`
-        },
-        injectedKeyword: missing[2] || 'SQL'
-      },
-      {
-        id: 'b4',
-        original: 'Implemented fraud detection classification algorithms.',
-        tailored: `Engineered ensemble fraud detection models incorporating ${missing[3] || 'Distributed Training'} paradigms, boosting detection precision by 28% and preventing an estimated $420K in monthly fraudulent transactions.`,
-        xyzFormula: {
-          x: 'Engineered ensemble fraud detection classification models',
-          y: 'Boosting detection precision by 28% and preventing $420K in monthly fraud',
-          z: `Incorporating ${missing[3] || 'Distributed Training'} paradigms`
-        },
-        injectedKeyword: missing[3] || 'Distributed Training'
-      }
-    ];
+    const missing = (missingKeywords && missingKeywords.length > 0)
+      ? missingKeywords
+      : ['Docker', 'AWS', 'SQL', 'CI/CD'];
+    const matched = (matchedKeywords && matchedKeywords.length > 0)
+      ? matchedKeywords
+      : ['Python', 'Problem Solving', 'Git'];
 
-    const projectedScore = Math.min(96, Math.max(currentScore + 26, 92));
+    // 1. Extract actual candidate bullet points or sentences from rawResumeText if present
+    const extractedLines = (rawResumeText || '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 20 && (line.startsWith('-') || line.startsWith('â€¢') || line.startsWith('*') || /^[A-Z]/.test(line)))
+      .map(line => line.replace(/^[-â€¢*]\s*/, ''));
+
+    const baseBullets = extractedLines.length >= 2
+      ? extractedLines.slice(0, 4)
+      : [
+          `Engineered core ${targetRole} workflows and algorithms for high-throughput data processing.`,
+          `Designed and deployed robust software services with structured monitoring and testing.`,
+          `Collaborated across engineering teams to refine feature extraction and system scalability.`,
+          `Implemented automated validation pipelines to improve reliability and error recovery.`
+        ];
+
+    // 2. Re-engineer candidate points using the Google XYZ formula:
+    // "Accomplished [X] as measured by [Y] by doing [Z]"
+    const bulletTransformations = baseBullets.map((orig, idx) => {
+      const keywordToInject = missing[idx % missing.length] || 'Production Testing';
+      const tailored = `Optimized and scaled ${orig.replace(/\.$/, '')} utilizing ${keywordToInject} [Verify: fill in your specific tooling], improving execution performance [Verify: insert your measured % or latency metric] by establishing automated validation gates.`;
+
+      return {
+        id: `b${idx + 1}`,
+        original: orig,
+        tailored,
+        xyzFormula: {
+          x: `Optimized and scaled ${orig.replace(/\.$/, '')}`,
+          y: '[Insert verified performance metric, e.g. % throughput gain or latency reduction]',
+          z: `Utilizing ${keywordToInject} containerization/infrastructure practices`
+        },
+        injectedKeyword: keywordToInject,
+        humanReviewNote: 'Verify that the tooling, architectural scope, and metrics accurately reflect your verified contributions.'
+      };
+    });
+
+    const projectedScore = Math.min(95, Math.max(currentScore + 18, 85));
     const newlyAddedKeywords = bulletTransformations.map(b => b.injectedKeyword);
     const allOptimizedSkills = Array.from(new Set([...matched, ...newlyAddedKeywords]));
 
-    const executiveSummary = `Results-oriented ${targetRole} with proven expertise in architecting resilient, production-scale predictive systems. Specialized in ${allOptimizedSkills.slice(0, 5).join(', ')}. Demonstrated track record of optimizing latency, scaling distributed pipelines, and delivering quantifiable business impact through disciplined engineering.`;
+    const executiveSummary = `Results-focused ${targetRole} with hands-on experience in building scalable, reliable technical systems. Core competencies include ${allOptimizedSkills.slice(0, 6).join(', ')}. Demonstrated ability to apply structured engineering methodologies, optimize performance, and deliver measurable business value.`;
 
     return {
+      candidateName,
+      candidateEmail,
       targetRole,
       baselineScore: currentScore,
       projectedScore,
@@ -77,7 +85,10 @@ export const resumeTailorEngine = {
       bulletTransformations,
       allOptimizedSkills,
       newlyAddedKeywords,
+      humanReviewNotice: 'All tailored bullets use the Google XYZ framework. You must verify and customize the bracketed placeholders with your actual measured impact before submitting.',
       fullTailoredMarkdown: this.generateMarkdownDocument({
+        candidateName,
+        candidateEmail,
         targetRole,
         executiveSummary,
         skills: allOptimizedSkills,
@@ -86,9 +97,11 @@ export const resumeTailorEngine = {
     };
   },
 
-  generateMarkdownDocument({ targetRole, executiveSummary, skills, bullets }) {
-    return `# ALEX RIVERA
-**${targetRole.toUpperCase()}** | San Francisco, CA | alex.rivera@email.com | (555) 019-2834 | linkedin.com/in/alex-rivera
+  generateMarkdownDocument({ candidateName, candidateEmail, targetRole, executiveSummary, skills, bullets }) {
+    return `# ${candidateName.toUpperCase()}
+**${targetRole.toUpperCase()}** | ${candidateEmail} | [Candidate Contact Details & Portfolio / LinkedIn]
+
+> **Human Review Notice:** The bullet points below have been formatted using Google's XYZ formula ("Accomplished [X] as measured by [Y] by doing [Z]"). Replace all [Verify: ...] markers with your genuine, verified project numbers before submitting to employers.
 
 ---
 
@@ -98,25 +111,19 @@ ${executiveSummary}
 ---
 
 ## CORE TECHNICAL COMPETENCIES
-${skills.join('  •  ')}
+${skills.join('  â€¢  ')}
 
 ---
 
-## PROFESSIONAL EXPERIENCE
-### TechCorp Inc. — Senior ${targetRole}
-*2022 – Present | San Francisco, CA*
-${bullets.map(b => `- ${b.tailored}`).join('\n')}
-
-### Innovate AI Labs — Machine Learning Engineer
-*2020 – 2022 | Austin, TX*
-- Built real-time telemetry processing pipelines handling 100K+ concurrent signals with automated anomaly triage.
-- Spearheaded modular model evaluation harness reducing deployment verification cycles from 3 days to 4 hours.
+## RE-ENGINEERED KEY BULLET POINTS (XYZ FORMULA)
+${bullets.map(b => `- **Tailored:** ${b.tailored}\n  - *Original draft:* "${b.original}"\n  - *Target Keyword Injected:* \`${b.injectedKeyword}\``).join('\n\n')}
 
 ---
 
-## EDUCATION & CREDENTIALS
-**Bachelor of Science in Computer Science**
-University of California, Berkeley | Dean's Honors List
+## VERIFICATION CHECKLIST BEFORE SUBMITTING
+- [ ] Every metric (% throughput, latency, reliability) corresponds to my actual contribution.
+- [ ] Every mentioned technology (${bullets.map(b => b.injectedKeyword).join(', ')}) is one I am prepared to discuss in depth during technical interviews.
+- [ ] Dates, titles, and team scopes are accurate.
 `.trim();
   },
 
@@ -134,7 +141,7 @@ University of California, Berkeley | Dean's Honors List
 <!DOCTYPE html>
 <html>
 <head>
-  <title>${tailoredData.targetRole} — Curriculum Vitae</title>
+  <title>${tailoredData.candidateName} â€” ${tailoredData.targetRole} CV</title>
   <style>
     @page { size: A4; margin: 20mm 15mm; }
     body {
@@ -157,6 +164,14 @@ University of California, Berkeley | Dean's Honors List
       margin-bottom: 12px;
       color: #333;
     }
+    .notice-box {
+      background: #fdfaf3;
+      border: 1px solid #e2d9c8;
+      padding: 8px 12px;
+      font-size: 9pt;
+      margin-bottom: 14px;
+      font-style: italic;
+    }
     hr {
       border: none;
       border-top: 1px solid #999;
@@ -176,18 +191,6 @@ University of California, Berkeley | Dean's Honors List
       margin: 6px 0;
       line-height: 1.6;
     }
-    .job-title {
-      font-weight: bold;
-      display: flex;
-      justify-content: space-between;
-      font-size: 10.5pt;
-    }
-    .job-meta {
-      font-style: italic;
-      font-size: 9.5pt;
-      color: #444;
-      margin-bottom: 4px;
-    }
     ul {
       margin: 4px 0 10px 18px;
       padding: 0;
@@ -200,9 +203,13 @@ University of California, Berkeley | Dean's Honors List
   </style>
 </head>
 <body>
-  <h1>ALEX RIVERA</h1>
+  <h1>${tailoredData.candidateName.toUpperCase()}</h1>
   <div class="header-sub">
-    ${tailoredData.targetRole} &bull; San Francisco, CA &bull; alex.rivera@email.com &bull; (555) 019-2834 &bull; linkedin.com/in/alex-rivera
+    ${tailoredData.targetRole} &bull; ${tailoredData.candidateEmail} &bull; Candidate Portfolio & Credentials
+  </div>
+
+  <div class="notice-box">
+    <strong>Human Verification Notice:</strong> The points below have been tailored using Google's XYZ formula. Verify all tooling and metrics against your actual project experience before submitting to prospective employers.
   </div>
 
   <h2>Professional Summary</h2>
@@ -210,35 +217,13 @@ University of California, Berkeley | Dean's Honors List
 
   <h2>Core Technical Competencies</h2>
   <div class="skills-block">
-    <strong>Languages & Frameworks:</strong> ${tailoredData.allOptimizedSkills.join(', ')}
+    ${tailoredData.allOptimizedSkills.join(', ')}
   </div>
 
-  <h2>Professional Experience</h2>
-  <div class="job-title">
-    <span>Senior ${tailoredData.targetRole} — TechCorp Systems</span>
-    <span>2022 – Present</span>
-  </div>
-  <div class="job-meta">San Francisco, CA</div>
+  <h2>Targeted Technical Contributions</h2>
   <ul>
     ${tailoredData.bulletTransformations.map(b => `<li>${b.tailored}</li>`).join('')}
   </ul>
-
-  <div class="job-title">
-    <span>Machine Learning Engineer — Innovate AI Labs</span>
-    <span>2020 – 2022</span>
-  </div>
-  <div class="job-meta">Austin, TX</div>
-  <ul>
-    <li>Engineered streaming telemetry analysis pipelines ingesting 100K+ events per second with sub-50ms windowed aggregations.</li>
-    <li>Architected automated model validation and canary testing harness, cutting pre-deployment verification cycles from 72 to 4 hours.</li>
-  </ul>
-
-  <h2>Education</h2>
-  <div class="job-title">
-    <span>Bachelor of Science in Computer Science</span>
-    <span>University of California, Berkeley</span>
-  </div>
-  <div class="job-meta">Dean's Honors List &bull; Magna Cum Laude</div>
 
   <script>
     window.onload = function() {

@@ -16,6 +16,7 @@ import {
 import GlassCard from '../GlassCard';
 import Badge from '../Badge';
 import { interviewApi } from '../../services/interviewApi';
+import { storageService } from '../../utils/storage/storageService';
 
 /**
  * RecordingReview Component
@@ -69,6 +70,10 @@ export default function RecordingReview({
     if (!url.includes('user_id=') && uid) {
       url += `${url.includes('?') ? '&' : '?'}user_id=${encodeURIComponent(uid)}`;
     }
+    const token = storageService.getToken();
+    if (token && !url.includes('token=')) {
+      url += `${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    }
     return url;
   };
 
@@ -106,11 +111,37 @@ export default function RecordingReview({
       return;
     }
 
-    // 2. Secondary: streamUrl from API response or sessionId fallback
-    const targetUrl = resolveStreamUrl(streamUrl, sessionId, userId);
-    if (targetUrl) {
-      setMediaSrc(targetUrl);
+    // 2. Secondary: request short-lived streaming ticket to avoid long-lived credentials in URLs
+    let isCancelled = false;
+    if (sessionId) {
+      interviewApi.getRecordingStreamTicket(sessionId, userId).then(ticketData => {
+        if (isCancelled) return;
+        if (ticketData?.stream_url) {
+          let ticketUrl = ticketData.stream_url;
+          if (ticketUrl.includes(':8000/api/')) {
+            ticketUrl = '/api/' + ticketUrl.split(':8000/api/')[1];
+          }
+          setMediaSrc(ticketUrl);
+        } else {
+          const fallbackUrl = resolveStreamUrl(streamUrl, sessionId, userId);
+          if (fallbackUrl) setMediaSrc(fallbackUrl);
+        }
+      }).catch(() => {
+        if (!isCancelled) {
+          const fallbackUrl = resolveStreamUrl(streamUrl, sessionId, userId);
+          if (fallbackUrl) setMediaSrc(fallbackUrl);
+        }
+      });
+    } else {
+      const targetUrl = resolveStreamUrl(streamUrl, sessionId, userId);
+      if (targetUrl) {
+        setMediaSrc(targetUrl);
+      }
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [streamUrl, recordedBlob, sessionId, userId]);
 
   // Video time update listener

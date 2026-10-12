@@ -22,7 +22,7 @@ class TestSecureSandbox(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn('docker', data)
-        self.assertIn('firecracker', data)
+        self.assertNotIn('firecracker', data)
         self.assertIn('process', data)
         self.assertTrue(data['process']['available'])
         self.assertEqual(data['default_executor'], 'process')
@@ -102,6 +102,21 @@ print("DB_URL:" + str(os.environ.get("DATABASE_URL")))
         data = get_res.json()
         self.assertEqual(data['job_id'], job_id)
         self.assertIn('42', data['stdout'])
+
+    def test_docker_fail_closed_when_unavailable(self):
+        """When preferred_mode='docker' is requested and Docker daemon is unavailable, host fallback is strictly blocked."""
+        from unittest.mock import patch
+        job = default_sandbox_manager.create_job(
+            user_id='test-user',
+            code='print("Should not run on host")',
+            language='python'
+        )
+        with patch.object(default_sandbox_manager.docker_executor, 'is_available', return_value=False):
+            result = default_sandbox_manager.run_job(job=job, preferred_mode='docker')
+            self.assertEqual(result.status, ExecutionStatus.SANDBOX_ERROR)
+            self.assertIn("Host execution is not permitted", result.error_message)
+            self.assertEqual(result.executor_type, "docker")
+
 
 if __name__ == '__main__':
     unittest.main()

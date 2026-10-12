@@ -19,6 +19,7 @@ from typing import Dict, Any, List, Optional
 
 from .multilingual_feedback_service import multilingual_feedback_service
 from ..languages import normalize_feedback_language, is_supported_feedback_language, get_language_display_name
+from ..evaluation.semantic_evaluator import default_semantic_evaluator
 
 
 class BaseLLMService(ABC):
@@ -1020,133 +1021,30 @@ class LocalGroundedLLMService(BaseLLMService):
         has_tradeoffs = any(t in text_lower for t in ["trade-off", "tradeoff", "however", "drawback", "advantage", "overhead", "bottleneck", "versus", "instead of", "mitigate", "prevent"])
 
         # -------------------------------------------------------------
-        # 6. Granular Scoring Calculation
+        # 6. Neural Semantic Evaluation (sentence-transformers / cosine similarity)
         # -------------------------------------------------------------
-        # Base technical accuracy calibrated by concept coverage
-        if concept_ratio >= 0.6:
-            base_tech = 82 + int(concept_ratio * 12)
-        elif concept_ratio >= 0.3:
-            base_tech = 68 + int(concept_ratio * 25)
-        else:
-            # Low concept match: check if answer provides a general definition
-            base_tech = 52 if word_count >= 15 else 42
-
-        # Completeness / Depth
-        base_comp = 40
-        if word_count >= 20:
-            base_comp += 15
-        if word_count >= 45:
-            base_comp += 15
-        if word_count >= 75:
-            base_comp += 10
-        base_comp += int(concept_ratio * 20)
-
-        # Relevance
-        base_rel = 80
-        if concept_ratio >= 0.4:
-            base_rel += 10
-        if concept_ratio >= 0.7:
-            base_rel += 5
-        if concept_ratio < 0.2:
-            base_rel = 60
-
-        # Communication
-        base_comm = 65
-        if has_structure:
-            base_comm += 12
-        if word_count >= 30 and word_count <= 220:
-            base_comm += 8
-        if has_metrics:
-            base_comm += 5
-
-        # Confidence
-        base_conf = 60
-        if has_metrics:
-            base_conf += 15
-        if has_tradeoffs:
-            base_conf += 10
-        if word_count >= 40:
-            base_conf += 8
-
-        # Bonuses for trade-offs & concrete examples
-        if has_tradeoffs:
-            base_tech += 4
-            base_comp += 5
-        if has_metrics:
-            base_tech += 3
-
-        # Clamp individual axes
-        tech_score = min(96, max(30, base_tech))
-        comp_score = min(95, max(30, base_comp))
-        rel_score = min(96, max(30, base_rel))
-        comm_score = min(95, max(30, base_comm))
-        conf_score = min(95, max(30, base_conf))
-
-        overall = int(round(
-            tech_score * 0.35 +
-            rel_score * 0.25 +
-            comm_score * 0.20 +
-            comp_score * 0.10 +
-            conf_score * 0.10
-        ))
-
-        # -------------------------------------------------------------
-        # 7. Adaptive Follow-Up Type & Next Difficulty Determination
-        # -------------------------------------------------------------
-        strengths = []
-        weaknesses = []
-
-        if concept_ratio >= 0.5 or tech_score >= 78:
-            strengths.append(f"Clear explanation of {domain_name} core mechanics.")
-        if has_structure:
-            strengths.append("Structured narrative flow with clear logical signposts.")
-        if has_tradeoffs:
-            strengths.append("Articulated engineering trade-offs and mitigation strategies.")
-        if has_metrics:
-            strengths.append("Reinforced arguments with quantifiable metrics and concrete figures.")
-        if not strengths:
-            strengths.append(f"Addressed the primary theme of the prompt on {skill}.")
-
-        if missing_concepts:
-            weaknesses.append(f"Could elaborate on {', '.join(missing_concepts[:2])}.")
-        if not has_tradeoffs:
-            weaknesses.append("Discuss alternative approaches and architectural trade-offs to show senior depth.")
-        if not has_metrics:
-            weaknesses.append("Incorporate measurable benchmarks (latency, memory overhead, accuracy delta) to elevate credibility.")
-        if comp_score < 70:
-            weaknesses.append("Expand on production edge cases, scaling limits, or failure recovery.")
-
-        # Adaptive strategy assignment:
-        if overall >= 80:
-            recommended_follow_up_type = "deeper_technical"
-            recommended_difficulty = "Advanced"
-            follow_up_needed = True
-            follow_up_reason = f"Strong answer ({overall}/100); probe advanced production architecture and scale trade-offs."
-        elif overall >= 60:
-            recommended_follow_up_type = "conceptual_probe"
-            recommended_difficulty = cur_difficulty
-            top_missing = missing_concepts[0] if missing_concepts else "practical implementation"
-            follow_up_needed = True
-            follow_up_reason = f"Solid baseline ({overall}/100); probe {top_missing}."
-        else:
-            recommended_follow_up_type = "foundational_clarification"
-            recommended_difficulty = "Beginner" if cur_difficulty == "Intermediate" else cur_difficulty
-            follow_up_needed = True
-            follow_up_reason = f"Foundational gaps detected ({overall}/100); verify core concepts before advancing."
-
-        # Feedback synthesis
-        top_focus = missing_concepts[0] if missing_concepts else "deeper trade-offs"
-        if has_tradeoffs:
-            tradeoff_phrase = "You effectively highlighted key trade-offs and mitigations. "
-        else:
-            tradeoff_phrase = f"To elevate this to an offer-winning answer, address: {top_focus}. "
-
-        feedback_en = (
-            f"Evaluation for {skill}: "
-            f"{'Demonstrated strong technical command with relevant domain concepts. ' if overall >= 80 else 'Good initial framing of the concept. '}"
-            f"{tradeoff_phrase}"
-            f"{'Including concrete metrics reinforced your delivery.' if has_metrics else 'Adding empirical metrics will significantly strengthen your impact.'}"
+        semantic_res = default_semantic_evaluator.evaluate(
+            question_text=q_text,
+            answer_text=text,
+            expected_skill=skill,
+            target_role=cur_role,
+            difficulty=cur_difficulty,
+            interview_type=interview_type
         )
+
+        tech_score = semantic_res["technical_accuracy"]
+        comp_score = semantic_res["completeness"]
+        rel_score = int(max(35, min(96, 50 + int(semantic_res.get("semantic_similarity", 0.5) * 45))))
+        comm_score = semantic_res["communication"]
+        conf_score = semantic_res["confidence"]
+        overall = semantic_res["overall_score"]
+        strengths = semantic_res["strengths"]
+        weaknesses = semantic_res["weaknesses"]
+        recommended_follow_up_type = semantic_res["recommended_follow_up"]["type"]
+        recommended_difficulty = semantic_res["recommended_follow_up"]["difficulty"]
+        follow_up_needed = True
+        follow_up_reason = semantic_res["recommended_follow_up"]["reason"]
+        feedback_en = semantic_res["actionable_feedback"]
 
         return {
             "overall_score": overall,
@@ -1996,7 +1894,16 @@ def get_llm_service() -> BaseLLMService:
     """Factory instantiating configured LLM service provider."""
     provider = os.getenv("LLM_PROVIDER", "").lower()
     
-    # Priority 1: Explicit Gemini or Gemini API keys present
+    # Priority 1: Explicit Groq provider or GROQ_API_KEY present (ultra-fast question generation)
+    if provider == "groq" or (not provider and os.getenv("GROQ_API_KEY")):
+        if os.getenv("GROQ_API_KEY"):
+            try:
+                from .groq_service import GroqLLMService
+                return GroqLLMService()
+            except Exception:
+                pass
+
+    # Priority 2: Explicit Gemini or Gemini API keys present
     if provider in ["gemini", "google"] or (not provider and (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))):
         if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
             try:
@@ -2005,7 +1912,7 @@ def get_llm_service() -> BaseLLMService:
             except Exception:
                 pass
 
-    # Priority 2: Explicit OpenAI or OpenAI API key present
+    # Priority 3: Explicit OpenAI or OpenAI API key present
     if provider in ["openai", "api"] or (not provider and os.getenv("OPENAI_API_KEY")):
         if os.getenv("OPENAI_API_KEY"):
             try:
@@ -2013,7 +1920,7 @@ def get_llm_service() -> BaseLLMService:
             except Exception:
                 pass
 
-    # Priority 3: Local grounded deterministic fallback engine
+    # Priority 4: Local grounded deterministic fallback engine
     return LocalGroundedLLMService()
 
 

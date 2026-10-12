@@ -11,7 +11,7 @@ from .models import ExecutionJob, ExecutionResult, TestCase
 class SandboxExecutor(ABC):
     """
     Abstract interface for isolated code execution backends.
-    Allows swapping execution environments (Docker, Firecracker, Process)
+    Allows swapping execution environments (Docker, Process)
     without rewriting application controllers or evaluation logic.
     """
 

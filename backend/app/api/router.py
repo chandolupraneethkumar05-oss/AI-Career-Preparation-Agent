@@ -5,6 +5,7 @@ AI Career Preparation Agent
 
 from fastapi import APIRouter
 
+from .routes.auth import router as auth_router
 from .routes.profile import router as profile_router
 from .routes.activities import router as activities_router
 from .routes.interviews import router as interviews_router
@@ -26,6 +27,7 @@ from .routes.execution import router as execution_router
 api_router = APIRouter(prefix="/api")
 
 # Register all modular domain routers
+api_router.include_router(auth_router)
 api_router.include_router(profile_router)
 api_router.include_router(activities_router)
 api_router.include_router(interviews_router)

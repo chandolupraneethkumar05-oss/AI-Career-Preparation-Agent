@@ -728,6 +728,32 @@ class InterviewEngine:
         if not interview:
             raise ValueError(f"Interview session {session_id} not found for this candidate.")
 
+        # Idempotency guard: prevent duplicate XP awards and repeated report regeneration
+        if interview.status == "completed":
+            rubric_scores = json.loads(interview.rubric_scores_json or "{}") if interview.rubric_scores_json else (interview.rubric_scores or {})
+            strengths = json.loads(interview.strengths_json or "[]") if interview.strengths_json else []
+            weaknesses = json.loads(interview.weaknesses_json or "[]") if interview.weaknesses_json else []
+            recommendations = json.loads(interview.recommendations_json or "[]") if interview.recommendations_json else []
+            return FinalInterviewReportResponse(
+                session_id=interview.id,
+                user_id=interview.user_id,
+                target_role=interview.role,
+                interview_type=interview.interview_type or "Technical",
+                difficulty=interview.difficulty,
+                overall_score=interview.overall_score or 75,
+                passed=interview.passed if interview.passed is not None else True,
+                rubric_scores=rubric_scores,
+                strengths=strengths,
+                weaknesses=weaknesses,
+                recommendations=recommendations,
+                observed_skills=[],
+                feedback_summary=interview.feedback_summary or "",
+                feedback_language=interview.feedback_language or "en",
+                fallback_notice=None,
+                next_best_action=None,
+                completed_at=interview.completed_at or interview.created_at
+            )
+
         questions = (
             db.query(InterviewQuestion)
             .filter(InterviewQuestion.session_id == session_id)

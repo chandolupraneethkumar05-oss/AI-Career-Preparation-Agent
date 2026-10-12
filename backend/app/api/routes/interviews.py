@@ -12,7 +12,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ...db.database import get_db
-from ...db.models import Interview, InterviewRecording, utc_now
+from ...db.models import Interview, InterviewRecording, User, utc_now
+from ..deps import get_current_user, get_optional_current_user, verify_user_ownership
+from ...core.security import create_stream_ticket, verify_stream_ticket
 from ...schemas.interview import (
     InterviewCreate,
     InterviewResponse,
@@ -31,6 +33,7 @@ from ...schemas.interview import (
     RecordingMetadataResponse,
     CommunicationMetricsResponse,
     RecordingSegmentItem,
+    TranscribeAudioResponse,
 )
 from ...services.interview_service import (
     save_interview,
@@ -41,6 +44,7 @@ from ...services.interview_engine import default_interview_engine
 from ...services.recording_storage_service import default_recording_storage, RecordingStorageError
 from ...services.communication_analysis_service import default_communication_service
 from ...services.skill_service import record_skill_evidence, sync_unified_skill_profile
+from ...services.transcription_service import default_transcription_service
 
 router = APIRouter(prefix="/interviews", tags=["Mock Interviews"])
 
@@ -52,7 +56,8 @@ router = APIRouter(prefix="/interviews", tags=["Mock Interviews"])
 @router.post("/start", response_model=InterviewSessionResponse)
 def start_interview_session(
     request: InterviewStartRequest,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -61,8 +66,10 @@ def start_interview_session(
     conditioned on user profile and generates personalized question #1.
     """
     try:
-        effective_user_id = request.user_id or user_id
+        effective_user_id = verify_user_ownership(request.user_id or user_id, current_user)
         return default_interview_engine.start_session(db=db, user_id=effective_user_id, request=request)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -70,15 +77,17 @@ def start_interview_session(
 @router.get("/{session_id}/current-question", response_model=InterviewSessionResponse)
 def get_current_question(
     session_id: str,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Retrieves the currently active question for an ongoing session.
     Guarantees candidate tenant isolation.
     """
+    effective_user_id = verify_user_ownership(user_id, current_user)
     try:
-        return default_interview_engine.get_current_question(db=db, user_id=user_id, session_id=session_id)
+        return default_interview_engine.get_current_question(db=db, user_id=effective_user_id, session_id=session_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -89,7 +98,8 @@ def get_current_question(
 def submit_answer(
     session_id: str,
     answer_in: SubmitAnswerRequest,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -97,8 +107,8 @@ def submit_answer(
     Communication Quality, Completeness, Confidence Indicators).
     Dynamically generates the next question or completes the interview.
     """
+    effective_user_id = verify_user_ownership(answer_in.user_id or user_id, current_user)
     try:
-        effective_user_id = answer_in.user_id or user_id
         return default_interview_engine.submit_answer(
             db=db,
             user_id=effective_user_id,
@@ -114,15 +124,17 @@ def submit_answer(
 @router.post("/{session_id}/complete", response_model=FinalInterviewReportResponse)
 def complete_interview_session(
     session_id: str,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Concludes an interview session, calculates aggregate hiring rubrics,
     synchronizes Skill Gaps, logs verified +100 XP activity, and recommends Next-Best-Action.
     """
+    effective_user_id = verify_user_ownership(user_id, current_user)
     try:
-        return default_interview_engine.complete_session(db=db, user_id=user_id, session_id=session_id)
+        return default_interview_engine.complete_session(db=db, user_id=effective_user_id, session_id=session_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -132,14 +144,16 @@ def complete_interview_session(
 @router.get("/{session_id}/detail")
 def get_interview_transcript(
     session_id: str,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Returns complete multi-turn interview transcript, per-turn answers, and 5-axis evaluations.
     """
+    effective_user_id = verify_user_ownership(user_id, current_user)
     try:
-        return default_interview_engine.get_session_detail(db=db, user_id=user_id, session_id=session_id)
+        return default_interview_engine.get_session_detail(db=db, user_id=effective_user_id, session_id=session_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -167,14 +181,41 @@ def generate_quick_answer(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/transcribe-audio", response_model=TranscribeAudioResponse)
+async def transcribe_audio_payload(
+    file: UploadFile = File(..., description="Binary audio payload (WebM, WAV, OGG, MP4)"),
+    language: Optional[str] = Form("en", description="Target speech language code (e.g. en, es, hi, te)"),
+    transcript_hint: Optional[str] = Form(None, description="Optional client-side transcript hint")
+):
+    """
+    Ingests candidate verbal audio recording and executes speech-to-text transcription
+    using the faster-whisper neural ASR engine. Filters background noise with VAD
+    and extracts structured transcript tokens for interview answer evaluation.
+    """
+    try:
+        audio_bytes = await file.read()
+        result = default_transcription_service.transcribe_bytes(
+            audio_bytes=audio_bytes,
+            filename_hint=file.filename or "audio.webm",
+            language=language,
+            transcript_hint=transcript_hint
+        )
+        return TranscribeAudioResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Audio transcription failed: {str(e)}")
+
+
+
 @router.get("", response_model=InterviewListResponse)
 def list_interviews(
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
     limit: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Retrieves all past mock interview sessions for the candidate."""
-    interviews = get_user_interviews(db, user_id=user_id, limit=limit)
+    effective_user_id = verify_user_ownership(user_id, current_user)
+    interviews = get_user_interviews(db, user_id=effective_user_id, limit=limit)
     total_count = len(interviews)
     avg_score = round(sum(i.overall_score for i in interviews) / total_count, 1) if total_count > 0 else 0.0
 
@@ -205,14 +246,16 @@ def list_interviews(
 @router.post("", response_model=InterviewResponse)
 def create_interview(
     interview_in: InterviewCreate,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Saves a completed mock interview session, awards +100 XP,
     and updates candidate skill gap models.
     """
-    interview = save_interview(db, user_id=user_id, data=interview_in)
+    effective_user_id = verify_user_ownership(interview_in.user_id or user_id, current_user)
+    interview = save_interview(db, user_id=effective_user_id, data=interview_in)
     return InterviewResponse(
         id=interview.id,
         user_id=interview.user_id,
@@ -231,11 +274,13 @@ def create_interview(
 @router.get("/{interview_id}", response_model=InterviewDetailResponse)
 def get_interview(
     interview_id: str,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Retrieves comprehensive interview question answers and AI evaluation."""
-    interview = get_interview_detail(db, user_id=user_id, interview_id=interview_id)
+    effective_user_id = verify_user_ownership(user_id, current_user)
+    interview = get_interview_detail(db, user_id=effective_user_id, interview_id=interview_id)
     if not interview:
         raise HTTPException(status_code=404, detail="Interview session not found")
 
@@ -275,6 +320,7 @@ async def save_interview_recording(
     segments_json: Optional[str] = Form("[]"),
     communication_metrics_json: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -282,9 +328,10 @@ async def save_interview_recording(
     Calculates communication metrics, saves to user-scoped storage,
     records Communication & Delivery skill evidence, and updates Unified Skill Profile.
     """
+    effective_user_id = verify_user_ownership(user_id, current_user)
     interview = (
         db.query(Interview)
-        .filter(Interview.id == session_id, Interview.user_id == user_id)
+        .filter(Interview.id == session_id, Interview.user_id == effective_user_id)
         .first()
     )
     if not interview:
@@ -329,7 +376,7 @@ async def save_interview_recording(
             file_bytes = await file.read()
             file_size_bytes = len(file_bytes)
             save_res = default_recording_storage.save_recording(
-                user_id=user_id,
+                user_id=effective_user_id,
                 session_id=session_id,
                 file_bytes=file_bytes,
                 mime_type=file.content_type or mime_type
@@ -344,7 +391,7 @@ async def save_interview_recording(
     # Check for existing recording to update or create
     existing_rec = (
         db.query(InterviewRecording)
-        .filter(InterviewRecording.session_id == session_id, InterviewRecording.user_id == user_id)
+        .filter(InterviewRecording.session_id == session_id, InterviewRecording.user_id == effective_user_id)
         .first()
     )
 
@@ -367,7 +414,7 @@ async def save_interview_recording(
         rec_id = f"rec_{uuid.uuid4().hex[:12]}"
         rec = InterviewRecording(
             id=rec_id,
-            user_id=user_id,
+            user_id=effective_user_id,
             session_id=session_id,
             storage_path=storage_path,
             recording_mode=recording_mode,
@@ -392,7 +439,7 @@ async def save_interview_recording(
     try:
         record_skill_evidence(
             db=db,
-            user_id=user_id,
+            user_id=effective_user_id,
             skill_name="Communication",
             source_type="interview",
             source_id=session_id,
@@ -402,7 +449,7 @@ async def save_interview_recording(
         )
         record_skill_evidence(
             db=db,
-            user_id=user_id,
+            user_id=effective_user_id,
             skill_name="Delivery",
             source_type="interview",
             source_id=session_id,
@@ -410,11 +457,11 @@ async def save_interview_recording(
             evidence_text=f"Clarity {comm_score}% | Pace status: {parsed_metrics.get('pace_status', 'optimal')}",
             confidence="medium"
         )
-        sync_unified_skill_profile(db=db, user_id=user_id, target_role=interview.role)
+        sync_unified_skill_profile(db=db, user_id=effective_user_id, target_role=interview.role)
     except Exception as ev_err:
         pass
 
-    stream_url = f"/api/interviews/{session_id}/recording/stream?user_id={user_id}" if rec.storage_path else None
+    stream_url = f"/api/interviews/{session_id}/recording/stream?user_id={effective_user_id}" if rec.storage_path else None
 
     return RecordingMetadataResponse(
         id=rec.id,
@@ -436,17 +483,19 @@ async def save_interview_recording(
 def get_interview_recording(
     session_id: str,
     user_id: str = Query("user-001", description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Retrieves recording metadata and timeline segments.
     Enforces strict user ownership: recording.user_id == user_id.
     """
+    effective_user_id = verify_user_ownership(user_id, current_user)
     rec = (
         db.query(InterviewRecording)
         .filter(
             InterviewRecording.session_id == session_id,
-            InterviewRecording.user_id == user_id,
+            InterviewRecording.user_id == effective_user_id,
             InterviewRecording.status != "deleted"
         )
         .first()
@@ -454,7 +503,7 @@ def get_interview_recording(
     if not rec:
         raise HTTPException(status_code=404, detail="No active recording found for this session.")
 
-    stream_url = f"/api/interviews/{session_id}/recording/stream?user_id={user_id}" if rec.storage_path else None
+    stream_url = f"/api/interviews/{session_id}/recording/stream?user_id={effective_user_id}" if rec.storage_path else None
 
     return RecordingMetadataResponse(
         id=rec.id,
@@ -472,22 +521,77 @@ def get_interview_recording(
     )
 
 
-@router.get("/{session_id}/recording/stream")
-def stream_interview_recording(
+@router.post("/{session_id}/recording/stream-ticket")
+def issue_recording_stream_ticket(
     session_id: str,
-    request: Request,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Streams the recorded video/audio media with HTTP Range support for video seeking.
-    Enforces tenant isolation: user_id must own the recording.
+    Issues a short-lived (120s), single-purpose playback ticket for HTML5 media streaming.
+    Prevents long-lived master bearer credentials from being leaked in URLs, browser history, or logs.
     """
+    effective_user_id = verify_user_ownership(user_id, current_user)
     rec = (
         db.query(InterviewRecording)
         .filter(
             InterviewRecording.session_id == session_id,
-            InterviewRecording.user_id == user_id,
+            InterviewRecording.user_id == effective_user_id,
+            InterviewRecording.status != "deleted"
+        )
+        .first()
+    )
+    if not rec:
+        raise HTTPException(status_code=404, detail="Active recording not found for this session.")
+
+    ticket = create_stream_ticket(user_id=effective_user_id, session_id=session_id, expires_in_seconds=120)
+    return {
+        "ticket": ticket,
+        "session_id": session_id,
+        "expires_in_seconds": 120,
+        "stream_url": f"/api/interviews/{session_id}/recording/stream?ticket={ticket}"
+    }
+
+
+@router.get("/{session_id}/recording/stream")
+def stream_interview_recording(
+    session_id: str,
+    request: Request,
+    ticket: Optional[str] = Query(None, description="Short-lived streaming ticket"),
+    user_id: str = Query("user-001", description="Candidate User ID"),
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Streams the recorded video/audio media with HTTP Range support for video seeking.
+    Authenticates via either:
+    1. Short-lived single-purpose stream ticket (?ticket=...)
+    2. Authenticated user session via Authorization header / query token
+    """
+    effective_user_id = None
+    if ticket:
+        ticket_user_id = verify_stream_ticket(ticket, session_id=session_id)
+        if not ticket_user_id:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired media playback ticket. Please request a new playback ticket."
+            )
+        effective_user_id = ticket_user_id
+    elif current_user:
+        effective_user_id = verify_user_ownership(user_id, current_user)
+    else:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required. Please provide a valid streaming ticket or authorization credentials.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    rec = (
+        db.query(InterviewRecording)
+        .filter(
+            InterviewRecording.session_id == session_id,
+            InterviewRecording.user_id == effective_user_id,
             InterviewRecording.status != "deleted"
         )
         .first()
@@ -495,7 +599,7 @@ def stream_interview_recording(
     if not rec or not rec.storage_path:
         raise HTTPException(status_code=404, detail="Recording media not found for streaming.")
 
-    path = default_recording_storage.get_recording_path(user_id=user_id, session_id=session_id)
+    path = default_recording_storage.get_recording_path(user_id=effective_user_id, session_id=session_id)
     if not path or not path.exists():
         raise HTTPException(status_code=404, detail="Media file on disk was not found.")
 
@@ -515,7 +619,7 @@ def stream_interview_recording(
 
     try:
         generator, s_byte, e_byte, f_size, m_type = default_recording_storage.get_stream(
-            user_id=user_id,
+            user_id=effective_user_id,
             session_id=session_id,
             start_byte=start_byte,
             end_byte=end_byte
@@ -539,6 +643,7 @@ def stream_interview_recording(
 def delete_interview_recording(
     session_id: str,
     user_id: str = Query("user-001", description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -546,16 +651,17 @@ def delete_interview_recording(
     Preserves interview evaluation scores, rubrics, and skill history.
     Enforces user ownership.
     """
+    effective_user_id = verify_user_ownership(user_id, current_user)
     rec = (
         db.query(InterviewRecording)
-        .filter(InterviewRecording.session_id == session_id, InterviewRecording.user_id == user_id)
+        .filter(InterviewRecording.session_id == session_id, InterviewRecording.user_id == effective_user_id)
         .first()
     )
     if not rec:
         raise HTTPException(status_code=404, detail="Recording not found or already deleted.")
 
     # Remove media files from user storage
-    default_recording_storage.delete_recording(user_id=user_id, session_id=session_id)
+    default_recording_storage.delete_recording(user_id=effective_user_id, session_id=session_id)
 
     # Soft delete in database
     rec.status = "deleted"
@@ -575,11 +681,13 @@ def analyze_session_communication(
     session_id: str,
     payload: Dict[str, Any],
     user_id: str = Query("user-001", description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Runs communication and verbal delivery analysis on transcripts.
     """
+    effective_user_id = verify_user_ownership(user_id, current_user)
     transcript = payload.get("transcript", "")
     duration = float(payload.get("duration", 0.0))
     is_behavioral = bool(payload.get("is_behavioral", False))

@@ -13,8 +13,9 @@ import mimetypes
 from pathlib import Path
 from typing import Optional, Dict, Any, Generator, Tuple
 
-# Base storage path inside backend/storage/recordings
-BASE_STORAGE_DIR = Path(__file__).resolve().parent.parent.parent / "storage" / "recordings"
+# Base storage path inside backend/storage/recordings or configured RECORDINGS_STORAGE_DIR
+_env_storage_dir = os.getenv("RECORDINGS_STORAGE_DIR")
+BASE_STORAGE_DIR = Path(_env_storage_dir).resolve() if _env_storage_dir else Path(__file__).resolve().parent.parent.parent / "storage" / "recordings"
 
 
 class RecordingStorageError(Exception):

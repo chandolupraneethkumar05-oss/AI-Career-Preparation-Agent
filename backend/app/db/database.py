@@ -42,6 +42,11 @@ def init_db() -> None:
     from . import models  # noqa: F401 Ensure models are registered on Base.metadata
 
     logger.info(f"Creating SQLite database tables at: {settings.DATABASE_URL}")
+    if settings.DATABASE_URL.startswith("sqlite:///"):
+        db_path_str = settings.DATABASE_URL.replace("sqlite:///", "")
+        if db_path_str and db_path_str != ":memory:":
+            from pathlib import Path
+            Path(db_path_str).parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables initialized successfully.")
 
@@ -193,9 +198,29 @@ def init_db() -> None:
             """)
             cursor = conn.exec_driver_sql("PRAGMA table_info(users)")
             user_cols = [row[1] for row in cursor.fetchall()]
-            if user_cols and "streak_recovery_used_at" not in user_cols:
-                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN streak_recovery_used_at DATETIME")
+            if user_cols:
+                if "streak_recovery_used_at" not in user_cols:
+                    conn.exec_driver_sql("ALTER TABLE users ADD COLUMN streak_recovery_used_at DATETIME")
+                if "hashed_password" not in user_cols:
+                    conn.exec_driver_sql("ALTER TABLE users ADD COLUMN hashed_password VARCHAR(256)")
                 conn.commit()
+
+            # Ensure multi-worker idempotency for daily reminders
+            try:
+                # Deduplicate any legacy pre-existing duplicates before applying unique constraint
+                conn.exec_driver_sql("""
+                    DELETE FROM reminder_logs
+                    WHERE rowid NOT IN (
+                        SELECT MIN(rowid)
+                        FROM reminder_logs
+                        GROUP BY user_id, reminder_date
+                    )
+                """)
+                conn.commit()
+                conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS uq_reminder_logs_user_date ON reminder_logs(user_id, reminder_date)")
+                conn.commit()
+            except Exception as uq_err:
+                logger.warning(f"Unique index check on reminder_logs: {uq_err}")
     except Exception as mig_exc:
         logger.warning(f"Schema migration warning: {mig_exc}")
 

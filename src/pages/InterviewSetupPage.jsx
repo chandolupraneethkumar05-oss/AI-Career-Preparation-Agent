@@ -126,9 +126,30 @@ export default function InterviewSetupPage() {
     }
   };
 
+  const [isDragging, setIsDragging] = useState(false);
+  const [resumeError, setResumeError] = useState(null);
+
+  const handleResumeFile = (file) => {
+    if (!file) return;
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+      setResumeError('Selected file exceeds the 10MB limit. Please upload a smaller document.');
+      return;
+    }
+    const validExts = ['.pdf', '.doc', '.docx', '.txt'];
+    const lowerName = file.name.toLowerCase();
+    const isValidExt = validExts.some(ext => lowerName.endsWith(ext));
+    if (!isValidExt) {
+      setResumeError('Unsupported file type. Please upload a PDF or Word document (.docx/.doc).');
+      return;
+    }
+    setResumeError(null);
+    setResumeName(file.name);
+  };
+
   const handleFileUpload = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setResumeName(e.target.files[0].name);
+      handleResumeFile(e.target.files[0]);
     }
   };
 
@@ -568,11 +589,24 @@ export default function InterviewSetupPage() {
                 {/* Resume Upload UI */}
                 <div>
                   <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Resume File</label>
-                  <div className="border border-dashed border-[#E5E0D5] hover:border-[#1A365D] rounded-md p-4 text-center transition-all bg-[#FAF8F3]">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+                        handleResumeFile(e.dataTransfer.files[0]);
+                      }
+                    }}
+                    className={`border-2 border-dashed rounded-md p-4 text-center transition-all ${
+                      isDragging ? 'border-[#1A365D] bg-[#EAEFF5]' : 'border-[#E5E0D5] hover:border-[#1A365D] bg-[#FAF8F3]'
+                    }`}
+                  >
                     <input
                       type="file"
                       id="resumeUpload"
-                      accept=".pdf,.doc,.docx"
+                      accept=".pdf,.doc,.docx,.txt"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
@@ -583,7 +617,12 @@ export default function InterviewSetupPage() {
                       <p className="text-xs font-semibold text-[#1F1B16]">Select or drag resume document</p>
                       <p className="text-[10px] text-[#70685E] mt-0.5">PDF or Word document up to 10MB</p>
                     </label>
-                    {resumeName && (
+                    {resumeError && (
+                      <div className="mt-2.5 p-2 rounded-md bg-[#FDF2E9] border border-[#F0D5C0] text-[11px] text-[#9A421A] text-left">
+                        {resumeError}
+                      </div>
+                    )}
+                    {resumeName && !resumeError && (
                       <div className="mt-3 p-2 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-center gap-2 text-xs text-[#1A365D] font-mono">
                         <FileCheck className="w-3.5 h-3.5 text-[#235E3B]" />
                         <span className="truncate">{resumeName}</span>

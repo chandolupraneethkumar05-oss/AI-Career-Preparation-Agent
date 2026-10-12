@@ -136,20 +136,29 @@ export default function DashboardPage() {
     }
   ]);
 
+  const todayKey = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [, setRewardedHabits] = useState(() => storageService.getRewardedHabits(new Date().toISOString().split('T')[0]));
+
   const toggleHabit = useCallback((id, xpReward) => {
     setHabits((prev) =>
       prev.map((h) => {
         if (h.id === id) {
           const nextState = !h.completed;
           if (nextState) {
-            addXP(xpReward);
+            // Anti-farming: award XP only once per calendar day per habit
+            const rewardedSet = storageService.getRewardedHabits(todayKey);
+            if (!rewardedSet.has(id)) {
+              addXP(xpReward);
+              storageService.recordRewardedHabit(todayKey, id);
+              setRewardedHabits((rPrev) => new Set([...rPrev, id]));
+            }
           }
           return { ...h, completed: nextState };
         }
         return h;
       })
     );
-  }, [addXP]);
+  }, [addXP, todayKey]);
 
   const completedHabitsCount = habits.filter((h) => h.completed).length;
 

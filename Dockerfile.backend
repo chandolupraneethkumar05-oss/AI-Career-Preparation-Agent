@@ -1,0 +1,61 @@
+# ==============================================================================
+# Production Dockerfile for AI Career Preparation Agent Backend
+# Runtime: Python 3.13-slim
+# Security: Non-root user (appuser:10001), healthcheck probe, no baked secrets
+# Concurrency: Single worker ASGI server safeguarding SQLite transactions
+# ==============================================================================
+
+FROM python:3.13-slim AS runner
+
+# Set non-interactive Debian frontend and Python environment flags
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8000 \
+    PYTHONPATH=/app:/app/backend \
+    DATABASE_URL=sqlite:////app/data/career_agent.db \
+    RECORDINGS_STORAGE_DIR=/app/storage/recordings \
+    HF_HOME=/app/.cache/huggingface \
+    SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence_transformers
+
+# Install essential system dependencies:
+# - curl: Health check probe
+# - ffmpeg: Audio conversion for faster-whisper transcription
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create dedicated non-root application user and group
+RUN groupadd -g 10001 appgroup && \
+    useradd -u 10001 -g appgroup -s /bin/sh -m appuser
+
+WORKDIR /app
+
+# Create necessary persistent data and model cache directories with non-root ownership
+RUN mkdir -p /app/data \
+             /app/storage/recordings \
+             /app/.cache/huggingface \
+             /app/.cache/sentence_transformers && \
+    chown -R appuser:appgroup /app
+
+# Copy dependency manifests and install wheels
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --no-cache-dir -r ./backend/requirements.txt
+
+# Copy backend application source code
+COPY backend/ ./backend/
+
+# Ensure all application files are owned by non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to unprivileged execution
+USER appuser
+
+EXPOSE 8000
+
+# Container liveness & readiness healthcheck probe
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Start production server with uvicorn (1 worker required for SQLite thread and lock safety)
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
