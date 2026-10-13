@@ -75,25 +75,25 @@ export default function InterviewFeedbackPage() {
   const industryPillars = session.summaryResult?.industryPillars || {
     algorithmicDepth: {
       name: 'Algorithmic & Technical Depth',
-      score: Math.min(100, Math.max(45, session.summaryResult?.scores?.technicalKnowledge || 78)),
+      score: Math.min(100, Math.max(45, session.summaryResult?.scores?.technicalKnowledge ?? overallScoreVal)),
       criteria: 'Correctness, optimal time/space complexity (Big-O), and edge-case enumeration',
-      status: (session.summaryResult?.scores?.technicalKnowledge || 78) >= 80 ? 'Exceptional' : 'Proficient'
+      status: (session.summaryResult?.scores?.technicalKnowledge ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
     },
     architectureQuality: {
       name: 'Architecture & Code Quality',
-      score: Math.min(100, Math.max(45, session.summaryResult?.scores?.structure || 80)),
+      score: Math.min(100, Math.max(45, session.summaryResult?.scores?.structure ?? overallScoreVal)),
       criteria: 'Modular design, fault tolerance, scalability bottlenecks, and trade-off justification',
-      status: (session.summaryResult?.scores?.structure || 80) >= 80 ? 'Exceptional' : 'Proficient'
+      status: (session.summaryResult?.scores?.structure ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
     },
     communicationPacing: {
       name: 'Communication & Thought Process',
-      score: Math.min(100, Math.max(45, session.summaryResult?.scores?.clarity || 82)),
+      score: Math.min(100, Math.max(45, session.summaryResult?.scores?.clarity ?? overallScoreVal)),
       criteria: 'Structured narrative (STAR / Top-Down), verbal cadence, and proactive clarification',
-      status: (session.summaryResult?.scores?.clarity || 82) >= 80 ? 'Exceptional' : 'Proficient'
+      status: (session.summaryResult?.scores?.clarity ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
     },
     autonomyCoachability: {
       name: 'Autonomy vs. Coaching Receptivity',
-      score: Math.min(100, Math.max(45, session.summaryResult?.scores?.confidence || 84)),
+      score: Math.min(100, Math.max(45, session.summaryResult?.scores?.confidence ?? overallScoreVal)),
       criteria: (session.summaryResult?.totalHintsUsed || 0) === 0
         ? 'Formulated and validated all answers fully independently without hints (0 hints used)'
         : `Utilized ${session.summaryResult?.totalHintsUsed || 1} coach hints; showed good receptivity to guidance during the interview`,

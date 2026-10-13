@@ -27,11 +27,14 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
     let tTech = 0, tRel = 0, tComm = 0, tProb = 0, tConf = 0;
     sessionAnswers.forEach(a => {
       const sc = a.evaluation?.scores || {};
-      tTech += (sc.technicalKnowledge ?? 7.5) * 10;
-      tRel += (sc.relevance ?? 7.5) * 10;
-      tComm += (sc.clarity ?? 7.5) * 10;
-      tProb += (sc.structure ?? 7.5) * 10;
-      tConf += (sc.confidence ?? 7.5) * 10;
+      const ansOverall = sc.overall ? (sc.overall <= 10 ? sc.overall * 10 : sc.overall) : 70;
+      const to100 = (val) => val != null ? (val <= 10 ? val * 10 : val) : ansOverall;
+
+      tTech += to100(sc.technicalKnowledge);
+      tRel += to100(sc.relevance);
+      tComm += to100(sc.clarity);
+      tProb += to100(sc.structure);
+      tConf += to100(sc.confidence);
     });
     const len = sessionAnswers.length;
     if (!techScore) techScore = Math.round(tTech / len);
@@ -41,12 +44,12 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
     if (!confScore) confScore = Math.round(tConf / len);
   }
 
-  // Fallbacks if zero evidence exists
-  techScore = techScore || 75;
-  relScore = relScore || 75;
-  commScore = commScore || 75;
-  probScore = probScore || 75;
-  confScore = confScore || 75;
+  const baselineScore = scores.overall || 70;
+  techScore = techScore ?? baselineScore;
+  relScore = relScore ?? baselineScore;
+  commScore = commScore ?? baselineScore;
+  probScore = probScore ?? baselineScore;
+  confScore = confScore ?? baselineScore;
 
   const overall = scores.overall || Math.round((techScore + relScore + commScore + probScore + confScore) / 5);
 

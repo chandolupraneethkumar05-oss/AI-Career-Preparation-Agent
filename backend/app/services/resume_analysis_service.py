@@ -28,7 +28,7 @@ from .skill_taxonomy import (
     get_canonical_role,
     normalize_skill
 )
-from .ai.llm.llm_service import get_llm_service
+from .ai.llm.llm_service import get_llm_service, get_resume_llm_service
 from .skill_service import upsert_skill_gap, record_skill_evidence, sync_unified_skill_profile
 from .activity_service import record_activity
 from .recommendation_service import evaluate_next_best_action
@@ -354,9 +354,9 @@ class ResumeAnalysisService:
             f"Identified {len(all_matched)} matching technical skills and {len(all_missing_important)} priority skill gaps."
         )
 
-        # 7b. Dynamic AI LLM Deep Contextual Resume Analysis (Groq LPU / Gemini)
+        # 7b. Dynamic AI LLM Deep Contextual Resume Analysis (OpenAI / GPT-4o-mini)
         try:
-            llm_service = get_llm_service()
+            llm_service = get_resume_llm_service()
             if hasattr(llm_service, "analyze_resume"):
                 llm_analysis = llm_service.analyze_resume(
                     resume_text=cleaned_text,

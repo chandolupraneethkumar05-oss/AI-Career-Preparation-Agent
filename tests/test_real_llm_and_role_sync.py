@@ -183,6 +183,54 @@ class TestRealLLMAndRoleSync(unittest.TestCase):
         self.assertEqual(session_resp.target_role, custom_role)
         self.assertTrue(len(session_resp.current_question.question) > 10)
 
+    def test_09_specialized_provider_routing_matrix(self):
+        """Verifies each specialized task factory routes to its designated provider."""
+        from backend.app.services.ai.llm.llm_service import (
+            get_question_generator_llm_service,
+            get_evaluator_llm_service,
+            get_resume_llm_service,
+            get_general_llm_service
+        )
+        from backend.app.services.ai.llm.groq_service import GroqLLMService
+        from backend.app.services.ai.llm.nvidia_service import NvidiaLLMService
+
+        # 1. Question Generator routes to Groq
+        with patch.dict(os.environ, {"GROQ_API_KEY": "gsk-mock-groq-key"}):
+            q_service = get_question_generator_llm_service()
+            self.assertIsInstance(q_service, GroqLLMService)
+
+        # 2. Answer Evaluator routes to NVIDIA
+        with patch.dict(os.environ, {"NVIDIA_API_KEY": "nvapi-mock-nvidia-key"}):
+            eval_service = get_evaluator_llm_service()
+            self.assertIsInstance(eval_service, NvidiaLLMService)
+            self.assertEqual(eval_service.api_key, "nvapi-mock-nvidia-key")
+
+        # 3. Resume Analysis routes to OpenAI
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-mock-openai-key"}, clear=True):
+            resume_service = get_resume_llm_service()
+            self.assertIsInstance(resume_service, OpenAICompatibleLLMService)
+
+        # 4. General tasks route to Gemini
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-mock-gemini-key"}):
+            gen_service = get_general_llm_service()
+            self.assertIsInstance(gen_service, GeminiLLMService)
+
+    def test_10_nvidia_service_offline_fallback(self):
+        """NvidiaLLMService falls back cleanly without crashing when unconfigured or offline."""
+        from backend.app.services.ai.llm.nvidia_service import NvidiaLLMService
+
+        service = NvidiaLLMService(api_key="")
+        eval_result = service.evaluate_interview_answer(
+            question={"question": "Explain consistency vs availability in distributed streaming", "skill": "Distributed Systems"},
+            answer_text="In distributed streaming architectures, the CAP theorem states that under network partitions we must trade off consistency for availability.",
+            target_role="Distributed Systems Engineer",
+            difficulty="Advanced"
+        )
+        self.assertIn("overall_score", eval_result)
+        self.assertIn("technical_accuracy", eval_result)
+        self.assertIn("strengths", eval_result)
+        self.assertIn("weaknesses", eval_result)
+
 
 if __name__ == "__main__":
     unittest.main()

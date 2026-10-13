@@ -1895,13 +1895,226 @@ class OpenAICompatibleLLMService(BaseLLMService):
             question, topic, difficulty, interview_type, target_role, career_context, retrieved_chunks, language
         )
 
+    def analyze_resume(
+        self,
+        resume_text: str,
+        target_role: str,
+        job_description: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Deep contextual resume evaluation and ATS scoring using OpenAI."""
+        if not self.api_key:
+            # Fallback cascade: Gemini -> Groq -> None
+            if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+                try:
+                    from .gemini_service import GeminiLLMService
+                    return GeminiLLMService().analyze_resume(resume_text, target_role, job_description)
+                except Exception:
+                    pass
+            if os.getenv("GROQ_API_KEY"):
+                try:
+                    from .groq_service import GroqLLMService
+                    return GroqLLMService().analyze_resume(resume_text, target_role, job_description)
+                except Exception:
+                    pass
+            return None
 
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=self.api_key)
+
+            system_prompt = (
+                "You are a Senior Principal Technical Recruiter and ATS Auditor. "
+                "Analyze the candidate's actual resume text against the target role and job description. "
+                "Extract verified technical skills actually mentioned in the resume. "
+                "Identify missing skills and concepts that are strictly necessary or expected for this specific target role. "
+                "Write 2-3 genuine strengths and 2-3 constructive weaknesses directly citing the candidate's resume content. "
+                "Provide an executive summary and realistic ATS match score (0-100). "
+                "Return valid JSON matching the exact schema."
+            )
+
+            user_prompt = (
+                f"Target Role: {target_role}\n"
+                f"Job Description: {job_description or ('Standard industry requirements for ' + target_role)}\n"
+                f"Candidate Resume Text:\n{resume_text[:4000]}\n\n"
+                "Return valid JSON with exactly these fields:\n"
+                "{\n"
+                '  "ats_score": 78,\n'
+                '  "extracted_skills": ["Python", "FastAPI", "Docker", "PostgreSQL"],\n'
+                '  "matched_skills": ["Python", "Docker", "PostgreSQL"],\n'
+                '  "missing_skills": ["Kubernetes", "System Design"],\n'
+                '  "strengths": ["Specific strong point citing candidate project/experience 1", "Specific strong point 2"],\n'
+                '  "weaknesses": ["Specific actionable gap for this target role 1", "Specific actionable gap 2"],\n'
+                f'  "summary": "Professional executive summary of candidate suitability for {target_role}.",\n'
+                '  "score_breakdown": {\n'
+                '    "keyword_match_score": 75,\n'
+                '    "section_completeness_score": 85,\n'
+                '    "quantifiable_impact_score": 70,\n'
+                '    "format_readability_score": 80\n'
+                "  }\n"
+                "}"
+            )
+
+            resp = client.chat.completions.create(
+                model=self.model,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.2
+            )
+            raw = json.loads(resp.choices[0].message.content or "{}")
+            if "ats_score" in raw and "extracted_skills" in raw:
+                return raw
+        except Exception:
+            pass
+
+        if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+            try:
+                from .gemini_service import GeminiLLMService
+                return GeminiLLMService().analyze_resume(resume_text, target_role, job_description)
+            except Exception:
+                pass
+        if os.getenv("GROQ_API_KEY"):
+            try:
+                from .groq_service import GroqLLMService
+                return GroqLLMService().analyze_resume(resume_text, target_role, job_description)
+            except Exception:
+                pass
+        return None
+
+
+
+
+def get_question_generator_llm_service() -> BaseLLMService:
+    """
+    Dedicated Question Generation Service:
+    Primary: Groq Cloud LPU (ultra-fast question synthesis and dynamic adaptive follow-ups)
+    Fallback: Gemini -> OpenAI -> Local Grounded
+    """
+    provider = os.getenv("QUESTION_LLM_PROVIDER", "").lower()
+    if provider == "groq" or not provider:
+        if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
+            try:
+                from .groq_service import GroqLLMService
+                return GroqLLMService()
+            except Exception:
+                pass
+    if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        try:
+            from .gemini_service import GeminiLLMService
+            return GeminiLLMService()
+        except Exception:
+            pass
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            return OpenAICompatibleLLMService()
+        except Exception:
+            pass
+    return LocalGroundedLLMService()
+
+
+def get_evaluator_llm_service() -> BaseLLMService:
+    """
+    Dedicated Answer Evaluation & Hiring Committee Report Service:
+    Primary: NVIDIA NIM (calibrated 5-axis scoring, staff bar raiser feedback, Llama-3.3-70b-instruct)
+    Fallback: Groq -> Gemini -> OpenAI -> Local Grounded
+    """
+    provider = os.getenv("EVAL_LLM_PROVIDER", "").lower()
+    if provider == "nvidia" or not provider:
+        if os.getenv("NVIDIA_API_KEY"):
+            try:
+                from .nvidia_service import NvidiaLLMService
+                return NvidiaLLMService()
+            except Exception:
+                pass
+    if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
+        try:
+            from .groq_service import GroqLLMService
+            return GroqLLMService()
+        except Exception:
+            pass
+    if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        try:
+            from .gemini_service import GeminiLLMService
+            return GeminiLLMService()
+        except Exception:
+            pass
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            return OpenAICompatibleLLMService()
+        except Exception:
+            pass
+    return LocalGroundedLLMService()
+
+
+def get_resume_llm_service() -> BaseLLMService:
+    """
+    Dedicated Resume Analysis & ATS Matching Service:
+    Primary: OpenAI (deep contextual ATS grading, gpt-4o-mini / gpt-4o)
+    Fallback: Gemini -> Groq -> Local Grounded
+    """
+    provider = os.getenv("RESUME_LLM_PROVIDER", "").lower()
+    if provider == "openai" or not provider:
+        if os.getenv("OPENAI_API_KEY"):
+            try:
+                return OpenAICompatibleLLMService()
+            except Exception:
+                pass
+    if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        try:
+            from .gemini_service import GeminiLLMService
+            return GeminiLLMService()
+        except Exception:
+            pass
+    if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
+        try:
+            from .groq_service import GroqLLMService
+            return GroqLLMService()
+        except Exception:
+            pass
+    return LocalGroundedLLMService()
+
+
+def get_general_llm_service() -> BaseLLMService:
+    """
+    Dedicated General Tasks Service (RAG Knowledge, Quick Answers, Daily Challenges):
+    Primary: Google AI Studio / Gemini (gemini-1.5-flash / gemini-2.0-flash)
+    Fallback: Groq -> OpenAI -> Local Grounded
+    """
+    provider = os.getenv("GENERAL_LLM_PROVIDER", "").lower()
+    if provider in ["gemini", "google"] or not provider:
+        if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+            try:
+                from .gemini_service import GeminiLLMService
+                return GeminiLLMService()
+            except Exception:
+                pass
+    if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
+        try:
+            from .groq_service import GroqLLMService
+            return GroqLLMService()
+        except Exception:
+            pass
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            return OpenAICompatibleLLMService()
+        except Exception:
+            pass
+    return LocalGroundedLLMService()
 
 
 def get_llm_service() -> BaseLLMService:
-    """Factory instantiating configured LLM service provider."""
+    """Factory instantiating configured LLM service provider with default routing."""
     provider = os.getenv("LLM_PROVIDER", "").lower()
-    
+
+    if provider == "nvidia":
+        try:
+            from .nvidia_service import NvidiaLLMService
+            return NvidiaLLMService()
+        except Exception:
+            pass
+
     # Priority 1: Explicit Groq provider or GROQ_API_KEY present (ultra-fast question generation)
     if provider == "groq" or (not provider and os.getenv("GROQ_API_KEY")):
         if os.getenv("GROQ_API_KEY"):
@@ -1928,10 +2141,19 @@ def get_llm_service() -> BaseLLMService:
             except Exception:
                 pass
 
-    # Priority 4: Local grounded deterministic fallback engine
+    # Priority 4: NVIDIA if NVIDIA_API_KEY is present
+    if not provider and os.getenv("NVIDIA_API_KEY"):
+        try:
+            from .nvidia_service import NvidiaLLMService
+            return NvidiaLLMService()
+        except Exception:
+            pass
+
+    # Priority 5: Local grounded deterministic fallback engine
     return LocalGroundedLLMService()
 
 
 # Shared singleton instance
 default_llm_service = get_llm_service()
+
 

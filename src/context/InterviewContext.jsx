@@ -591,21 +591,21 @@ export function InterviewProvider({ children }) {
     const industryPillars = {
       algorithmicDepth: {
         name: 'Algorithmic & Technical Depth',
-        score: Math.min(100, Math.max(45, finalScores.technicalKnowledge || 75)),
+        score: Math.min(100, Math.max(45, finalScores.technicalKnowledge ?? finalScores.overall)),
         criteria: 'Correctness, optimal time/space complexity (Big-O), and edge-case handling',
-        status: (finalScores.technicalKnowledge || 75) >= 80 ? 'Exceptional' : (finalScores.technicalKnowledge || 75) >= 65 ? 'Proficient' : 'Developing'
+        status: (finalScores.technicalKnowledge ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.technicalKnowledge ?? finalScores.overall) >= 65 ? 'Proficient' : 'Developing'
       },
       architectureQuality: {
         name: 'Architecture & Code Quality',
-        score: Math.min(100, Math.max(45, finalScores.structure || 78)),
+        score: Math.min(100, Math.max(45, finalScores.structure ?? finalScores.overall)),
         criteria: 'Modular design, fault tolerance, scalability, and trade-off justification',
-        status: (finalScores.structure || 78) >= 80 ? 'Exceptional' : (finalScores.structure || 78) >= 65 ? 'Proficient' : 'Developing'
+        status: (finalScores.structure ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.structure ?? finalScores.overall) >= 65 ? 'Proficient' : 'Developing'
       },
       communicationPacing: {
         name: 'Communication & Thought Process',
-        score: Math.min(100, Math.max(45, finalScores.clarity || 80)),
+        score: Math.min(100, Math.max(45, finalScores.clarity ?? finalScores.overall)),
         criteria: 'Structured answers (STAR / Top-Down), speaking clarity, and proactive clarification',
-        status: (finalScores.clarity || 80) >= 80 ? 'Exceptional' : (finalScores.clarity || 80) >= 65 ? 'Proficient' : 'Developing'
+        status: (finalScores.clarity ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.clarity ?? finalScores.overall) >= 65 ? 'Proficient' : 'Developing'
       },
       autonomyCoachability: {
         name: 'Autonomy & Coachability',

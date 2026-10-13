@@ -38,26 +38,37 @@ export function evaluateAnswer(questionObj, answerText, role = 'Machine Learning
 
   // Calculate keyword matches
   const lower = text.toLowerCase();
-  const idealKeywords = questionObj.idealKeywords || ['design', 'performance', 'data', 'architecture', 'scalability'];
+  // Dynamically extract meaningful technical anchor words from the actual question
+  const questionWords = (questionObj.question || '')
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !['what', 'when', 'where', 'which', 'explain', 'describe', 'would', 'could', 'should', 'about', 'your', 'with', 'from', 'this', 'that', 'have', 'been', 'team', 'maintain', 'using'].includes(w));
+
+  const idealKeywords = questionObj.idealKeywords || Array.from(new Set([
+    ...questionWords.slice(0, 8),
+    'architecture', 'tradeoff', 'latency', 'consistency', 'failure', 'pipeline', 'metric'
+  ]));
   let keywordHits = 0;
   idealKeywords.forEach(kw => {
     if (lower.includes(kw.toLowerCase())) keywordHits++;
   });
   const keywordRatio = Math.min(1, keywordHits / Math.max(1, idealKeywords.length));
 
-  // Determine structural and clarity bonuses
-  const hasExample = lower.includes('for example') || lower.includes('such as') || lower.includes('in my experience') || lower.includes('in a project') || lower.includes('instance');
+  // Determine structural, trade-off, and metric bonuses
+  const hasExample = lower.includes('for example') || lower.includes('such as') || lower.includes('in my experience') || lower.includes('in a project') || lower.includes('instance') || lower.includes('e.g.');
   const hasStarStructure = lower.includes('situation') || lower.includes('result') || lower.includes('outcome') || lower.includes('task') || lower.includes('action') || lower.includes('led to');
-  const hasMetrics = /\d+[%|x|ms|s|k|m]/.test(lower) || lower.includes('percent') || lower.includes('reduced') || lower.includes('improved');
+  const hasMetrics = /\d+[%|x|ms|s|k|m]/.test(lower) || lower.includes('percent') || lower.includes('reduced') || lower.includes('improved') || lower.includes('sla') || lower.includes('p99') || lower.includes('p95');
+  const hasTradeoffs = lower.includes('trade-off') || lower.includes('tradeoff') || lower.includes('whereas') || lower.includes('on the other hand') || lower.includes('instead of') || lower.includes('compromise') || lower.includes('bottleneck');
 
   // Baseline scores based on length & depth
-  let lengthFactor = Math.min(1, wordCount / 90); // 90 words is a good sweet spot for interview mock
+  let lengthFactor = Math.min(1, wordCount / 80);
   
-  let techScore = Math.min(9.8, 5.0 + (keywordRatio * 3.5) + (hasExample ? 0.8 : 0) + (lengthFactor * 0.7));
-  let relScore = Math.min(9.6, 5.5 + (keywordRatio * 3.0) + (wordCount > 25 ? 1.0 : 0));
-  let clarityScore = Math.min(9.5, 6.0 + (hasExample ? 1.5 : 0.5) + (wordCount >= 40 && wordCount <= 220 ? 1.5 : 0.5));
-  let structScore = Math.min(9.4, 5.0 + (hasStarStructure ? 2.5 : 1.0) + (hasExample ? 1.0 : 0.5));
-  let confScore = Math.min(9.5, 5.8 + (hasMetrics ? 1.8 : 0.6) + (wordCount > 50 ? 1.2 : 0.5));
+  let techScore = Math.min(9.8, 5.2 + (keywordRatio * 3.2) + (hasTradeoffs ? 0.9 : 0) + (hasMetrics ? 0.5 : 0) + (lengthFactor * 0.6));
+  let relScore = Math.min(9.8, 5.0 + (keywordRatio * 3.8) + (wordCount > 30 ? 0.8 : 0));
+  let clarityScore = Math.min(9.6, 5.8 + (hasExample ? 1.4 : 0.4) + (hasStarStructure ? 1.2 : 0) + (wordCount >= 35 && wordCount <= 250 ? 1.2 : 0.4));
+  let structScore = Math.min(9.6, 5.0 + (hasStarStructure ? 2.2 : 0.8) + (hasTradeoffs ? 1.2 : 0.4) + (hasExample ? 0.6 : 0));
+  let confScore = Math.min(9.6, 5.5 + (hasMetrics ? 2.0 : 0.6) + (hasTradeoffs ? 1.0 : 0.4) + (wordCount > 40 ? 0.8 : 0));
 
   // Round to 1 decimal place
   techScore = Number(techScore.toFixed(1));

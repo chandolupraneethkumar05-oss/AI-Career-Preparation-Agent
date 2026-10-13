@@ -22,7 +22,7 @@ from ...schemas.ai import (
 from .career.career_context_builder import build_user_career_context
 from .rag.retrieval_service import default_retrieval_service
 from .rag.knowledge_base import KNOWLEDGE_CHUNKS
-from .llm.llm_service import default_llm_service, get_llm_service
+from .llm.llm_service import default_llm_service, get_llm_service, get_general_llm_service
 
 
 class AIOrchestrator:
@@ -56,8 +56,8 @@ class AIOrchestrator:
 
         retrieved_chunks = retrieval_result.get("chunks", [])
 
-        # 3. Grounded LLM Response Generation
-        self.llm_service = get_llm_service()
+        # 3. Grounded LLM Response Generation (Google AI Studio / Gemini)
+        self.llm_service = get_general_llm_service()
         raw_output = self.llm_service.generate_grounded_response(
             query=query_text,
             user_context=user_context,
@@ -136,7 +136,7 @@ class AIOrchestrator:
 
     def get_ai_status(self) -> AIStatusResponse:
         """Returns live status of the AI subsystem."""
-        self.llm_service = get_llm_service()
+        self.llm_service = get_general_llm_service()
         return AIStatusResponse(
             status="operational",
             llm_provider=self.llm_service.__class__.__name__,
