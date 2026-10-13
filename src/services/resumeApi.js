@@ -4,7 +4,7 @@
  */
 
 import { storageService } from '../utils/storage/storageService';
-import { BACKEND_BASE_URL } from './apiConfig';
+import { BACKEND_BASE_URL, authenticatedFetch } from './apiConfig';
 
 export const resumeApi = {
   /**
@@ -30,7 +30,7 @@ export const resumeApi = {
     formData.append('userId', userId);
 
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/resume/analyze`, {
+      const res = await authenticatedFetch(`${BACKEND_BASE_URL}/api/resume/analyze`, {
         method: 'POST',
         headers: storageService.getAuthHeaders(),
         body: formData
@@ -56,7 +56,7 @@ export const resumeApi = {
    */
   async getLatestAnalysis(userId = 'user-001') {
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/resume/latest/${userId}`, {
+      const res = await authenticatedFetch(`${BACKEND_BASE_URL}/api/resume/latest/${userId}`, {
         headers: {
           'Accept': 'application/json',
           ...storageService.getAuthHeaders()
@@ -80,7 +80,7 @@ export const resumeApi = {
    */
   async getAnalysisHistory(userId = 'user-001', limit = 10) {
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/resume/history/${userId}?limit=${limit}`);
+      const res = await authenticatedFetch(`${BACKEND_BASE_URL}/api/resume/history/${userId}?limit=${limit}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       return data.analyses || [];
@@ -95,7 +95,7 @@ export const resumeApi = {
    */
   async getAnalysisById(analysisId) {
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/api/resume/${analysisId}`);
+      const res = await authenticatedFetch(`${BACKEND_BASE_URL}/api/resume/${analysisId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err) {

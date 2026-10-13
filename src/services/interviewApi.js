@@ -6,7 +6,7 @@
 import { QUESTION_BANK } from '../data/mockData';
 import { evaluateAnswer } from '../utils/evaluator';
 import { storageService } from '../utils/storage/storageService';
-import { API_BASE_URL } from './apiConfig';
+import { API_BASE_URL, authenticatedFetch } from './apiConfig';
 
 const resolveUserId = (id) => (id && id !== 'user-001') ? id : (storageService.getCurrentUser()?.id || id || 'usr_candidate');
 
@@ -26,7 +26,7 @@ export const interviewApi = {
   }) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/start?user_id=${encodeURIComponent(effectiveUserId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/start?user_id=${encodeURIComponent(effectiveUserId)}`, {
 
         method: 'POST',
         headers: {
@@ -101,7 +101,7 @@ export const interviewApi = {
   async getCurrentQuestion(sessionId, userId = null) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/current-question?user_id=${encodeURIComponent(effectiveUserId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/current-question?user_id=${encodeURIComponent(effectiveUserId)}`, {
         headers: {
           'Accept': 'application/json',
           ...storageService.getAuthHeaders()
@@ -133,7 +133,7 @@ export const interviewApi = {
   }) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/answer?user_id=${encodeURIComponent(effectiveUserId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/answer?user_id=${encodeURIComponent(effectiveUserId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +225,7 @@ export const interviewApi = {
   async completeSession(sessionId, userId = null) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/complete?user_id=${encodeURIComponent(effectiveUserId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/complete?user_id=${encodeURIComponent(effectiveUserId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -252,7 +252,7 @@ export const interviewApi = {
   async getSessionDetail(sessionId, userId = null) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/detail?user_id=${encodeURIComponent(effectiveUserId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/detail?user_id=${encodeURIComponent(effectiveUserId)}`, {
         headers: {
           'Accept': 'application/json',
           ...storageService.getAuthHeaders()
@@ -275,7 +275,7 @@ export const interviewApi = {
   async getHistory(userId = null, limit = 50) {
     const effectiveUserId = resolveUserId(userId);
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews?user_id=${encodeURIComponent(effectiveUserId)}&limit=${limit}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews?user_id=${encodeURIComponent(effectiveUserId)}&limit=${limit}`, {
         headers: {
           'Accept': 'application/json',
           ...storageService.getAuthHeaders()
@@ -308,7 +308,7 @@ export const interviewApi = {
     questionId = null
   }) {
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/quick-answer?user_id=${encodeURIComponent(userId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/quick-answer?user_id=${encodeURIComponent(userId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -365,7 +365,7 @@ export const interviewApi = {
         formData.append('communication_metrics_json', JSON.stringify(communicationMetrics));
       }
 
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
         method: 'POST',
         headers: storageService.getAuthHeaders(),
         body: formData
@@ -409,7 +409,7 @@ export const interviewApi = {
    */
   async getRecording(sessionId, userId = 'user-001') {
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
         headers: {
           'Accept': 'application/json',
           ...storageService.getAuthHeaders()
@@ -432,7 +432,7 @@ export const interviewApi = {
    */
   async deleteRecording(sessionId, userId = 'user-001') {
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
         method: 'DELETE',
         headers: storageService.getAuthHeaders()
       });
@@ -459,7 +459,7 @@ export const interviewApi = {
     userId = 'user-001'
   }) {
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/communication-analysis?user_id=${encodeURIComponent(userId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/communication-analysis?user_id=${encodeURIComponent(userId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -514,7 +514,7 @@ export const interviewApi = {
    */
   async getRecordingStreamTicket(sessionId, userId = 'user-001') {
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording/stream-ticket?user_id=${encodeURIComponent(userId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording/stream-ticket?user_id=${encodeURIComponent(userId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -568,7 +568,7 @@ export const interviewApi = {
         formData.append('file', fileBlob, `${sessionId}.${ext}`);
       }
 
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
         method: 'POST',
         body: formData
       });
@@ -602,7 +602,7 @@ export const interviewApi = {
    */
   async getRecording(sessionId, userId = 'user-001') {
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch recording: ${response.status}`);
       }
@@ -618,7 +618,7 @@ export const interviewApi = {
    */
   async deleteRecording(sessionId, userId = 'user-001') {
     try {
-      const response = await fetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
         method: 'DELETE'
       });
       if (!response.ok) {
@@ -649,7 +649,7 @@ export const interviewApi = {
         formData.append('transcript_hint', transcriptHint);
       }
 
-      const response = await fetch(`${API_BASE_URL}/interviews/transcribe-audio`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/transcribe-audio`, {
         method: 'POST',
         body: formData
       });

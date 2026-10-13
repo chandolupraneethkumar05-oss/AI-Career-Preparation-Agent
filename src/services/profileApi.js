@@ -1,5 +1,5 @@
 import { storageService } from '../utils/storage/storageService';
-import { BACKEND_BASE_URL } from './apiConfig';
+import { BACKEND_BASE_URL, authenticatedFetch } from './apiConfig';
 
 const resolveUserId = (id) => id || storageService.getCurrentUser()?.id || 'usr_candidate';
 
@@ -11,7 +11,7 @@ export const profileApi = {
         'Accept': 'application/json',
         ...storageService.getAuthHeaders()
       };
-      const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`, {
+      const res = await authenticatedFetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`, {
         headers
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -30,7 +30,7 @@ export const profileApi = {
         'Accept': 'application/json',
         ...storageService.getAuthHeaders()
       };
-      const res = await fetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`, {
+      const res = await authenticatedFetch(`${BACKEND_BASE_URL}/api/profile?user_id=${encodeURIComponent(effectiveId)}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify(profileData)

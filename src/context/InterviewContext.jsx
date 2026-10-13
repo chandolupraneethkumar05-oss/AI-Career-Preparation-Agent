@@ -154,7 +154,7 @@ export function InterviewProvider({ children }) {
           sessionId: backendSession.session_id,
           questions: [mappedFirstQ],
           totalQuestions: backendSession.total_questions || questionLimit,
-          isAiEngineActive: true,
+          isAiEngineActive: !backendSession.is_offline,
           isLoading: false
         }));
         return backendSession;

@@ -137,6 +137,7 @@ class AnswerEvaluationResponse(BaseModel):
     feedback: str
     follow_up_needed: bool = False
     follow_up_reason: Optional[str] = None
+    evaluator: Optional[str] = "groq_openai/gpt-oss-120b"
 
     model_config = ConfigDict(from_attributes=True)
 

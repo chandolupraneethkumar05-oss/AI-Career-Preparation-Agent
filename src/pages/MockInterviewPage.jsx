@@ -1353,6 +1353,26 @@ export default function MockInterviewPage() {
                   <span>Interviewer Feedback &amp; Suggestions</span>
                 </div>
                 <p className="text-[#3B352E] leading-relaxed">{currentEval.aiRecommendation}</p>
+                {currentEval.strengths && currentEval.strengths.length > 0 && (
+                  <div className="pt-2 border-t border-[#E5E0D5]/60 space-y-1">
+                    <span className="font-semibold text-[#235E3B] text-[11px] block">Key Strengths:</span>
+                    <ul className="list-disc list-inside space-y-0.5 text-[#235E3B] text-[11px]">
+                      {currentEval.strengths.map((str, idx) => (
+                        <li key={idx}>{str}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {currentEval.areasToImprove && currentEval.areasToImprove.length > 0 && (
+                  <div className="pt-1.5 space-y-1">
+                    <span className="font-semibold text-[#9A421A] text-[11px] block">Areas to Elevate:</span>
+                    <ul className="list-disc list-inside space-y-0.5 text-[#9A421A] text-[11px]">
+                      {currentEval.areasToImprove.map((area, idx) => (
+                        <li key={idx}>{area}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {currentEval.adaptiveNote && (
                   <div className="pt-1 text-[11px] text-[#8C6E54] font-medium flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 text-[#8C6E54]" />

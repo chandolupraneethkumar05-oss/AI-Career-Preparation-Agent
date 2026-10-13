@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { MOCK_USER } from '../data/mockData';
 import { storageService, STORAGE_KEYS } from '../utils/storage/storageService';
-import { API_BASE_URL } from '../services/apiConfig';
+import { API_BASE_URL, ensureAuthToken } from '../services/apiConfig';
 
 const AuthContext = createContext(null);
 
@@ -40,13 +40,24 @@ export function AuthProvider({ children }) {
               streak: data.streak
             }));
           } else if (res.status === 401) {
-            // Token expired, revoked, or invalid on backend
+            // Token expired or invalidated; refresh via demo token
             storageService.removeToken();
-            storageService.remove(STORAGE_KEYS.AUTH_USER);
-            setUser(null);
+            const fresh = await ensureAuthToken();
+            if (fresh) {
+              const demoUser = storageService.getCurrentUser();
+              if (demoUser) setUser(demoUser);
+            }
           }
         })
         .catch(() => {});
+    } else {
+      // Auto-ensure demo token on initial visit
+      ensureAuthToken().then((fresh) => {
+        if (fresh) {
+          const demoUser = storageService.getCurrentUser();
+          if (demoUser) setUser(demoUser);
+        }
+      }).catch(() => {});
     }
 
     if (user?.id) {

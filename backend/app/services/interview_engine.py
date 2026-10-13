@@ -474,7 +474,8 @@ class InterviewEngine:
             skill_evidence=eval_dict.get("skill_evidence", {}),
             feedback=eval_model.feedback,
             follow_up_needed=eval_model.follow_up_needed,
-            follow_up_reason=eval_model.follow_up_reason
+            follow_up_reason=eval_model.follow_up_reason,
+            evaluator=eval_dict.get("evaluator", "groq_openai/gpt-oss-120b")
         )
 
         # Record granular interview skill evidence for closed-loop skill gap calibration
