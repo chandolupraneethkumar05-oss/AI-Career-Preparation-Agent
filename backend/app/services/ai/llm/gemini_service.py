@@ -16,6 +16,7 @@ from typing import Dict, Any, List, Optional
 
 from .multilingual_feedback_service import multilingual_feedback_service
 from ..languages import normalize_feedback_language, is_supported_feedback_language
+from .difficulty_profiles import get_difficulty_profile, normalize_difficulty
 
 
 class GeminiLLMService:
@@ -236,40 +237,51 @@ Return valid JSON with exactly these fields:
         previous_evaluations = previous_evaluations or []
 
         target_role = session_config.get("target_role") or session_config.get("role") or career_context.get("target_role") or "Machine Learning Engineer"
-        difficulty = session_config.get("difficulty") or "Intermediate"
+        difficulty_raw = session_config.get("difficulty") or "Intermediate"
+        difficulty = normalize_difficulty(difficulty_raw)
         interview_type = session_config.get("interview_type") or session_config.get("category") or "Technical"
         company_playbook = session_config.get("company_playbook") or "general"
+        job_description = (
+            session_config.get("job_description")
+            or career_context.get("job_description")
+            or ""
+        ).strip()
 
         prev_q_texts = [q.get("question") or q.get("question_text", "") for q in previous_questions]
         past_q_texts = career_context.get("past_interview_questions", [])
         all_forbidden = list(set([t for t in (prev_q_texts + past_q_texts) if t]))
         last_eval = previous_evaluations[-1] if previous_evaluations else None
 
-        # Dynamic topic focus seeds to ensure creative variation across sessions
-        subdomain_seeds = [
-            "distributed architecture, scalability tradeoffs, and high availability",
-            "production failure modes, edge-case recovery, and latency optimization",
-            "end-to-end data pipelines, streaming reliability, and consistency models",
-            "modern deep learning paradigms, loss surface dynamics, and quantization",
-            "monitoring metrics, drift detection, and automated canary deployment",
-            "security boundaries, data isolation, and API design trade-offs"
-        ]
-        focus_seed = random.choice(subdomain_seeds) if 'random' in globals() else subdomain_seeds[sequence_number % len(subdomain_seeds)]
+        profile = get_difficulty_profile(difficulty)
+        topic_seeds = profile.get("topic_seeds", [
+            "core fundamentals, standard libraries, and foundational problem solving"
+        ])
+        focus_seed = topic_seeds[sequence_number % len(topic_seeds)]
+        interviewer_persona = profile.get("interviewer_persona", f"a Technical Interviewer ({company_playbook.title()} playbook)")
+        level_guidance = profile.get("guidance", "Ask clear, constructive questions appropriate for candidate seniority.")
+
+        jd_instruction = ""
+        if job_description:
+            jd_instruction = f"\nTarget Job Description excerpt: {job_description[:400]}\nGround the question in the specific requirements and tech stack of this job description."
 
         system_prompt = (
-            f"You are a Senior Principal Interviewer at a premier technology enterprise ({company_playbook.title()} playbook). "
+            f"You are {interviewer_persona}. "
             f"You are conducting an authentic {difficulty}-level {interview_type} mock interview for the role of {target_role}. "
             f"Focus topic inspiration: {focus_seed}. "
-            "Generate an authentic, high-signal, production-realistic interview question. "
+            f"Level calibration guidance: {level_guidance} "
+            f"{jd_instruction} "
+            "Generate an authentic, high-signal, level-appropriate interview question. "
             "STRICT REQUIREMENT: NEVER repeat or closely rephrase any of the previously asked questions."
         )
 
         user_prompt = f"""
 Sequence Number: Question {sequence_number}
 Role: {target_role}
-Difficulty: {difficulty}
+Difficulty Level: {difficulty}
+Level Persona & Rules: {level_guidance}
 Interview Type: {interview_type}
 Topic Seed: {focus_seed}
+Job Description Excerpt: {job_description[:300] if job_description else "None provided"}
 Strictly Do NOT Duplicate Any of These Questions: {json.dumps(all_forbidden[:15])}
 Previous Evaluation Gaps: {json.dumps(last_eval.get('weaknesses', []) if last_eval else [])}
 Target Language: {language}
@@ -277,11 +289,11 @@ Target Language: {language}
 Return valid JSON with exactly these fields:
 {{
   "question": "The fresh, authentic interview question to ask the candidate",
-  "skill": "Specific core skill tested (e.g. PyTorch, Distributed Systems, SQL, STAR Leadership)",
+  "skill": "Specific core skill tested",
   "topic": "Specific technical topic",
-  "rationale": "Why this question is critical for this candidate at this stage",
-  "expected_focus": "Key technical points, trade-offs, and architecture the candidate should cover",
-  "rubric_guidance": "Evaluation guidance for scoring candidate's answer"
+  "rationale": "Why this question is appropriate for this level and role",
+  "expected_focus": "Key foundational points or concepts the candidate should cover at this level",
+  "rubric_guidance": "Evaluation guidance calibrated to {difficulty} level"
 }}
 """
         raw_resp = self._call_gemini(user_prompt, system_prompt, temperature=0.7, json_mode=True)
@@ -333,6 +345,36 @@ Return valid JSON with exactly these fields:
         Deep multi-axis evaluation of candidate interview answers using Google Gemini.
         """
         effective_answer = answer_text or user_answer or ""
+        is_skipped = effective_answer.strip() in ["", "[Skipped by candidate]", "[Skipped]"]
+        if is_skipped:
+            return {
+                "overall_score": 0,
+                "technical_accuracy": 0,
+                "communication_quality": 0,
+                "relevance": 0,
+                "completeness": 0,
+                "confidence_indicators": 0,
+                "correctness_score": 0,
+                "depth_score": 0,
+                "relevance_score": 0,
+                "communication_score": 0,
+                "technical_score": 0,
+                "feedback": f"Question on {question.get('skill', 'this topic')} was skipped by the candidate. We have marked this as a high-priority topic for guided practice and roadmap drills.",
+                "strengths": [],
+                "weaknesses": [f"Candidate skipped the question on {question.get('skill', 'this topic')}"],
+                "missing_concepts": [question.get("skill", "Core concept")],
+                "detected_topics": [question.get("skill", "Topic")],
+                "follow_up_needed": False,
+                "follow_up_reason": None,
+                "recommended_follow_up_type": "none",
+                "recommended_difficulty": question.get("difficulty", "Beginner"),
+                "skill_evidence": {question.get("skill", "Engineering Fundamentals"): 0},
+                "question_id": question.get("id") or question.get("question_id"),
+                "skill": question.get("skill", "Engineering Fundamentals"),
+                "language": language,
+                "evaluator": "calibrated_skip_handler"
+            }
+
         if not self.api_key or len(effective_answer.strip()) < 10:
             return self._fallback.evaluate_interview_answer(
                 question, answer_text, career_context, language,
@@ -342,11 +384,17 @@ Return valid JSON with exactly these fields:
         q_text = question.get("question") or question.get("question_text", "")
         skill = question.get("skill") or question.get("topic", "Technical Knowledge")
         role = target_role or question.get("target_role") or "Machine Learning Engineer"
+        norm_diff = normalize_difficulty(difficulty or question.get("difficulty") or "Intermediate")
+        profile = get_difficulty_profile(norm_diff)
+        rubric_exp = profile.get("rubric_expectations", "Assess correctness and clarity.")
 
         system_prompt = (
             "You are an expert calibration evaluator for technical and behavioral interviews. "
-            "Score candidate answers with fairness and rigor. "
-            "Scores must be realistic integers between 30 and 98 based on technical depth, clarity, and correctness. "
+            f"Candidate seniority level is {norm_diff}. "
+            f"Level scoring guidance: {rubric_exp} "
+            "Do NOT demand staff-level or enterprise architecture trade-offs for beginner or intermediate candidates. "
+            "Score candidate answers with fairness, accuracy, and constructive encouragement. "
+            "Scores must be realistic integers between 30 and 98 based on whether the answer meets expectations for this level. "
             "Return valid JSON matching the exact schema."
         )
 

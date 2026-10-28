@@ -66,3 +66,5 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 scratch/
+unpacked_sources/
+

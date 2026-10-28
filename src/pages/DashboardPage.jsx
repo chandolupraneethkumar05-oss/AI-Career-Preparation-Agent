@@ -203,13 +203,13 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
           <div>
             <span className="editorial-overline block">
-              CAREER PREPARATION DASHBOARD
+              CAREER READINESS &amp; PREPARATION
             </span>
             <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1F1B16] tracking-tight mt-1">
-              Your Preparation Dashboard
+              Welcome back, {user?.name || 'Candidate'} 👋
             </h1>
             <p className="text-xs sm:text-sm text-[#3B352E] mt-0.5">
-              Practice progress for <strong className="font-semibold text-[#1F1B16]">{user?.name || 'Candidate'}</strong>.
+              Personalized roadmap, practice streaks, and interview readiness for <strong className="font-semibold text-[#1F1B16]">{userRole}</strong>.
             </p>
           </div>
 

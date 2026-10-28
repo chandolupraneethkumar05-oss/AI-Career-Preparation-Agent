@@ -210,30 +210,45 @@ class SemanticAnswerEvaluator:
                 }
             }
 
-        # 3. Calibrated 5-Axis Scoring
-        # Technical Accuracy (0-100): Grounded primarily in semantic topical alignment + domain precision
-        base_tech = int(45 + (semantic_sim * 45))
-        if has_tradeoffs:
-            base_tech += min(6, tradeoff_count * 2)
-        if has_metrics:
-            base_tech += min(5, metric_count * 2)
-        tech_score = max(35, min(96, base_tech))
+        # 3. Calibrated 5-Axis Scoring (Level-Aware Calibration)
+        is_beginner = any(k in str(difficulty).lower() for k in ["begin", "junior", "entry", "fresher", "foundational", "easy"])
+        
+        if is_beginner:
+            # Beginners are evaluated on semantic accuracy, clarity, and basic conceptual correctness
+            base_tech = int(55 + (semantic_sim * 45))
+            tech_score = max(45, min(98, base_tech))
 
-        # Problem Solving (0-100): Weighted on architectural trade-offs, edge cases, and alternatives
-        base_ps = 50 + (18 if has_tradeoffs else 0) + (12 if has_metrics else 0) + int(semantic_sim * 15)
-        problem_solving_score = max(35, min(95, base_ps))
+            # Problem solving for beginners reflects foundational understanding and reasoning
+            problem_solving_score = max(50, min(95, int(55 + (semantic_sim * 38))))
 
-        # Communication (0-100): Structural clarity, STAR progression, and concise delivery
-        base_comm = 55 + (star_count * 8) + (8 if has_tradeoffs else 0)
-        comm_score = max(40, min(95, base_comm))
+            # Communication rewards clear articulation
+            word_bonus = 8 if len(cleaned_answer.split()) >= 20 else 0
+            base_comm = 60 + (star_count * 8) + word_bonus
+            comm_score = max(50, min(98, base_comm))
 
-        # Completeness / Depth (0-100): Multi-faceted coverage of the prompt
-        base_comp = int(40 + (semantic_sim * 35) + (10 if has_tradeoffs else 0) + (10 if has_metrics else 0))
-        comp_score = max(35, min(95, base_comp))
+            # Completeness & Confidence calibrated for entry-level
+            comp_score = max(45, min(95, int(52 + (semantic_sim * 42))))
+            conf_score = max(50, min(95, int(55 + (semantic_sim * 35))))
+        else:
+            # Mid-level and Senior level scoring
+            base_tech = int(45 + (semantic_sim * 45))
+            if has_tradeoffs:
+                base_tech += min(6, tradeoff_count * 2)
+            if has_metrics:
+                base_tech += min(5, metric_count * 2)
+            tech_score = max(35, min(96, base_tech))
 
-        # Confidence (0-100): Empirical metrics, definitive technical statements, and quantified impact
-        base_conf = 50 + (18 if has_metrics else 0) + (12 if has_tradeoffs else 0) + int(semantic_sim * 15)
-        conf_score = max(35, min(95, base_conf))
+            base_ps = 50 + (18 if has_tradeoffs else 0) + (12 if has_metrics else 0) + int(semantic_sim * 15)
+            problem_solving_score = max(35, min(95, base_ps))
+
+            base_comm = 55 + (star_count * 8) + (8 if has_tradeoffs else 0)
+            comm_score = max(40, min(95, base_comm))
+
+            base_comp = int(40 + (semantic_sim * 35) + (10 if has_tradeoffs else 0) + (10 if has_metrics else 0))
+            comp_score = max(35, min(95, base_comp))
+
+            base_conf = 50 + (18 if has_metrics else 0) + (12 if has_tradeoffs else 0) + int(semantic_sim * 15)
+            conf_score = max(35, min(95, base_conf))
 
         # Weighted Overall Score
         overall = int(round(
@@ -257,12 +272,14 @@ class SemanticAnswerEvaluator:
 
         if has_tradeoffs:
             strengths.append(f"Articulated comparative engineering trade-offs ({', '.join(found_tradeoffs[:2])}).")
-        else:
+        elif not is_beginner:
             weaknesses.append("Discuss alternative approaches and explicit architectural trade-offs to demonstrate senior engineering depth.")
+        else:
+            strengths.append("Provided a straightforward conceptual answer.")
 
         if has_metrics:
             strengths.append(f"Reinforced explanation with quantifiable engineering metrics ({', '.join(found_metrics[:2])}).")
-        else:
+        elif not is_beginner:
             weaknesses.append("Incorporate concrete metrics (latency SLAs, Big-O complexity, memory consumption) to strengthen impact.")
 
         if has_star:
@@ -271,7 +288,10 @@ class SemanticAnswerEvaluator:
             weaknesses.append("Adopt the STAR method (Situation, Task, Action, Result) to give a structured narrative.")
 
         if comp_score < 70:
-            weaknesses.append("Elaborate on production failure modes, concurrency, or scalability bottlenecks.")
+            if is_beginner:
+                weaknesses.append("Elaborate with a practical code example or real-world use case.")
+            else:
+                weaknesses.append("Elaborate on production failure modes, concurrency, or scalability bottlenecks.")
 
         feedback_summary = (
             f"Evaluation for {expected_skill or 'response'}: "

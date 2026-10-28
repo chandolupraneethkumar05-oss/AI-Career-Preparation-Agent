@@ -151,6 +151,7 @@ class Interview(Base):
     strengths_json = Column(Text, default="[]")
     weaknesses_json = Column(Text, default="[]")
     interview_mode = Column(String(16), default="text")  # text, video
+    job_description = Column(Text, default="", nullable=True)
     created_at = Column(DateTime, default=utc_now, nullable=False, index=True)
 
     user = relationship("User", back_populates="interviews")
@@ -291,6 +292,7 @@ class InterviewAnswer(Base):
     answer = Column(Text, nullable=False)
     word_count = Column(Integer, default=0)
     time_spent_seconds = Column(Integer, default=0)
+    skipped = Column(Boolean, default=False, nullable=True)
     submitted_at = Column(DateTime, default=utc_now, nullable=False)
 
     session = relationship("Interview", back_populates="answers")

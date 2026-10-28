@@ -18,6 +18,7 @@ from typing import Dict, Any, List, Optional
 
 from .multilingual_feedback_service import multilingual_feedback_service
 from ..languages import normalize_feedback_language, is_supported_feedback_language
+from .difficulty_profiles import get_difficulty_profile, normalize_difficulty
 
 
 class NvidiaLLMService:
@@ -159,6 +160,37 @@ class NvidiaLLMService:
         effective_answer = (answer_text or user_answer or "").strip()
         career_context = career_context or {}
 
+        is_skipped = effective_answer in ["", "[Skipped by candidate]", "[Skipped]"]
+        if is_skipped:
+            return {
+                "overall_score": 0,
+                "technical_accuracy": 0,
+                "problem_solving": 0,
+                "communication_quality": 0,
+                "relevance": 0,
+                "completeness": 0,
+                "confidence_indicators": 0,
+                "correctness_score": 0,
+                "depth_score": 0,
+                "relevance_score": 0,
+                "communication_score": 0,
+                "technical_score": 0,
+                "feedback": f"Question on {question.get('skill', 'this topic')} was skipped by the candidate. We have marked this as a high-priority topic for guided practice and roadmap drills.",
+                "strengths": [],
+                "weaknesses": [f"Candidate skipped the question on {question.get('skill', 'this topic')}"],
+                "missing_concepts": [question.get("skill", "Core concept")],
+                "detected_topics": [question.get("skill", "Topic")],
+                "follow_up_needed": False,
+                "follow_up_reason": None,
+                "recommended_follow_up_type": "none",
+                "recommended_difficulty": question.get("difficulty", "Beginner"),
+                "skill_evidence": {question.get("skill", "Engineering Fundamentals"): 0},
+                "question_id": question.get("id") or question.get("question_id"),
+                "skill": question.get("skill", "Engineering Fundamentals"),
+                "language": language,
+                "evaluator": "calibrated_skip_handler"
+            }
+
         if not self.api_key or len(effective_answer) < 10:
             return self._fallback.evaluate_interview_answer(
                 question=question,
@@ -175,19 +207,24 @@ class NvidiaLLMService:
         q_text = question.get("question") or question.get("question_text") or ""
         skill = question.get("skill") or question.get("topic") or "Technical Knowledge"
         role = target_role or question.get("target_role") or career_context.get("target_role") or "Software Engineer"
-        level = difficulty or question.get("difficulty") or "Intermediate"
+        level = normalize_difficulty(difficulty or question.get("difficulty") or "Intermediate")
         q_type = interview_type or question.get("question_type") or "Technical"
+        profile = get_difficulty_profile(level)
+        rubric_exp = profile.get("rubric_expectations", "Assess correctness and clarity.")
 
         system_prompt = (
-            "You are an elite Staff-Level Bar Raiser and Technical Hiring Committee Evaluator. "
-            "Evaluate the candidate's exact answer rigorously, objectively, and fairly. "
+            "You are an expert calibration evaluator and Technical Hiring Committee Evaluator. "
+            f"Candidate seniority level is {level}. "
+            f"Level scoring guidance: {rubric_exp} "
+            "Do NOT demand staff-level or enterprise architecture trade-offs for beginner or intermediate candidates. "
+            "Evaluate the candidate's exact answer constructively, objectively, and fairly against this level. "
             "Scoring guidance: "
-            "- Score dynamically and authentically based purely on the technical depth, correctness, edge-case coverage, and clarity of the candidate's response. "
-            "- Do NOT output canned or static scores. Every score must be a calibrated integer (0-100) reflecting actual performance. "
+            "- Score dynamically and authentically based on correctness and clarity for this level. "
+            "- Scores must be realistic integers between 30 and 98. "
             "- Weak, vague, or incorrect answers: 30-59. "
-            "- Decent, standard answers missing edge cases or scale: 60-79. "
-            "- Strong, comprehensive answers with trade-offs and metrics: 80-94. "
-            "- Exceptional, staff-level answers with profound insight: 95-99. "
+            "- Decent, standard answers meeting baseline level expectations: 60-79. "
+            "- Clear, accurate answers with sound technical reasoning: 80-94. "
+            "- Exceptional, comprehensive answers with deep insight: 95-99. "
             "Return valid JSON matching the exact schema."
         )
 

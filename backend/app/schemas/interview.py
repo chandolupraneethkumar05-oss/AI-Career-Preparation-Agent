@@ -70,6 +70,7 @@ class InterviewStartRequest(BaseModel):
     feedback_language: Optional[str] = Field(default="en", description="Language for feedback reports (en, te, hi, es)")
     total_questions: Optional[int] = Field(default=5, ge=3, le=15, description="Interview length (Quick: 5, Standard: 10)")
     interview_mode: Optional[str] = Field(default="text", description="Interview mode: text or video")
+    job_description: Optional[str] = Field(default="", description="Optional Job Description text for tailored question generation")
 
 
 class InterviewQuestionResponse(BaseModel):
@@ -100,6 +101,7 @@ class InterviewSessionResponse(BaseModel):
     total_questions: int
     current_question_index: int
     current_question: Optional[InterviewQuestionResponse] = None
+    job_description: Optional[str] = ""
     started_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -108,8 +110,9 @@ class InterviewSessionResponse(BaseModel):
 class SubmitAnswerRequest(BaseModel):
     user_id: str = Field(default="user-001", description="Candidate User ID")
     question_id: str = Field(..., description="ID of question being answered")
-    answer: str = Field(..., min_length=2, max_length=5000, description="Candidate verbal or typed answer")
+    answer: str = Field(..., min_length=0, max_length=5000, description="Candidate verbal or typed answer")
     time_spent_seconds: Optional[int] = Field(default=0, ge=0)
+    skipped: Optional[bool] = Field(default=False, description="Whether candidate skipped the question")
 
 
 class AnswerEvaluationResponse(BaseModel):

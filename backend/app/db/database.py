@@ -87,6 +87,15 @@ def init_db() -> None:
                     conn.exec_driver_sql("ALTER TABLE interviews ADD COLUMN weaknesses_json TEXT DEFAULT '[]'")
                 if "interview_mode" not in int_cols:
                     conn.exec_driver_sql("ALTER TABLE interviews ADD COLUMN interview_mode VARCHAR(16) DEFAULT 'text'")
+                if "job_description" not in int_cols:
+                    conn.exec_driver_sql("ALTER TABLE interviews ADD COLUMN job_description TEXT DEFAULT ''")
+                conn.commit()
+
+            cursor = conn.exec_driver_sql("PRAGMA table_info(interview_answers)")
+            ans_cols = [row[1] for row in cursor.fetchall()]
+            if ans_cols:
+                if "skipped" not in ans_cols:
+                    conn.exec_driver_sql("ALTER TABLE interview_answers ADD COLUMN skipped BOOLEAN DEFAULT 0")
                 conn.commit()
 
             cursor = conn.exec_driver_sql("PRAGMA table_info(answer_evaluations)")

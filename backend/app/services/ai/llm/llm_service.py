@@ -317,6 +317,50 @@ class LocalGroundedLLMService(BaseLLMService):
 
     def _get_skill_gap_questions(self, gap_skill: str, target_role: str, difficulty: str) -> List[str]:
         skill_lower = gap_skill.lower()
+        is_beginner = any(k in str(difficulty).lower() for k in ["begin", "junior", "entry", "fresher", "foundational", "easy"])
+
+        if is_beginner:
+            if "sql" in skill_lower:
+                return [
+                    "What is the difference between an INNER JOIN and a LEFT JOIN in SQL? In what situation would you use each?",
+                    "Can you explain the difference between WHERE and HAVING clauses in SQL, and how HAVING is used with GROUP BY?",
+                    "What are the most common SQL data types (VARCHAR, INT, DATE) and why is it important to choose the right type for a column?"
+                ]
+            elif any(k in skill_lower for k in ["docker", "container", "mlops"]):
+                return [
+                    "What is a Docker container, and how is it different from running an application directly on your operating system?",
+                    "What is the purpose of a Dockerfile, and what do common commands like FROM, COPY, and RUN do?",
+                    "Why do developers use containers to package and share their software projects?"
+                ]
+            elif any(k in skill_lower for k in ["pytorch", "deep learning"]):
+                return [
+                    "What is a Tensor in PyTorch, and how is it similar to or different from a NumPy array?",
+                    "Can you explain what a loss function and an optimizer do during neural network training in PyTorch?",
+                    "What does model.eval() do in PyTorch, and why is it important when testing a trained model?"
+                ]
+            elif "python" in skill_lower:
+                return [
+                    "What is the difference between a Python List and a Python Dictionary, and when would you choose one over the other?",
+                    "Can you explain the difference between mutable and immutable data types in Python with examples?",
+                    "How do functions work in Python, and what is the difference between positional arguments and keyword arguments?"
+                ]
+            elif any(k in skill_lower for k in ["kubernetes", "k8s"]):
+                return [
+                    "In simple terms, what is Kubernetes and what core problem does it solve for container management?",
+                    "What is a Pod in Kubernetes, and how does it relate to a Docker container?"
+                ]
+            elif any(k in skill_lower for k in ["scikit-learn", "sklearn"]):
+                return [
+                    "What is the standard workflow in scikit-learn for splitting data into train/test sets and fitting a model (fit, predict)?",
+                    "Can you explain the difference between classification (e.g. Logistic Regression) and regression (e.g. Linear Regression) in scikit-learn?"
+                ]
+            else:
+                return [
+                    f"You have listed {gap_skill} as an area of focus. Can you explain from first principles what core problem {gap_skill} solves?",
+                    f"What was your first experience learning or using {gap_skill}, and what basic feature did you find most interesting?",
+                    f"In simple terms, how would you explain the primary workflow of {gap_skill} to a fellow junior developer?"
+                ]
+
         if "sql" in skill_lower:
             return [
                 "Suppose you have `customers` and `orders` tables. How would you construct an optimized query to identify customers who have never placed an order, and how would you index and optimize this query for tables with millions of rows?",
@@ -409,47 +453,99 @@ class LocalGroundedLLMService(BaseLLMService):
                 ]
 
         elif cat == "SQL":
-            return [
-                "Explain the functional differences between INNER JOIN, LEFT OUTER JOIN, and FULL OUTER JOIN. In query execution, what happens under the hood during a Hash Join versus a Nested Loop Join?",
-                "How do B-Tree indexes accelerate WHERE clause lookups, and what query patterns cause the query optimizer to perform a full table scan despite an index being present?",
-                "How do ACID properties guarantee transactional reliability in relational databases, and what are the concurrency trade-offs between Read Committed and Serializable isolation levels?"
-            ]
+            if diff == "Beginner":
+                return [
+                    "What is the difference between an INNER JOIN and a LEFT JOIN in SQL, and can you give a simple real-world example of when to use each?",
+                    "What is the difference between WHERE and HAVING clauses in SQL, and which one is used with GROUP BY aggregations?",
+                    "Can you explain what Primary Keys and Foreign Keys are, and why relationships are important in relational databases?",
+                    "What is the purpose of an index on a database table, and how does it speed up search queries?",
+                    "What is the difference between DELETE, TRUNCATE, and DROP statements in SQL?",
+                    "How do you use aggregate functions like COUNT, SUM, AVG, and GROUP BY to summarize records from a database table?"
+                ]
+            else:
+                return [
+                    "Explain the functional differences between INNER JOIN, LEFT OUTER JOIN, and FULL OUTER JOIN. In query execution, what happens under the hood during a Hash Join versus a Nested Loop Join?",
+                    "How do B-Tree indexes accelerate WHERE clause lookups, and what query patterns cause the query optimizer to perform a full table scan despite an index being present?",
+                    "How do ACID properties guarantee transactional reliability in relational databases, and what are the concurrency trade-offs between Read Committed and Serializable isolation levels?"
+                ]
 
         elif cat == "MLOps":
-            return [
-                "Describe the complete lifecycle of moving an ML model from an experimental notebook into an automated CI/CD and deployment pipeline. How do you detect and handle data drift versus concept drift post-deployment?",
-                "How would you design a low-latency model serving system with model caching, batching, and GPU acceleration for real-time inference (e.g. sub-20ms p99 SLA)?",
-                "What role does a Feature Store play in preventing training-serving skew, and how does it ensure point-in-time correctness for historical feature lookups?"
-            ]
+            if diff == "Beginner":
+                return [
+                    "What is the difference between experimenting with machine learning in a Jupyter notebook versus deploying it as an API service?",
+                    "Why do developers use virtual environments and requirements files or Docker containers when building machine learning projects?",
+                    "What does it mean when a deployed model experiences data drift, and why is ongoing monitoring important?"
+                ]
+            else:
+                return [
+                    "Describe the complete lifecycle of moving an ML model from an experimental notebook into an automated CI/CD and deployment pipeline. How do you detect and handle data drift versus concept drift post-deployment?",
+                    "How would you design a low-latency model serving system with model caching, batching, and GPU acceleration for real-time inference (e.g. sub-20ms p99 SLA)?",
+                    "What role does a Feature Store play in preventing training-serving skew, and how does it ensure point-in-time correctness for historical feature lookups?"
+                ]
 
         elif cat in ["STAR Method", "Behavioral Interviews"] or interview_type == "Behavioral":
-            return [
-                "Tell me about a project where you faced conflicting technical priorities, a tight deadline, or unexpected roadblocks. Using the STAR framework, explain the Situation, the Task you owned, the specific Actions you drove, and the measurable Result.",
-                "Describe a situation where you had a strong technical disagreement with a team member or stakeholder regarding system design. How did you resolve the conflict and reach alignment?",
-                "Can you share an experience where an engineering project or model failed in production or did not achieve its target KPI? What went wrong, and what systemic changes did you put in place as a result?",
-                "Give an example of a complex technical decision you made under significant ambiguity or incomplete data. How did you validate your assumptions and mitigate risks?"
-            ]
+            if diff == "Beginner":
+                return [
+                    "Tell me about a challenging academic or personal project you worked on. Using the STAR framework, explain the Situation, the Task, the Action you took, and the final Result.",
+                    "Describe a time when you had to learn a new programming language or framework quickly to complete a task. How did you approach learning it?",
+                    "Tell me about a time you worked in a group project or team and encountered a disagreement. How did you communicate and find a solution?",
+                    "Can you share an experience where you made a mistake in your code or missed a deadline? What did you do to fix it and what did you learn?"
+                ]
+            else:
+                return [
+                    "Tell me about a project where you faced conflicting technical priorities, a tight deadline, or unexpected roadblocks. Using the STAR framework, explain the Situation, the Task you owned, the specific Actions you drove, and the measurable Result.",
+                    "Describe a situation where you had a strong technical disagreement with a team member or stakeholder regarding system design. How did you resolve the conflict and reach alignment?",
+                    "Can you share an experience where an engineering project or model failed in production or did not achieve its target KPI? What went wrong, and what systemic changes did you put in place as a result?",
+                    "Give an example of a complex technical decision you made under significant ambiguity or incomplete data. How did you validate your assumptions and mitigate risks?"
+                ]
 
         elif cat in ["HR Interviews", "Career Preparation"] or interview_type == "HR":
-            return [
-                f"Why are you choosing to pursue a career as a {target_role}, and how do you prioritize continuous skill development when working on fast-paced engineering initiatives?",
-                "Where do you see your technical leadership and architectural expertise expanding over the next two to three years in this role?",
-                "How do you manage your time and maintain engineering quality when multiple high-priority deliverables and operational incidents compete for your attention?"
-            ]
+            if diff == "Beginner":
+                return [
+                    f"What motivated you to pursue a career in {target_role}, and what personal projects or coursework have you enjoyed the most?",
+                    "How do you organize your time when balancing multiple assignments, learning goals, or project deadlines?",
+                    "Where do you hope to grow your technical skills over your first year as an entry-level engineer?"
+                ]
+            else:
+                return [
+                    f"Why are you choosing to pursue a career as a {target_role}, and how do you prioritize continuous skill development when working on fast-paced engineering initiatives?",
+                    "Where do you see your technical leadership and architectural expertise expanding over the next two to three years in this role?",
+                    "How do you manage your time and maintain engineering quality when multiple high-priority deliverables and operational incidents compete for your attention?"
+                ]
 
         elif cat == "Software Engineering":
-            return [
-                "How do you apply SOLID design principles when architecting backend APIs and data processing services, and how does Dependency Inversion facilitate comprehensive unit and integration testing?",
-                "What are the architectural trade-offs between synchronous REST APIs, gRPC, and asynchronous event-driven messaging (Kafka/RabbitMQ) for inter-service communication?",
-                "How do you design database schema migrations in a high-availability production environment without incurring service downtime or table lockouts?"
-            ]
+            if diff == "Beginner":
+                return [
+                    "Can you explain the difference between synchronous and asynchronous execution in programming, with a simple code or real-world example?",
+                    "What are the core principles of Object-Oriented Programming (OOP) like Encapsulation and Inheritance, and why are they useful?",
+                    "What is Git, and what is the difference between 'git pull' and 'git push'? How do you handle a simple merge conflict?",
+                    "What is a REST API, and what are the standard HTTP methods like GET, POST, PUT, and DELETE used for?",
+                    "Why is writing unit tests important, and what is the difference between testing a single function versus an entire system?",
+                    "How do you handle errors and exceptions in your code to prevent crashes when unexpected input arrives?"
+                ]
+            else:
+                return [
+                    "How do you apply SOLID design principles when architecting backend APIs and data processing services, and how does Dependency Inversion facilitate comprehensive unit and integration testing?",
+                    "What are the architectural trade-offs between synchronous REST APIs, gRPC, and asynchronous event-driven messaging (Kafka/RabbitMQ) for inter-service communication?",
+                    "How do you design database schema migrations in a high-availability production environment without incurring service downtime or table lockouts?"
+                ]
 
         elif cat in ["Data Structures & Algorithms", "DSA"]:
-            return [
-                "When would you choose a Hash Map over a Balanced Binary Search Tree (Red-Black / AVL tree), and what are the worst-case time complexity implications of hash collisions?",
-                "How does Dijkstra's algorithm find the shortest path in a weighted graph, and why does it fail when negative edge weights are present?",
-                "Can you explain the trade-offs between dynamic programming with memoization (top-down) versus tabulation (bottom-up), particularly with respect to recursion stack depth?"
-            ]
+            if diff == "Beginner":
+                return [
+                    "What is the difference between an Array and a Linked List, and what are the advantages and disadvantages of each?",
+                    "Can you explain Big-O notation in simple terms and compare O(1), O(n), and O(n^2) with everyday programming examples?",
+                    "What is a Stack and what is a Queue? What are common programming examples of Last-In-First-Out (LIFO) and First-In-First-Out (FIFO)?",
+                    "What is a Hash Map (Dictionary), and why does it allow fast O(1) key lookups?",
+                    "How does Binary Search work, and why must an array be sorted before you can perform binary search?",
+                    "What is recursion in programming, what is a base case, and what happens if a recursive function does not have a base case?"
+                ]
+            else:
+                return [
+                    "When would you choose a Hash Map over a Balanced Binary Search Tree (Red-Black / AVL tree), and what are the worst-case time complexity implications of hash collisions?",
+                    "How does Dijkstra's algorithm find the shortest path in a weighted graph, and why does it fail when negative edge weights are present?",
+                    "Can you explain the trade-offs between dynamic programming with memoization (top-down) versus tabulation (bottom-up), particularly with respect to recursion stack depth?"
+                ]
 
         elif cat in ["AI Engineering", "Data Science", "Data Analytics"]:
             return [
@@ -673,11 +769,19 @@ class LocalGroundedLLMService(BaseLLMService):
         ]
         if resume_candidates and sequence_number in [1, 2] and interview_type == "Technical":
             prime_skill = resume_candidates[0]
-            resume_options = [
-                f"Your resume highlights practical experience with {prime_skill}. Could you walk me through a challenging project where you implemented {prime_skill}, detailing your design choices, the constraints you faced, and how you validated the results?",
-                f"In your projects utilizing {prime_skill}, how did you optimize system performance, handle edge cases, and ensure maintainability across production releases?",
-                f"Regarding your work with {prime_skill}: What was the most significant technical trade-off or distributed bottleneck you resolved while architecting solutions with {prime_skill}?"
-            ]
+            is_beginner = any(k in str(difficulty).lower() for k in ["begin", "junior", "entry", "fresher", "foundational", "easy"])
+            if is_beginner:
+                resume_options = [
+                    f"Your resume highlights practical experience with {prime_skill}. Could you tell me about a project or assignment where you used {prime_skill}, what features you built, and what you learned from building it?",
+                    f"How did you get started with {prime_skill}, and what is your favorite library or tool within {prime_skill} that helped you build your projects?",
+                    f"Can you explain a specific bug or technical challenge you ran into while writing code with {prime_skill}, and how you debugged and fixed it?"
+                ]
+            else:
+                resume_options = [
+                    f"Your resume highlights practical experience with {prime_skill}. Could you walk me through a challenging project where you implemented {prime_skill}, detailing your design choices, the constraints you faced, and how you validated the results?",
+                    f"In your projects utilizing {prime_skill}, how did you optimize system performance, handle edge cases, and ensure maintainability across production releases?",
+                    f"Regarding your work with {prime_skill}: What was the most significant technical trade-off or distributed bottleneck you resolved while architecting solutions with {prime_skill}?"
+                ]
             chosen_q = next((ro for ro in resume_options if ro.strip().lower() not in all_forbidden), resume_options[0])
             loc_q = self._localize_question(chosen_q, language, target_role)
             return {

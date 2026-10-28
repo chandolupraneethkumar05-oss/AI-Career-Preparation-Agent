@@ -190,7 +190,8 @@ class InterviewEngine:
             "interview_language": interview_lang,
             "feedback_language": feedback_lang,
             "session_number": past_session_count + 1,
-            "resume_text": ""
+            "resume_text": "",
+            "job_description": getattr(request, "job_description", "") or ""
         }
 
         # Generate question #1 using dedicated Question Generator LLM (Groq Cloud LPU)
@@ -224,6 +225,7 @@ class InterviewEngine:
             recommendations_json="[]",
             strengths_json="[]",
             weaknesses_json="[]",
+            job_description=getattr(request, "job_description", "") or "",
             started_at=now,
             created_at=now
         )
@@ -277,6 +279,7 @@ class InterviewEngine:
             total_questions=interview.total_questions,
             current_question_index=0,
             current_question=q1_response,
+            job_description=interview.job_description or "",
             started_at=interview.started_at or now
         )
 
@@ -334,6 +337,7 @@ class InterviewEngine:
             total_questions=interview.total_questions or interview.questions_count or 5,
             current_question_index=interview.current_question_index,
             current_question=current_q_resp,
+            job_description=interview.job_description or "",
             started_at=interview.started_at or utc_now()
         )
 
@@ -390,21 +394,50 @@ class InterviewEngine:
         )
         rag_eval_chunks = rag_res.get("chunks", []) if isinstance(rag_res, dict) else (rag_res or [])
 
-        # 5-Axis Evaluation using dedicated Evaluator LLM (NVIDIA NIM / Llama-3.3-70b-instruct)
-        eval_dict = get_evaluator_llm_service().evaluate_interview_answer(
-            question=q_dict,
-            answer_text=request.answer,
-            career_context=career_context,
-            language=interview.feedback_language or "en",
-            user_answer=request.answer,
-            retrieved_knowledge=rag_eval_chunks,
-            target_role=interview.role,
-            difficulty=question.difficulty,
-            interview_type=interview.interview_type or "Technical"
-        )
+        is_user_skipped = bool(getattr(request, "skipped", False)) or request.answer.strip() in ["", "[Skipped by candidate]", "[Skipped]"]
+        effective_answer_text = "[Skipped by candidate]" if is_user_skipped else request.answer
+
+        if is_user_skipped:
+            eval_dict = {
+                "overall_score": 0,
+                "technical_accuracy": 0,
+                "communication_quality": 0,
+                "relevance": 0,
+                "completeness": 0,
+                "confidence_indicators": 0,
+                "correctness_score": 0,
+                "depth_score": 0,
+                "relevance_score": 0,
+                "communication_score": 0,
+                "technical_score": 0,
+                "feedback": f"You skipped this question on {question.skill}. We have marked this competency as a high-priority skill gap in your preparation dashboard and will recommend foundational drills.",
+                "strengths": [],
+                "weaknesses": [f"Candidate skipped {question.skill} question"],
+                "missing_concepts": [question.skill],
+                "detected_topics": [question.skill],
+                "follow_up_needed": False,
+                "follow_up_reason": None,
+                "recommended_follow_up_type": "none",
+                "recommended_difficulty": question.difficulty,
+                "skill_evidence": {question.skill: 0},
+                "evaluator": "calibrated_skip_handler"
+            }
+        else:
+            # 5-Axis Evaluation using dedicated Evaluator LLM (NVIDIA NIM / Llama-3.3-70b-instruct)
+            eval_dict = get_evaluator_llm_service().evaluate_interview_answer(
+                question=q_dict,
+                answer_text=effective_answer_text,
+                career_context=career_context,
+                language=interview.feedback_language or "en",
+                user_answer=effective_answer_text,
+                retrieved_knowledge=rag_eval_chunks,
+                target_role=interview.role,
+                difficulty=question.difficulty,
+                interview_type=interview.interview_type or "Technical"
+            )
 
         now = utc_now()
-        word_count = len(request.answer.split())
+        word_count = len(effective_answer_text.split())
 
         # Save Answer (Persistence Safety First)
         ans_id = f"ans_{uuid.uuid4().hex[:10]}"
@@ -413,9 +446,10 @@ class InterviewEngine:
             session_id=session_id,
             question_id=question.id,
             user_id=user_id,
-            answer=request.answer,
+            answer=effective_answer_text,
             word_count=word_count,
             time_spent_seconds=request.time_spent_seconds or 0,
+            skipped=is_user_skipped,
             submitted_at=now
         )
         db.add(answer_model)
@@ -423,12 +457,18 @@ class InterviewEngine:
 
         # Save Evaluation with 5-Axis & Adaptive Follow-Up metadata
         eval_id = f"eval_{uuid.uuid4().hex[:10]}"
-        overall_val = int(eval_dict.get("overall_score") or 70)
-        tech_val = int(eval_dict.get("technical_accuracy") or overall_val)
-        comm_val = int(eval_dict.get("communication_quality") or overall_val)
-        rel_val = int(eval_dict.get("relevance") or overall_val)
-        comp_val = int(eval_dict.get("completeness") or overall_val)
-        conf_val = int(eval_dict.get("confidence_indicators") or overall_val)
+        raw_overall = eval_dict.get("overall_score")
+        overall_val = int(raw_overall if raw_overall is not None else 70)
+        raw_tech = eval_dict.get("technical_accuracy")
+        tech_val = int(raw_tech if raw_tech is not None else overall_val)
+        raw_comm = eval_dict.get("communication_quality")
+        comm_val = int(raw_comm if raw_comm is not None else overall_val)
+        raw_rel = eval_dict.get("relevance")
+        rel_val = int(raw_rel if raw_rel is not None else overall_val)
+        raw_comp = eval_dict.get("completeness")
+        comp_val = int(raw_comp if raw_comp is not None else overall_val)
+        raw_conf = eval_dict.get("confidence_indicators")
+        conf_val = int(raw_conf if raw_conf is not None else overall_val)
 
         eval_model = AnswerEvaluation(
             id=eval_id,
