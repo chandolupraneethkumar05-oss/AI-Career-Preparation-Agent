@@ -131,7 +131,8 @@ export function InterviewProvider({ children }) {
         totalQuestions: questionLimit,
         interviewLanguage: config.interviewLanguage || 'en',
         feedbackLanguage: config.feedbackLanguage || 'en',
-        interviewMode: mode
+        interviewMode: mode,
+        jobDescription: config.jobDescription || setup.jobDescription || ''
       });
 
 
@@ -184,9 +185,12 @@ export function InterviewProvider({ children }) {
 
 
   // Submit answer for the current question
-  const submitCurrentAnswer = async (answerText) => {
+  const submitCurrentAnswer = async (answerText, options = {}) => {
     const currentQ = session.questions[session.currentIndex];
     if (!currentQ) return null;
+
+    const isSkipped = Boolean(options.skipped || options.isSkipped);
+    const effectiveAnswer = isSkipped ? "[Skipped by candidate]" : (answerText || "");
 
     let evaluation = null;
     let nextDifficulty = session.currentDifficulty;
@@ -197,7 +201,9 @@ export function InterviewProvider({ children }) {
       try {
         const submissionResult = await interviewApi.submitAnswer(session.sessionId, {
           questionId: currentQ.id,
-          answer: answerText,
+          answer: effectiveAnswer,
+          skipped: isSkipped,
+          timeSpentSeconds: options.timeSpentSeconds || 0,
           userId: getActiveUserId(),
           currentQuestionMeta: currentQ,
           targetRole: setup.targetRole,

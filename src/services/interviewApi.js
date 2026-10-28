@@ -22,6 +22,7 @@ export const interviewApi = {
     interviewLanguage = 'en',
     feedbackLanguage = 'en',
     interviewMode = 'text',
+    jobDescription = '',
     userId = null
   }) {
     const effectiveUserId = resolveUserId(userId);
@@ -42,7 +43,8 @@ export const interviewApi = {
           total_questions: totalQuestions,
           interview_language: interviewLanguage,
           feedback_language: feedbackLanguage,
-          interview_mode: interviewMode
+          interview_mode: interviewMode,
+          job_description: jobDescription || ''
         })
       });
 
@@ -125,6 +127,7 @@ export const interviewApi = {
     questionId,
     answer,
     timeSpentSeconds = 0,
+    skipped = false,
     userId = null,
     currentQuestionMeta = null,
     targetRole = 'Machine Learning Engineer',
@@ -143,8 +146,9 @@ export const interviewApi = {
         body: JSON.stringify({
           user_id: effectiveUserId,
           question_id: questionId,
-          answer,
-          time_spent_seconds: timeSpentSeconds
+          answer: skipped ? "[Skipped by candidate]" : (answer || ""),
+          time_spent_seconds: timeSpentSeconds,
+          skipped: Boolean(skipped)
         })
 
       });
@@ -158,6 +162,43 @@ export const interviewApi = {
     } catch (err) {
       console.warn('[interviewApi] submitAnswer failed, utilizing offline evaluation fallback:', err);
       // Client-side offline evaluator fallback
+      if (skipped) {
+        return {
+          evaluation: {
+            id: `eval_offline_${Date.now()}`,
+            question_id: questionId,
+            overall_score: 0,
+            technical_accuracy: 0,
+            communication_quality: 0,
+            relevance: 0,
+            completeness: 0,
+            confidence_indicators: 0,
+            strengths: [],
+            weaknesses: [`Question skipped by candidate`],
+            skill_evidence: { [currentQuestionMeta?.category || 'General']: 0 },
+            feedback: 'You skipped this question. It has been recorded as a priority focus area for your personalized study plan.',
+            follow_up_needed: false,
+            follow_up_reason: null
+          },
+          next_question: {
+            id: `q_next_${Date.now()}`,
+            question: `Explain fundamental engineering concepts and practical workflows for ${targetRole}.`,
+            skill: 'Fundamentals',
+            difficulty: difficulty,
+            generated_source: 'offline_fallback',
+            expected_focus: 'Explain core principles simply and clearly.'
+          },
+          adaptive_decision: {
+            action: 'standard',
+            difficulty: difficulty,
+            reason: 'Question skipped; advancing to next syllabus topic.'
+          },
+          is_complete: false,
+          completed_count: 1,
+          total_questions: 5
+        };
+      }
+
       const localEval = evaluateAnswer(
         currentQuestionMeta || { id: questionId, question: 'Interview prompt', category: 'General' },
         answer,
