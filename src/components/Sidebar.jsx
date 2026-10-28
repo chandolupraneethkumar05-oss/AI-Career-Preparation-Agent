@@ -27,34 +27,18 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
 
   const navSections = [
     {
-      title: 'Core',
+      title: 'Practice & Cockpit',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { to: '/career-journey', label: 'Career Journey', icon: Compass },
-        { to: '/progress', label: 'Progress Analytics', icon: TrendingUp },
-      ]
-    },
-    {
-      title: 'Practice & Arena',
-      items: [
         { to: '/interview-setup', label: 'Mock Interview', icon: Mic },
-        { to: '/skill-arena', label: 'Skill Arena', icon: Code2 },
-        { to: '/daily-challenge', label: 'Daily Practice', icon: Flame },
-        { to: '/interview-experiences', label: 'Question Vault', icon: BookOpen },
+        { to: '/skill-arena', label: 'Skill Arena & Daily', icon: Code2 },
       ]
     },
     {
-      title: 'Diagnostics',
+      title: 'Analytics & Tools',
       items: [
         { to: '/ats', label: 'Resume / ATS', icon: FileSearch },
-        { to: '/skill-gap', label: 'Skill Gap', icon: Brain },
-        { to: '/weekly-report', label: 'Weekly Report', icon: FileText },
-      ]
-    },
-    {
-      title: 'Account',
-      items: [
-        { to: '/achievements', label: 'Milestones', icon: Award },
+        { to: '/progress', label: 'Progress & Insights', icon: TrendingUp },
         { to: '/settings', label: 'Settings', icon: Settings },
       ]
     }

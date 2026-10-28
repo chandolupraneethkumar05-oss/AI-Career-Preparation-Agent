@@ -50,21 +50,22 @@ export default function App() {
                   }
                 >
                   <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/career-journey" element={<CareerJourneyPage />} />
-                  <Route path="/weekly-report" element={<WeeklyReportPage />} />
                   <Route path="/interview-setup" element={<InterviewSetupPage />} />
                   <Route path="/interview-ready" element={<InterviewReadyPage />} />
                   <Route path="/mock-interview" element={<MockInterviewPage />} />
                   <Route path="/interview-feedback" element={<InterviewFeedbackPage />} />
-                  <Route path="/skill-gap" element={<SkillGapPage />} />
-                  <Route path="/ats" element={<ATSScannerPage />} />
-                  <Route path="/daily-challenge" element={<DailyChallengePage />} />
                   <Route path="/skill-arena" element={<SkillArenaPage />} />
+                  <Route path="/ats" element={<ATSScannerPage />} />
+                  <Route path="/skill-gap" element={<SkillGapPage />} />
                   <Route path="/progress" element={<ProgressPage />} />
-                  <Route path="/achievements" element={<AchievementsPage />} />
-                  <Route path="/interview-experiences" element={<InterviewExperiencesPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
-                  {/* Clean redirect for legacy /assistant route */}
+
+                  {/* Clean consolidations for streamlined 6-hub navigation */}
+                  <Route path="/daily-challenge" element={<Navigate to="/skill-arena?tab=daily" replace />} />
+                  <Route path="/weekly-report" element={<Navigate to="/progress?tab=weekly" replace />} />
+                  <Route path="/career-journey" element={<Navigate to="/progress?tab=milestones" replace />} />
+                  <Route path="/achievements" element={<Navigate to="/progress?tab=milestones" replace />} />
+                  <Route path="/interview-experiences" element={<Navigate to="/interview-setup" replace />} />
                   <Route path="/assistant" element={<Navigate to="/dashboard" replace />} />
                 </Route>
 

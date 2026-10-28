@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Code2,
   Bug,
@@ -21,7 +21,8 @@ import {
   Award,
   Terminal,
   Play,
-  Cpu
+  Cpu,
+  Flame
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -38,6 +39,12 @@ const PRACTICE_MODES = [
     label: 'All Modes',
     icon: Sparkles,
     description: 'Career-prioritized challenges across all technical modes'
+  },
+  {
+    id: 'daily',
+    label: "Today's Daily Drill",
+    icon: Flame,
+    description: 'Featured daily coding challenge with +50 XP practice streak reward'
   },
   {
     id: 'coding',
@@ -67,12 +74,15 @@ const PRACTICE_MODES = [
 
 export default function SkillArenaPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'daily' ? 'daily' : 'all';
+
   const { user, updateUser } = useAuth();
   const userId = user?.id || 'user-001';
   const targetRole = user?.targetRole || 'Machine Learning Engineer';
 
   // Active mode & challenge states
-  const [selectedMode, setSelectedMode] = useState('all');
+  const [selectedMode, setSelectedMode] = useState(initialTab);
   const [activeChallenge, setActiveChallenge] = useState(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);

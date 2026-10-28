@@ -24,10 +24,9 @@ export default function AppLayout() {
       case '/interview-ready': return 'Interview Readiness';
       case '/mock-interview': return 'Mock Interview Practice';
       case '/daily-challenge': return 'Daily Practice Question';
-      case '/skill-arena': return 'Skill Arena Practice';
+      case '/skill-arena': return 'Skill Arena & Daily Practice';
       case '/ats': return 'Resume / ATS Diagnostic';
-      case '/achievements': return 'Academic Milestones';
-      case '/progress': return 'Career Readiness Progress';
+      case '/progress': return 'Progress & Insights Hub';
       case '/interview-experiences': return 'Interview Archive';
       case '/settings': return 'System Settings';
       default: return 'Career Hub';
