@@ -7,6 +7,9 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('talentpath_explicit_logout') === 'true') {
+      return null;
+    }
     return storageService.getCurrentUser();
   });
 
@@ -220,7 +223,11 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      if (typeof window !== 'undefined') localStorage.setItem('talentpath_explicit_logout', 'true');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('talentpath_explicit_logout', 'true');
+        localStorage.removeItem('interview_ai_auth_user');
+        localStorage.removeItem('interview_ai_auth_token');
+      }
       const headers = storageService.getAuthHeaders();
       if (headers.Authorization) {
         await fetch(`${API_BASE_URL}/auth/logout`, {

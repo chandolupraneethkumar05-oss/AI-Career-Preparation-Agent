@@ -345,11 +345,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Right Corner: Candidate Boy Character (Clean, No Frames, No Badges) */}
-        <div className="hidden md:flex items-center justify-end shrink-0 w-44 lg:w-56 self-end pointer-events-none select-none">
+        <div className="hidden md:flex items-center justify-center shrink-0 w-48 lg:w-60 pointer-events-none select-none">
           <img
             src="/boy-illustration-transparent.png"
             alt="Candidate studying with laptop"
-            className="w-full max-h-52 object-contain"
+            className="w-full h-auto max-h-56 object-contain"
           />
         </div>
 

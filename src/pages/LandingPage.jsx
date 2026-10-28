@@ -230,27 +230,9 @@ export default function LandingPage() {
       </section>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 5. ARCHITECTURAL PHOTO BREAK (MATCHING REFERENCE DESIGN)      */}
+      {/* 5. METHODOLOGY & SCORECARD SHOWCASE                           */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <section className="px-4 sm:px-6 lg:px-8 py-10 max-w-7xl mx-auto">
-        <div className="relative rounded-3xl overflow-hidden shadow-lg h-64 sm:h-80 lg:h-96">
-          <img
-            src="/landing-arches-break.jpg"
-            alt="University Innovation Arches"
-            className="w-full h-full object-cover object-center filter brightness-[0.95]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent flex items-end p-6 sm:p-10">
-            <p className="text-white text-xs sm:text-sm font-semibold tracking-wide">
-              Engineering Excellence &amp; Objective Evaluation Architecture
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ───────────────────────────────────────────────────────────── */}
-      {/* 6. METHODOLOGY & SCORECARD SHOWCASE                           */}
-      {/* ───────────────────────────────────────────────────────────── */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           <div className="lg:col-span-5 space-y-4">
@@ -318,20 +300,7 @@ export default function LandingPage() {
       </section>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 7. CAMPUS TREE-LINED AVENUE PHOTO BREAK                       */}
-      {/* ───────────────────────────────────────────────────────────── */}
-      <section className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
-        <div className="relative rounded-3xl overflow-hidden shadow-lg h-56 sm:h-72 lg:h-80">
-          <img
-            src="/landing-trees-break.jpg"
-            alt="University Tree-lined Pathway"
-            className="w-full h-full object-cover object-center filter brightness-[0.98]"
-          />
-        </div>
-      </section>
-
-      {/* ───────────────────────────────────────────────────────────── */}
-      {/* 8. 6-GRID CAPABILITY SHOWCASE                                 */}
+      {/* 6. 6-GRID CAPABILITY SHOWCASE                                 */}
       {/* ───────────────────────────────────────────────────────────── */}
       <section className="py-14 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

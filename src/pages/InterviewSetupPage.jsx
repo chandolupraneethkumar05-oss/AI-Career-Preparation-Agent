@@ -218,8 +218,6 @@ export default function InterviewSetupPage() {
   const [interviewerPersona, setInterviewerPersona] = useState(setup.interviewerPersona || 'julian');
   const [resumeName, setResumeName] = useState(setup.resumeFileName || 'Candidate_Resume.pdf');
   const [jobDescription, setJobDescription] = useState(setup.jobDescription || '');
-  const [interviewLanguage, setInterviewLanguage] = useState(setup.interviewLanguage || 'en');
-  const [feedbackLanguage, setFeedbackLanguage] = useState(setup.feedbackLanguage || 'en');
   const [totalQuestions, setTotalQuestions] = useState(setup.totalQuestions || 5);
 
   const detectedTech = useMemo(() => extractDetectedTech(jobDescription), [jobDescription]);
@@ -304,8 +302,8 @@ export default function InterviewSetupPage() {
       interviewerPersona,
       resumeFileName: resumeName,
       jobDescription,
-      interviewLanguage,
-      feedbackLanguage,
+      interviewLanguage: 'en',
+      feedbackLanguage: 'en',
       totalQuestions
     });
     if (user?.id) {
@@ -780,7 +778,7 @@ export default function InterviewSetupPage() {
               <span>
                 {showAdvanced
                   ? 'Hide Advanced Customization Options'
-                  : 'Show Advanced Options (Target Employer Playbook, Custom Resume File, Languages, Question Count)'}
+                  : 'Show Advanced Options (Target Employer Playbook, Custom Resume File, Question Count)'}
               </span>
             </span>
             {showAdvanced ? <ChevronUp className="w-4 h-4 text-[#1A365D]" /> : <ChevronDown className="w-4 h-4 text-[#1A365D]" />}
@@ -896,81 +894,45 @@ export default function InterviewSetupPage() {
               </div>
             </GlassCard>
 
-            {/* 8. Multilingual & Session Length */}
+            {/* 8. Session Length */}
             <GlassCard className="p-6 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-                <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
-                  <Globe className="w-4 h-4" />
+              <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">Language &amp; Session Length</h3>
-                  <p className="text-xs text-[#70685E]">Configure interview question language, feedback presentation, and question count</p>
+                  <h3 className="text-base font-bold text-slate-900 font-sans">Session Length &amp; Question Volume</h3>
+                  <p className="text-xs text-slate-500 font-sans">Configure your target practice session question count</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-                {/* Interview Question Language */}
-                <div>
-                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Interview Language</label>
-                  <select
-                    value={interviewLanguage}
-                    onChange={(e) => setInterviewLanguage(e.target.value)}
-                    className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] focus:outline-none focus:border-[#1A365D]"
+              <div className="pt-1 max-w-sm">
+                <label className="block text-xs font-semibold text-slate-700 mb-2">Question Volume</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setTotalQuestions(5)}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      totalQuestions === 5
+                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                    }`}
                   >
-                    <option value="en">English (Canonical)</option>
-                    <option value="te">Telugu (తెలుగు)</option>
-                    <option value="hi">Hindi (हिन्दी)</option>
-                    <option value="es">Spanish (Español)</option>
-                  </select>
-                  <p className="text-[10px] text-[#70685E] mt-1">Language for oral / text queries</p>
-                </div>
-
-                {/* Feedback Language */}
-                <div>
-                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Feedback &amp; Rubric Language</label>
-                  <select
-                    value={feedbackLanguage}
-                    onChange={(e) => setFeedbackLanguage(e.target.value)}
-                    className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] focus:outline-none focus:border-[#1A365D]"
+                    Concise (5 Qs)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTotalQuestions(10)}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      totalQuestions === 10
+                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                    }`}
                   >
-                    <option value="en">English (Canonical)</option>
-                    <option value="te">Telugu (తెలుగు)</option>
-                    <option value="hi">Hindi (हिन्दी)</option>
-                  </select>
-                  <p className="text-[10px] text-[#235E3B] mt-1">
-                    Scoring is language-independent.
-                  </p>
+                    Exhaustive (10 Qs)
+                  </button>
                 </div>
-
-                {/* Session Length */}
-                <div>
-                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Question Volume</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTotalQuestions(5)}
-                      className={`p-2.5 rounded-md border text-xs font-bold transition-all cursor-pointer ${
-                        totalQuestions === 5
-                          ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D]'
-                          : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
-                      }`}
-                    >
-                      Concise (5 Qs)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTotalQuestions(10)}
-                      className={`p-2.5 rounded-md border text-xs font-bold transition-all cursor-pointer ${
-                        totalQuestions === 10
-                          ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D]'
-                          : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
-                      }`}
-                    >
-                      Exhaustive (10 Qs)
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-[#70685E] mt-1">Target questions for this session</p>
-                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5 font-sans">Target questions for this calibrated session</p>
               </div>
             </GlassCard>
           </div>

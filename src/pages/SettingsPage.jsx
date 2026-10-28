@@ -27,7 +27,6 @@ import { useTheme } from '../context/ThemeContext';
 import { storageService } from '../utils/storage/storageService';
 import { reminderApi } from '../services/reminderApi';
 import { profileApi } from '../services/profileApi';
-import { SUPPORTED_FEEDBACK_LANGUAGES } from '../data/languages';
 import { MOCK_ROLES } from '../data/mockData';
 
 const TIMEZONE_OPTIONS = [
@@ -52,7 +51,6 @@ export default function SettingsPage() {
   const [name, setName] = useState(user?.name || 'Candidate');
   const [role, setRole] = useState(user?.targetRole || user?.role || setup.targetRole || 'Machine Learning Engineer');
   const [difficulty, setDifficulty] = useState(setup.difficulty || 'Intermediate');
-  const [feedbackLanguage, setFeedbackLanguage] = useState(user?.feedbackLanguage || setup.feedbackLanguage || 'en');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const isPredefinedRole = MOCK_ROLES.includes(role);
@@ -114,9 +112,6 @@ export default function SettingsPage() {
     fetchReminderDetails();
     const currentUserId = user?.id || 'usr_candidate';
     profileApi.getProfile(currentUserId).then((res) => {
-      if (res?.profile?.feedback_language) {
-        setFeedbackLanguage(res.profile.feedback_language);
-      }
       if (res?.user?.target_role && !user?.targetRole) {
         setRole(res.user.target_role);
       }
@@ -128,9 +123,9 @@ export default function SettingsPage() {
     const currentUserId = user?.id || 'usr_candidate';
     const finalRole = isCustomRole ? (customRoleInput.trim() || 'Software Engineer') : role;
     setRole(finalRole);
-    updateUser({ name, role: finalRole, targetRole: finalRole, feedbackLanguage });
-    updateSetup({ targetRole: finalRole, difficulty, feedbackLanguage });
-    profileApi.updateProfile({ target_role: finalRole, role: finalRole, name, feedback_language: feedbackLanguage }, currentUserId).catch(() => {});
+    updateUser({ name, role: finalRole, targetRole: finalRole });
+    updateSetup({ targetRole: finalRole, difficulty });
+    profileApi.updateProfile({ target_role: finalRole, role: finalRole, name }, currentUserId).catch(() => {});
 
 
     const newReminderPrefs = {
@@ -302,72 +297,6 @@ export default function SettingsPage() {
                 <option value="Intermediate">Intermediate (Mid-Level Professional)</option>
                 <option value="Advanced">Advanced (Senior Level)</option>
               </select>
-            </div>
-          </div>
-        </GlassCard>
-
-        {/* AI Feedback Language Preference */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E0D5] pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
-                <Globe className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-base font-serif font-bold text-[#1F1B16]">
-                  III. AI Feedback Language
-                </h3>
-                <p className="text-xs text-[#70685E]">
-                  Choose language for evaluation reports and practice feedback
-                </p>
-              </div>
-            </div>
-            <Badge variant="emerald" size="sm">
-              Phase 16 Multilingual
-            </Badge>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            {SUPPORTED_FEEDBACK_LANGUAGES.map((lang) => (
-              <div
-                key={lang.code}
-                onClick={() => setFeedbackLanguage(lang.code)}
-                className={`
-                  p-4 rounded-md border cursor-pointer transition-all text-left flex flex-col justify-between
-                  ${feedbackLanguage === lang.code
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-sm'
-                    : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                  }
-                `}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-bold font-serif text-[#1F1B16]">{lang.name}</span>
-                    {feedbackLanguage === lang.code && (
-                      <CheckCircle2 className="w-4 h-4 text-[#1A365D]" />
-                    )}
-                  </div>
-                  <span className="text-xs font-semibold text-[#8C6E54] block mb-1">
-                    {lang.native}
-                  </span>
-                  <p className="text-[11px] text-[#70685E] leading-relaxed">
-                    {lang.description}
-                  </p>
-                </div>
-                {lang.code !== 'en' && (
-                  <div className="mt-3 pt-2 border-t border-[#E5E0D5] text-[10px] text-[#235E3B] font-mono">
-                    Technical terms preserved in English
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-start gap-2.5 text-xs text-[#70685E]">
-            <Sparkles className="w-4 h-4 text-[#8C6E54] shrink-0 mt-0.5" />
-            <div>
-              <strong className="text-[#1F1B16] block mb-0.5">Evaluation Independence Guarantee:</strong>
-              <span>Evaluation rubrics, STAR indices, and skill metrics remain strictly objective. Linguistic preference only translates pedagogical commentary.</span>
             </div>
           </div>
         </GlassCard>

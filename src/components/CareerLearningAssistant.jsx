@@ -7,7 +7,6 @@ import {
   CheckCircle,
   ArrowRight,
   ShieldCheck,
-  Globe,
   HelpCircle,
   Loader2,
   AlertCircle
@@ -25,19 +24,12 @@ const SUGGESTED_QUESTIONS = [
   'What is the difference between Precision and Recall?'
 ];
 
-const LANGUAGES = [
-  { code: 'en', label: 'English (EN)' },
-  { code: 'te', label: 'Telugu (తెలుగు)' },
-  { code: 'hi', label: 'Hindi (हिन्दी)' },
-  { code: 'es', label: 'Spanish (Español)' }
-];
 
 export default function CareerLearningAssistant({ initialTopic: _initialTopic = null } = {}) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [query, setQuery] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
@@ -50,7 +42,7 @@ export default function CareerLearningAssistant({ initialTopic: _initialTopic = 
     setError(null);
 
     try {
-      const res = await aiApi.askQuestion(q, selectedLanguage, user?.id || 'user-001');
+      const res = await aiApi.askQuestion(q, 'en', user?.id || 'user-001');
       setResponse(res);
       setQuery('');
     } catch (err) {
@@ -95,22 +87,7 @@ export default function CareerLearningAssistant({ initialTopic: _initialTopic = 
           </div>
         </div>
 
-        {/* Language Selector */}
-        <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-900/80 border border-slate-800 rounded-lg p-1">
-          <Globe className="w-4 h-4 text-slate-400 ml-1.5" />
-          <select
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
-            className="bg-transparent text-xs text-slate-300 font-medium focus:outline-none pr-2 cursor-pointer"
-            aria-label="Feedback Language"
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang.code} value={lang.code} className="bg-slate-900 text-slate-200">
-                {lang.label}
-              </option>
-            ))}
-          </select>
-        </div>
+
       </div>
 
       {/* Suggested Questions */}

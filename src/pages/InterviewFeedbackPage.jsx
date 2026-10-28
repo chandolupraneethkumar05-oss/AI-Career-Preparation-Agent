@@ -46,7 +46,6 @@ import { getCompanyPlaybook } from '../data/companyPlaybooks';
 import { useInterview } from '../context/InterviewContext';
 import { useAuth } from '../context/AuthContext';
 import { synthesizeInterviewFeedback } from '../utils/feedbackAgent';
-import { getLanguageDisplayName } from '../data/languages';
 
 export default function InterviewFeedbackPage() {
   const navigate = useNavigate();
@@ -112,7 +111,6 @@ export default function InterviewFeedbackPage() {
 
   // Synthesize prototype feedback using the isolated agent logic
   const result = synthesizeInterviewFeedback(session.summaryResult, session.answers, setup);
-  const activeLang = result.feedbackLanguage || session.summaryResult?.feedbackLanguage || setup.feedbackLanguage || 'en';
   const fallbackNotice = result.fallbackNotice || session.summaryResult?.fallbackNotice || null;
 
   // Video session detection & communication metrics resolution
@@ -326,10 +324,6 @@ Candidate: ${user?.name || 'Candidate'}
           <Badge variant="neutral" size="md">
             {result.targetRole}
           </Badge>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-sm bg-[#EBF4EE] border border-[#CDE5D4] text-[#235E3B] text-xs font-semibold">
-            <Globe className="w-3.5 h-3.5 text-[#235E3B]" />
-            <span>Evaluation Language: {getLanguageDisplayName(activeLang)}</span>
-          </div>
           <button
             onClick={handleDownloadReport}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs font-semibold text-[#1F1B16] hover:bg-[#F2EFE9] transition-all shadow-xs cursor-pointer"
@@ -670,10 +664,6 @@ Candidate: ${user?.name || 'Candidate'}
             <h2 className="text-base font-serif font-bold text-[#1F1B16]">Examination Committee Evaluation Summary</h2>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm bg-[#EBF4EE] text-[#235E3B] border border-[#CDE5D4] flex items-center gap-1 font-mono">
-              <Globe className="w-3 h-3 text-[#235E3B]" />
-              {getLanguageDisplayName(activeLang)}
-            </span>
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm bg-[#FAF8F3] text-[#70685E] border border-[#E5E0D5] font-mono">
               Faculty Audit
             </span>
@@ -809,11 +799,6 @@ Candidate: ${user?.name || 'Candidate'}
                 <span className="text-xs font-bold text-[#1A365D] uppercase tracking-wider font-mono">
                   Autonomous Next-Best-Action
                 </span>
-                {session.summaryResult.backendReport.feedback_language && session.summaryResult.backendReport.feedback_language !== 'en' && (
-                  <Badge variant="navy" size="sm">
-                    {session.summaryResult.backendReport.feedback_language.toUpperCase()}
-                  </Badge>
-                )}
               </div>
               <h3 className="text-base font-serif font-bold text-[#1F1B16]">
                 {session.summaryResult.backendReport.next_best_action.title}
