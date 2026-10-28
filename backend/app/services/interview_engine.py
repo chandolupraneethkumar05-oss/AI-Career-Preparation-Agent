@@ -789,6 +789,7 @@ class InterviewEngine:
             strengths = json.loads(interview.strengths_json or "[]") if interview.strengths_json else []
             weaknesses = json.loads(interview.weaknesses_json or "[]") if interview.weaknesses_json else []
             recommendations = json.loads(interview.recommendations_json or "[]") if interview.recommendations_json else []
+            answers_count = db.query(InterviewAnswer).filter(InterviewAnswer.session_id == session_id).count()
             return FinalInterviewReportResponse(
                 session_id=interview.id,
                 user_id=interview.user_id,
@@ -805,7 +806,11 @@ class InterviewEngine:
                 feedback_summary=interview.feedback_summary or "",
                 feedback_language=interview.feedback_language or "en",
                 fallback_notice=None,
-                next_best_action=None,
+                next_best_action={},
+                skill_gap_updates=[],
+                questions_completed=answers_count or interview.questions_count,
+                total_questions=interview.questions_count,
+                started_at=interview.started_at or interview.created_at,
                 completed_at=interview.completed_at or interview.created_at
             )
 

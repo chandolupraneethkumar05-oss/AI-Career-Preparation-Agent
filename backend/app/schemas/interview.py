@@ -172,19 +172,19 @@ class FinalInterviewReportResponse(BaseModel):
     difficulty: str
     overall_score: int
     passed: bool
-    rubric_scores: Dict[str, int]
-    strengths: List[str]
-    weaknesses: List[str]
-    recommendations: List[str]
-    next_best_action: Dict[str, Any]
-    skill_gap_updates: List[Dict[str, Any]]
+    rubric_scores: Dict[str, int] = Field(default_factory=dict)
+    strengths: List[str] = Field(default_factory=list)
+    weaknesses: List[str] = Field(default_factory=list)
+    recommendations: List[str] = Field(default_factory=list)
+    next_best_action: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    skill_gap_updates: List[Dict[str, Any]] = Field(default_factory=list)
     observed_skills: List[Dict[str, Any]] = Field(default_factory=list)
-    feedback_summary: str
-    feedback_language: str
+    feedback_summary: str = ""
+    feedback_language: str = "en"
     fallback_notice: Optional[str] = None
-    questions_completed: int
-    total_questions: int
-    started_at: datetime
+    questions_completed: Optional[int] = 0
+    total_questions: Optional[int] = 5
+    started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     answers_transcript: List[Dict[str, Any]] = Field(default_factory=list)
 

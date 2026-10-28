@@ -20,6 +20,7 @@ from typing import Dict, Any, List, Optional
 from .multilingual_feedback_service import multilingual_feedback_service
 from ..languages import normalize_feedback_language, is_supported_feedback_language, get_language_display_name
 from ..evaluation.semantic_evaluator import default_semantic_evaluator
+from .difficulty_profiles import normalize_difficulty, get_difficulty_profile
 
 
 class BaseLLMService(ABC):
@@ -548,26 +549,49 @@ class LocalGroundedLLMService(BaseLLMService):
                 ]
 
         elif cat in ["AI Engineering", "Data Science", "Data Analytics"]:
-            return [
-                f"In building production RAG systems for a {target_role}, how do you evaluate chunking strategies, embedding dimensionality, and re-ranking algorithms to minimize retrieval hallucinations?",
-                "How do you design an A/B testing framework to statistically validate whether a newly deployed model or feature significantly outperforms the production baseline?",
-                "When engineering features from raw temporal and categorical data, how do you handle high cardinality and prevent future information leakage into training sets?"
-            ]
+            if diff == "Beginner":
+                return [
+                    "What is the difference between supervised and unsupervised learning, and can you provide a simple example of each?",
+                    "Can you explain the difference between Precision and Recall, and when you would prioritize one over the other?",
+                    "What is overfitting in machine learning, and how do training vs validation loss curves help identify it?",
+                    "What is the purpose of train/validation/test dataset splits, and why should we never evaluate a model on training data alone?"
+                ]
+            else:
+                return [
+                    f"In building production RAG systems for a {target_role}, how do you evaluate chunking strategies, embedding dimensionality, and re-ranking algorithms to minimize retrieval hallucinations?",
+                    "How do you design an A/B testing framework to statistically validate whether a newly deployed model or feature significantly outperforms the production baseline?",
+                    "When engineering features from raw temporal and categorical data, how do you handle high cardinality and prevent future information leakage into training sets?"
+                ]
 
         else:
-            return [
-                f"Regarding {topic}: Can you explain the core architectural principles, common trade-offs, and how you evaluate readiness for {target_role} applications?",
-                f"In your experience with {topic}, how do you diagnose performance bottlenecks and design systems for high availability and fault tolerance?",
-                f"What are the key technical standards and best practices you enforce when reviewing code and architecture for {topic} in a team setting?"
-            ]
+            if diff == "Beginner":
+                return [
+                    f"Regarding {topic}: Can you explain what it is in simple terms, why it is used in {target_role} development, and give a basic practical example?",
+                    f"When working with {topic}, what are the most common beginner mistakes or errors developers encounter, and how do you debug them?",
+                    f"What fundamental concepts or best practices should an entry-level engineer follow when writing clean, readable code for {topic}?"
+                ]
+            else:
+                return [
+                    f"Regarding {topic}: Can you explain the core architectural principles, common trade-offs, and how you evaluate readiness for {target_role} applications?",
+                    f"In your experience with {topic}, how do you diagnose performance bottlenecks and design systems for high availability and fault tolerance?",
+                    f"What are the key technical standards and best practices you enforce when reviewing code and architecture for {topic} in a team setting?"
+                ]
 
     def _synthesize_novel_scenario_question(self, target_role: str, topic: str, difficulty: str, sequence_number: int) -> str:
-        facets = [
-            f"Suppose you are architecting a mission-critical {target_role} system centered around {topic}. What key latency, scalability, and maintainability constraints would guide your design choices?",
-            f"In a production environment for a {target_role}, imagine an unexpected performance degradation occurs in {topic}. Walk me through your step-by-step diagnostic strategy to identify the root cause and resolve it.",
-            f"When scaling {topic} from prototype to high-throughput production, what architectural trade-offs between consistency, availability, and engineering velocity would you present to technical leadership?",
-            f"Imagine you are conducting a technical code and design review on a new implementation of {topic}. What anti-patterns, edge cases, and security vulnerabilities would you specifically look for?"
-        ]
+        if normalize_difficulty(difficulty) == "Beginner":
+            facets = [
+                f"Suppose you are building a beginner project for a {target_role} centered around {topic}. What basic concepts, functions, and steps would you use to implement it?",
+                f"Imagine a simple bug occurs when running code that uses {topic}. Walk me through how you would read error messages and systematically debug the issue.",
+                f"When writing code for {topic}, what naming conventions and comments would you include to make your code easy for other engineers to understand?",
+                f"Can you give a simple real-world analogy to explain {topic} to a junior student or team member?"
+            ]
+        else:
+            facets = [
+                f"Suppose you are architecting a mission-critical {target_role} system centered around {topic}. What key latency, scalability, and maintainability constraints would guide your design choices?",
+                f"In a production environment for a {target_role}, imagine an unexpected performance degradation occurs in {topic}. Walk me through your step-by-step diagnostic strategy to identify the root cause and resolve it.",
+                f"When scaling {topic} from prototype to high-throughput production, what architectural trade-offs between consistency, availability, and engineering velocity would you present to technical leadership?",
+                f"Imagine you are conducting a technical code and design review on a new implementation of {topic}. What anti-patterns, edge cases, and security vulnerabilities would you specifically look for?"
+            ]
         return facets[sequence_number % len(facets)]
 
     def generate_interview_question(
