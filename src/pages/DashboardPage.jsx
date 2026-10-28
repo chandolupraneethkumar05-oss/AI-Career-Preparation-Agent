@@ -19,7 +19,8 @@ import {
   Zap,
   ArrowRight,
   Award,
-  BookOpen
+  BookOpen,
+  AlertTriangle
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -31,7 +32,6 @@ import { activityService } from '../utils/activityService';
 import { agentDecisionEngine } from '../utils/agentDecisionEngine';
 import { skillApi } from '../services/skillApi';
 import { recommendationApi } from '../services/recommendationApi';
-import MarqueeBanner from '../components/MarqueeBanner';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -66,7 +66,6 @@ export default function DashboardPage() {
     return () => { mounted = false; };
   }, [user?.id]);
 
-
   // Next Best Action from Autonomous Agent Decision Engine
   const [liveNextAction, setLiveNextAction] = useState(() => agentDecisionEngine.getNextBestAction());
 
@@ -99,37 +98,106 @@ export default function DashboardPage() {
   // Real Interview History & Readiness Metrics
   const hasInterviews = Array.isArray(history) && history.length > 0;
   const currentReadiness = hasInterviews
-    ? (skillProfile?.overallReadiness ?? Math.round(history.reduce((a, b) => a + b.score, 0) / history.length))
+    ? (skillProfile?.overallReadiness ?? Math.round(history.reduce((a, b) => a + (b.score || 0), 0) / history.length))
     : (session.summaryResult?.scores?.overall || null);
 
   // User details
   const firstName = user?.name ? user.name.split(' ')[0] : 'Candidate';
-  const userRole = user?.targetRole || user?.role || 'Machine Learning Engineer';
+  const userRole = user?.targetRole || user?.role || 'Software Engineer';
 
-  // Daily Habits checklist
+  // Extract recent skipped skills or low-scoring skills (<70%) from the latest interview session
+  const recentRemediationSkills = useMemo(() => {
+    const skills = [];
+    const seen = new Set();
+
+    // 1. From active/latest session in memory
+    if (session?.answers && session.answers.length > 0) {
+      session.answers.forEach((ans, idx) => {
+        const rawAns = ans.answerText || ans.answer || '';
+        const rawScore = ans.evaluation?.scores?.overall ?? (ans.score != null ? ans.score / 10 : 7.5);
+        const score = Math.round(rawScore <= 10 ? rawScore * 10 : rawScore);
+        const isSkipped = Boolean(ans.skipped) || rawAns.includes('[Skipped by candidate]') || (score === 0 && !rawAns);
+        const skillName = ans.skill || ans.topic || ans.category || `Question ${idx + 1}`;
+
+        if ((isSkipped || score < 70) && !seen.has(skillName)) {
+          seen.add(skillName);
+          skills.push({
+            name: skillName,
+            isSkipped,
+            score,
+            question: ans.question || '',
+            reason: isSkipped ? 'Skipped during mock interview' : `Scored ${score}% in recent interview`
+          });
+        }
+      });
+    }
+
+    // 2. From skill profile gaps if available
+    if (skills.length === 0 && liveSkillProfile?.gaps && Array.isArray(liveSkillProfile.gaps)) {
+      liveSkillProfile.gaps.slice(0, 3).forEach((gap) => {
+        const name = typeof gap === 'string' ? gap : gap.name || gap.skill;
+        if (name && !seen.has(name)) {
+          seen.add(name);
+          skills.push({
+            name,
+            isSkipped: false,
+            score: gap.score || 60,
+            reason: 'Identified as high-priority skill gap'
+          });
+        }
+      });
+    }
+
+    return skills.slice(0, 3);
+  }, [session, liveSkillProfile]);
+
+  // Dynamic Role-Aware Daily Habits
   const isDailyDone = storageService.get(STORAGE_KEYS.DAILY_CHALLENGE_COMPLETED, false) || hasPracticedToday;
+
+  const defaultRoleDrill = useMemo(() => {
+    const roleLower = userRole.toLowerCase();
+    if (roleLower.includes('front') || roleLower.includes('react') || roleLower.includes('web')) {
+      return {
+        title: 'Practice React State & Lifecycle',
+        subtitle: 'Component re-renders and virtual DOM drill',
+        route: '/daily-challenge'
+      };
+    }
+    if (roleLower.includes('data') || roleLower.includes('machine') || roleLower.includes('ml')) {
+      return {
+        title: 'Practice ML Evaluation & Data Drift',
+        subtitle: 'Precision/Recall trade-offs and PSI metrics drill',
+        route: '/daily-challenge'
+      };
+    }
+    return {
+      title: 'Practice Backend & Database Querying',
+      subtitle: 'Conceptual query optimization and REST API drill',
+      route: '/daily-challenge'
+    };
+  }, [userRole]);
 
   const [habits, setHabits] = useState(() => [
     {
       id: 'habit-1',
-      title: 'Practice SQL & Database Concurrency',
-      subtitle: 'Conceptual query optimization drill',
+      title: defaultRoleDrill.title,
+      subtitle: defaultRoleDrill.subtitle,
       xpReward: 50,
       completed: Boolean(isDailyDone),
-      route: '/daily-challenge'
+      route: defaultRoleDrill.route
     },
     {
       id: 'habit-2',
       title: 'Complete Mock Technical Interview',
-      subtitle: '15-min structured audio scenario',
+      subtitle: 'Adaptive interview with skip support',
       xpReward: 100,
       completed: Boolean(hasInterviews),
       route: '/interview-setup'
     },
     {
       id: 'habit-3',
-      title: 'Review Communication Feedback Report',
-      subtitle: 'Pacing, clarity, and STAR structure audit',
+      title: 'Review Performance & Model Answers',
+      subtitle: 'Inspect staff-level exemplars and rubrics',
       xpReward: 35,
       completed: Boolean(hasInterviews && session?.summaryResult),
       route: '/interview-feedback'
@@ -202,10 +270,13 @@ export default function DashboardPage() {
       <div className="border-b border-[#E5E0D5] pb-5 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
           <div>
-            <span className="editorial-overline block">
-              CAREER READINESS &amp; PREPARATION
-            </span>
-            <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1F1B16] tracking-tight mt-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="editorial-overline">CAREER READINESS COCKPIT</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#EAEFF5] text-[#1A365D] font-bold">
+                {user?.difficulty || 'Beginner / Campus Ready'}
+              </span>
+            </div>
+            <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1F1B16] tracking-tight">
               Welcome back, {user?.name || 'Candidate'} 👋
             </h1>
             <p className="text-xs sm:text-sm text-[#3B352E] mt-0.5">
@@ -214,15 +285,15 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-[#F5EFEA] border border-[#E8DCD1] text-[#8C6E54] font-semibold">
-              <span>🔥</span>
-              <span>{streakCount > 0 ? `${streakCount}-day streak` : 'Day 0 · Start streak'}</span>
+            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-[#8C6E54] font-semibold shadow-2xs">
+              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>{streakCount > 0 ? `${streakCount}-day practice streak` : 'Start your practice streak'}</span>
             </span>
           </div>
         </div>
 
         {/* Target Role Selector Box */}
-        <div className="p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-between text-xs text-[#1F1B16] shadow-[0_1px_2px_rgba(31,27,22,0.02)]">
+        <div className="p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-between text-xs text-[#1F1B16] shadow-2xs">
           <div className="flex items-center gap-2 truncate">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#70685E]">Target Role:</span>
             <span className="font-serif font-semibold text-[#1F1B16] truncate text-sm">{userRole}</span>
@@ -231,14 +302,76 @@ export default function DashboardPage() {
             onClick={() => navigate('/settings')}
             className="text-xs font-semibold text-[#1A365D] hover:underline flex items-center gap-1 cursor-pointer ml-3 shrink-0"
           >
-            <span>Switch</span>
+            <span>Change Target Role</span>
             <span className="text-[10px]">→</span>
           </button>
         </div>
-
-        {/* Dynamic Editorial Headline Ticker */}
-        <MarqueeBanner variant="dashboard" role={userRole} />
       </div>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* TARGETED REMEDIATION & SKILL DRILLS (From Interview Skips)    */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {recentRemediationSkills.length > 0 && (
+        <GlassCard className="p-5 sm:p-6 space-y-3.5 border-l-4 border-l-amber-500 bg-[#FFFDF9]">
+          <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="editorial-overline text-amber-800">
+                TARGETED REMEDIATION &amp; SKILL DRILLS
+              </span>
+            </div>
+            <Badge variant="bronze" size="xs">
+              {recentRemediationSkills.some(s => s.isSkipped) ? 'SKIPPED TOPICS DETECTED' : 'GAP REINFORCEMENT'}
+            </Badge>
+          </div>
+
+          <div>
+            <h2 className="font-serif text-base sm:text-lg font-bold text-[#1F1B16] flex items-center gap-2">
+              <span>High-Priority Remediation from Recent Practice</span>
+            </h2>
+            <p className="text-xs text-[#70685E] mt-0.5 leading-relaxed">
+              Topics you skipped or scored below 70% in your latest interview sessions. Practice targeted drills to convert these gaps into strengths.
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            {recentRemediationSkills.map((item, idx) => (
+              <div
+                key={idx}
+                className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-serif font-bold text-xs sm:text-sm text-[#1F1B16]">
+                      {item.name}
+                    </span>
+                    {item.isSkipped ? (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-mono font-bold">
+                        SKIPPED
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.2 rounded bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-mono font-bold">
+                        {item.score}% SCORE
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-[#70685E]">
+                    {item.reason}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/skill-arena')}
+                  className="px-3 py-1.5 rounded-md bg-[#1B2A4A] hover:bg-[#142038] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 self-start sm:self-auto shadow-2xs"
+                >
+                  <span>Practice Drill</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
 
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 2. SECTION I: READINESS INDEX                                 */}
@@ -247,7 +380,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
           <div className="flex items-center gap-2">
             <span className="editorial-overline text-[#70685E]">
-              I. CAREER READINESS
+              I. CAREER READINESS INDEX
             </span>
           </div>
           <Badge variant={hasInterviews && currentReadiness >= 75 ? "emerald" : hasInterviews ? "navy" : "neutral"} size="sm">
@@ -407,7 +540,7 @@ export default function DashboardPage() {
                   <Sparkles className="w-3.5 h-3.5 text-[#70685E]" />
                   Agent Decision Rationale:
                 </span>
-                <button onClick={() => setShowRationale(false)} className="text-[#70685E] hover:text-[#1F1B16]">
+                <button onClick={() => setShowRationale(false)} className="text-[#70685E] hover:text-[#1F1B16] cursor-pointer">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -433,7 +566,7 @@ export default function DashboardPage() {
           {/* Tool 1: Mock Interview */}
           <div
             onClick={() => navigate('/interview-setup')}
-            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#D5CFBF] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-[0_1px_2px_rgba(31,27,22,0.02)] group"
+            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-2xs group"
           >
             <div className="w-8 h-8 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D]">
               <Mic className="w-4 h-4" />
@@ -443,7 +576,7 @@ export default function DashboardPage() {
                 Mock Interview Practice
               </h3>
               <p className="text-xs text-[#70685E] mt-0.5">
-                Practice realistic interviews with adaptive follow-up questions
+                Practice calibrated interviews with skip options and model answers
               </p>
             </div>
           </div>
@@ -451,7 +584,7 @@ export default function DashboardPage() {
           {/* Tool 2: Resume ATS Scanner */}
           <div
             onClick={() => navigate('/ats')}
-            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#D5CFBF] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-[0_1px_2px_rgba(31,27,22,0.02)] group"
+            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-2xs group"
           >
             <div className="w-8 h-8 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D]">
               <FileText className="w-4 h-4" />
@@ -461,7 +594,7 @@ export default function DashboardPage() {
                 Resume ATS Scanner
               </h3>
               <p className="text-xs text-[#70685E] mt-0.5">
-                Match your resume keywords to your target job
+                Match your resume keywords to your target job requirements
               </p>
             </div>
           </div>
@@ -469,7 +602,7 @@ export default function DashboardPage() {
           {/* Tool 3: Skill Gap Analysis */}
           <div
             onClick={() => navigate('/skill-gap')}
-            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#D5CFBF] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-[0_1px_2px_rgba(31,27,22,0.02)] group"
+            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-2xs group"
           >
             <div className="w-8 h-8 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D]">
               <Compass className="w-4 h-4" />
@@ -479,7 +612,7 @@ export default function DashboardPage() {
                 Skill Gap Analysis
               </h3>
               <p className="text-xs text-[#70685E] mt-0.5">
-                Find what skills you need to learn and practice
+                Inspect competencies and curriculum benchmarks for {userRole}
               </p>
             </div>
           </div>
@@ -487,7 +620,7 @@ export default function DashboardPage() {
           {/* Tool 4: Skill Arena */}
           <div
             onClick={() => navigate('/skill-arena')}
-            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#D5CFBF] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-[0_1px_2px_rgba(31,27,22,0.02)] group"
+            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-2xs group"
           >
             <div className="w-8 h-8 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D]">
               <Code2 className="w-4 h-4" />
@@ -497,7 +630,7 @@ export default function DashboardPage() {
                 Skill Arena Coding
               </h3>
               <p className="text-xs text-[#70685E] mt-0.5">
-                Practice coding, SQL, and problem solving
+                Targeted practice drills, algorithms, and SQL query execution
               </p>
             </div>
           </div>
