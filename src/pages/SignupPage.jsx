@@ -141,10 +141,10 @@ export default function SignupPage() {
 
         {/* Centerpiece: Interactive Mock Interview Simulation Card */}
         <div className="my-8 lg:my-auto relative z-10 max-w-lg mx-auto w-full">
-          <div className={`p-6 sm:p-7 rounded-2xl bg-slate-900/80 border transition-all duration-300 backdrop-blur-md shadow-2xl ${
+          <div className={`p-6 sm:p-7 rounded-2xl bg-[#1E293B] border transition-all duration-300 shadow-2xl ${
             authStatus === 'success' 
-              ? 'border-emerald-500/50 shadow-emerald-500/20' 
-              : 'border-slate-800/90 hover:border-slate-700'
+              ? 'border-emerald-500/60 shadow-emerald-500/20' 
+              : 'border-slate-700/80 hover:border-slate-600'
           }`}>
             
             {/* Step Progress Pills */}
@@ -158,31 +158,31 @@ export default function SignupPage() {
                         ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm shadow-emerald-500/40'
                         : step < 2
                         ? 'bg-slate-800 text-emerald-400'
-                        : 'bg-slate-800/60 text-slate-500'
+                        : 'bg-slate-800/80 text-slate-400'
                     }`}
                   >
                     {step < 2 ? '✓' : step}
                   </span>
                 ))}
               </div>
-              <span className="text-[11px] font-mono font-medium text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="text-[11px] font-mono font-bold text-emerald-300 uppercase tracking-wider bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                 Question 2 of 5
               </span>
             </div>
 
             {/* Question Text Prompt */}
             <div className="space-y-1.5 mb-5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
                 Technical Calibration • Distributed Systems
               </span>
-              <h2 className="text-base sm:text-lg font-semibold text-white leading-snug">
+              <h2 className="text-base sm:text-lg font-bold text-white leading-snug">
                 “How do you optimize an application for high-throughput reads?”
               </h2>
             </div>
 
             {/* Live Audio Waveform & Speech Visualizer */}
-            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between gap-3 mb-5">
-              <div className="flex items-center gap-2 text-slate-300 text-xs font-medium">
+            <div className="p-3.5 rounded-xl bg-[#0F172A] border border-slate-700/80 flex items-center justify-between gap-3 mb-5">
+              <div className="flex items-center gap-2 text-slate-200 text-xs font-semibold">
                 <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
                   <Mic className="w-3.5 h-3.5 animate-pulse" />
                 </div>
@@ -198,14 +198,14 @@ export default function SignupPage() {
                       height: `${h}px`,
                       animation: `pulse 1.2s ease-in-out infinite ${i * 0.12}s`
                     }}
-                    className="w-1 rounded-full bg-emerald-400/90"
+                    className="w-1 rounded-full bg-emerald-400"
                   />
                 ))}
               </div>
             </div>
 
             {/* Live Readiness Gauge & Key Points */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-700/80">
               <div className="flex items-center gap-3">
                 <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
                   <svg className="w-12 h-12 -rotate-90" viewBox="0 0 72 72">
@@ -213,7 +213,7 @@ export default function SignupPage() {
                       cx="36"
                       cy="36"
                       r={radius}
-                      className="text-slate-800"
+                      className="text-slate-700"
                       strokeWidth="5"
                       stroke="currentColor"
                       fill="transparent"
@@ -234,12 +234,12 @@ export default function SignupPage() {
                   <span className="absolute text-xs font-mono font-bold text-white">92%</span>
                 </div>
                 <div>
-                  <span className="text-xs font-semibold text-white block">Readiness Match</span>
-                  <span className="text-[11px] text-slate-400">Strong Technical Depth</span>
+                  <span className="text-xs font-bold text-white block">Readiness Match</span>
+                  <span className="text-[11px] text-slate-300">Strong Technical Depth</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-500/20">
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30">
                 <span>Cache-Aside Pattern</span>
               </div>
             </div>

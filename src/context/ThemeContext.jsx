@@ -8,6 +8,10 @@ export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => {
     try {
       const saved = storageService.getTheme();
+      if (saved === 'warm' || saved === 'editorial_scholar') {
+        storageService.saveTheme('white');
+        return 'white';
+      }
       return isValidTheme(saved) ? saved : DEFAULT_THEME;
     } catch {
       return DEFAULT_THEME;

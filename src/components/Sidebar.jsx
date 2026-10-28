@@ -4,20 +4,13 @@ import {
   LayoutDashboard, 
   Mic, 
   FileSearch, 
-  Flame, 
   Code2, 
-  Brain, 
   TrendingUp, 
-  Award, 
   Settings, 
   ChevronLeft, 
-  ChevronRight,
-  LogOut,
-  X,
-  Target,
-  BookOpen,
-  Compass,
-  FileText
+  ChevronRight, 
+  LogOut, 
+  X 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -68,8 +61,8 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
       {/* Sidebar Element */}
       <aside
         className={`
-          bg-[var(--theme-sidebar,#F8F6F0)] 
-          border-r border-[var(--theme-border,#E5E0D5)] 
+          bg-white 
+          border-r border-slate-200 
           flex flex-col justify-between 
           transition-all duration-200 z-50 
           h-screen
@@ -79,33 +72,33 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
           ${collapsed ? 'md:w-16' : 'md:w-60'}
         `}
       >
-        {/* Top Header / Brand Masthead */}
+        {/* Top Header / Brand */}
         <div>
-          <div className="h-16 flex items-center justify-between px-3.5 border-b border-[var(--theme-border,#E5E0D5)] bg-[var(--theme-surface,#FFFDF9)]">
+          <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-200 bg-white">
             {(!collapsed || mobileOpen) ? (
               <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="w-8 h-8 rounded-md bg-[var(--theme-cta,#1B2A4A)] flex items-center justify-center text-white shrink-0 shadow-sm">
-                  <span className="font-serif font-bold text-xs tracking-wider">TP</span>
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm shadow-indigo-600/30">
+                  <span className="font-sans font-bold text-xs tracking-wider">TP</span>
                 </div>
                 <div className="truncate">
-                  <span className="font-serif font-bold text-base tracking-tight text-[var(--theme-text,#1F1B16)] block">
+                  <span className="font-sans font-bold text-base tracking-tight text-slate-900 block">
                     TalentPath
                   </span>
-                  <p className="text-[9px] uppercase tracking-widest text-[var(--theme-text-micro,#5C554B)] font-bold truncate">
+                  <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold truncate">
                     Career Prep Agent
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="mx-auto w-8 h-8 rounded-md bg-[var(--theme-cta,#1B2A4A)] flex items-center justify-center text-white shadow-sm">
-                <span className="font-serif font-bold text-xs">TP</span>
+              <div className="mx-auto w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-600/30">
+                <span className="font-sans font-bold text-xs">TP</span>
               </div>
             )}
 
             {/* Desktop Collapse Toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="p-1 rounded-md border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] transition-colors hidden md:block cursor-pointer"
+              className="p-1 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors hidden md:block cursor-pointer"
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -115,7 +108,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             {/* Mobile Close Button */}
             <button
               onClick={() => setMobileOpen(false)}
-              className="p-1 rounded-md border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] md:hidden cursor-pointer"
+              className="p-1 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 md:hidden cursor-pointer"
               title="Close navigation"
             >
               <X className="w-4 h-4" />
@@ -128,12 +121,12 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
               <div key={section.title} className="space-y-0.5">
                 {(!collapsed || mobileOpen) ? (
                   <div className="px-3 pt-1 pb-1">
-                    <span className="text-[9px] font-mono uppercase tracking-widest text-[var(--theme-text-micro,#5C554B)] font-bold select-none">
+                    <span className="text-[9px] font-sans uppercase tracking-widest text-slate-400 font-bold select-none">
                       {section.title}
                     </span>
                   </div>
                 ) : sIdx > 0 ? (
-                  <div className="my-1.5 border-t border-[var(--theme-border,#E5E0D5)]/70" />
+                  <div className="my-1.5 border-t border-slate-100" />
                 ) : null}
 
                 {section.items.map((item) => {
@@ -144,10 +137,10 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
                       to={item.to}
                       onClick={handleNavClick}
                       className={({ isActive }) => `
-                        flex items-center gap-2.5 px-3 py-1.5 rounded-md font-medium text-xs transition-colors duration-150
+                        flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-colors duration-150
                         ${isActive
-                          ? 'bg-[var(--theme-selected,#EAEFF5)] text-[var(--theme-primary,#1A365D)] font-semibold border border-[var(--theme-border-strong,#D0DBE7)] shadow-none'
-                          : 'text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] border border-transparent'
+                          ? 'bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
                         }
                         ${collapsed && !mobileOpen ? 'justify-center px-1.5 py-2' : ''}
                       `}
@@ -166,20 +159,20 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
         </div>
 
         {/* Bottom Candidate Profile Bar */}
-        <div className="p-2.5 border-t border-[var(--theme-border,#E5E0D5)] bg-[var(--theme-surface,#FFFDF9)]">
+        <div className="p-2.5 border-t border-slate-200 bg-white">
           {(!collapsed || mobileOpen) ? (
-            <div className="flex items-center justify-between gap-2 p-1.5 rounded-md bg-[var(--theme-surface-low,#FAF8F3)] border border-[var(--theme-border,#E5E0D5)]">
+            <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-50 border border-slate-200">
               <div className="truncate flex-1 min-w-0">
-                <p className="text-xs font-semibold text-[var(--theme-text,#1F1B16)] truncate">
+                <p className="text-xs font-semibold text-slate-900 truncate">
                   {user?.name || 'Candidate'}
                 </p>
-                <p className="text-[10px] text-[var(--theme-text-muted,#70685E)] truncate">
+                <p className="text-[10px] text-slate-500 truncate">
                   {user?.targetRole || 'ML Engineer'}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 rounded-md text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-danger,#9A421A)] hover:bg-[var(--theme-danger-bg,#FDF2E9)] transition-colors shrink-0 cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
                 title="Log Out"
                 aria-label="Log Out"
               >
@@ -189,7 +182,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
           ) : (
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center p-2 rounded-md text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-danger,#9A421A)] hover:bg-[var(--theme-danger-bg,#FDF2E9)] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               title="Log Out"
               aria-label="Log Out"
             >

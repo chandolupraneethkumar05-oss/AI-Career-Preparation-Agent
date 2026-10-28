@@ -1,51 +1,52 @@
 @import "tailwindcss";
 
 /* =========================================================================
-   1. EDITORIAL SCHOLAR & ACADEMIC CURATOR — ALEXANDRIA STYLE DESIGN SYSTEM
+   TALENTSHINE DESIGN SYSTEM — CLEAN SLATE, PURE WHITE & ELECTRIC INDIGO
+   Inspired by Talent Shine (lms.talentshineindia.com/home/AiInterview)
    ========================================================================= */
 
-:root, [data-theme="white"] {
+:root, [data-theme="white"], [data-theme="warm"], [data-theme="editorial_scholar"] {
   --theme-id: "white";
   
   /* ── Canvas & Surfaces — Talent Shine Clean Slate & Pure White ───────── */
-  --theme-bg: #F8FAFC;                /* Clean Neutral Canvas */
-  --theme-surface: #FFFFFF;           /* Crisp Pure White Surface */
-  --theme-surface-hover: #F1F5F9;     /* Subtle Surface Hover */
-  --theme-surface-subtle: #F1F5F9;    /* Inset Subdued Surface */
-  --theme-surface-low: #FFFFFF;       /* Clean White Low Surface */
+  --theme-bg: #F8FAFC;                /* Slate-50 Clean Canvas */
+  --theme-surface: #FFFFFF;           /* Pure White Surface */
+  --theme-surface-hover: #F1F5F9;     /* Slate-100 Surface Hover */
+  --theme-surface-subtle: #F1F5F9;    /* Slate-100 Inset Surface */
+  --theme-surface-low: #FFFFFF;       /* Crisp White Surface */
   --theme-sidebar: #FFFFFF;           /* Crisp Modern Sidebar */
-  --theme-border: #E2E8F0;            /* 1px Hairline Divider */
-  --theme-border-strong: #CBD5E1;     /* Emphasized Divider */
+  --theme-border: #E2E8F0;            /* Slate-200 1px Border */
+  --theme-border-strong: #CBD5E1;     /* Slate-300 Border */
 
   /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
   --theme-ink-primary: #0F172A;       /* Slate-900 Headings & Key Text */
   --theme-ink-secondary: #334155;     /* Slate-700 Descriptions */
   --theme-ink-tertiary: #64748B;      /* Slate-500 Subtitles */
-  --theme-ink-micro: #475569;         /* Tracked Overlines & Micro Labels */
+  --theme-ink-micro: #475569;         /* Slate-600 Micro Labels */
 
   --theme-text: #0F172A;
   --theme-text-secondary: #334155;
   --theme-text-muted: #64748B;
   --theme-text-micro: #475569;
 
-  /* ── Primary Accents & CTAs — Vibrant Electric Indigo ────────────────── */
-  --theme-primary: #4F46E5;           /* Electric Indigo */
+  /* ── Primary Accents & CTAs — Electric Indigo ────────────────────────── */
+  --theme-primary: #4F46E5;           /* Indigo-600 */
   --theme-primary-light: #6366F1;     /* Indigo-500 */
-  --theme-cta: #4F46E5;               /* Primary CTA Button */
+  --theme-cta: #4F46E5;               /* Primary Action Button */
   --theme-cta-hover: #4338CA;         /* Indigo-700 Hover */
   --theme-cta-text: #FFFFFF;          /* High-Contrast White Text */
 
-  /* ── Secondary Accent ─────────────────────────────────────────────────── */
-  --theme-bronze: #F59E0B;            /* Warm Amber Accent */
+  /* ── Secondary & Status Accents ──────────────────────────────────────── */
+  --theme-bronze: #F59E0B;            /* Amber-500 Practice Streaks */
   --theme-bronze-hover: #D97706;
   --theme-accent: #4F46E5;
 
   /* ── Semantic System ─────────────────────────────────────────────────── */
-  --theme-success: #10B981;           /* Vibrant Emerald */
+  --theme-success: #10B981;           /* Emerald-500 Scores & Readiness */
   --theme-success-bg: #ECFDF5;
-  --theme-warning: #F59E0B;
+  --theme-warning: #F59E0B;           /* Amber Alert */
   --theme-warning-bg: #FFFBEB;
-  --theme-danger: #EF4444;            /* Rose Alert */
+  --theme-danger: #EF4444;            /* Red Error */
   --theme-danger-bg: #FEF2F2;
   --theme-neutral: #64748B;
   --theme-neutral-bg: #F1F5F9;
@@ -55,64 +56,7 @@
   --theme-header-bg: rgba(255, 255, 255, 0.95);
   --theme-input-bg: #FFFFFF;
   --theme-selected: #EEF2FF;
-  --theme-glow-primary: 0 4px 14px 0 rgba(79, 70, 229, 0.25);
-  --theme-glow-secondary: none;
-
-  color-scheme: light;
-}
-
-[data-theme="warm"], [data-theme="editorial_scholar"] {
-  --theme-id: "warm";
-  
-  /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
-  --theme-bg: #F8F6F0;                /* Warm Archival Canvas */
-  --theme-surface: #FFFDF9;           /* Porcelain Card Surface */
-  --theme-surface-hover: #F2EFE9;     /* Subtle Surface Hover */
-  --theme-surface-subtle: #F2EFE9;    /* Inset Subdued Surface */
-  --theme-surface-low: #FAF8F3;       /* Secondary Low Surface */
-  --theme-sidebar: #F8F6F0;           /* Restrained Archival Sidebar */
-  --theme-border: #E5E0D5;            /* 1px Hairline Divider */
-  --theme-border-strong: #D5CFBF;     /* Emphasized Divider */
-
-  /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
-  --theme-ink-primary: #1F1B16;       /* Primary Headings & Important Text */
-  --theme-ink-secondary: #3B352E;     /* Body Text & Descriptions */
-  --theme-ink-tertiary: #70685E;      /* Subtitles & Timestamps */
-  --theme-ink-micro: #5C554B;         /* Tracked Overlines & Micro Labels (WCAG AA) */
-
-  --theme-text: #1F1B16;
-  --theme-text-secondary: #3B352E;
-  --theme-text-muted: #70685E;
-  --theme-text-micro: #5C554B;
-
-  /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
-  --theme-primary: #1A365D;           /* Academic Navy (Active & Key Links) */
-  --theme-primary-light: #2A4A7F;
-  --theme-cta: #1B2A4A;               /* Primary CTA Button */
-  --theme-cta-hover: #142038;         /* CTA Hover State */
-  --theme-cta-text: #FFFFFF;          /* High-Contrast White Text */
-
-  /* ── Secondary Editorial Accent ──────────────────────────────────────── */
-  --theme-bronze: #8C6E54;            /* Aged Bronze / Ochre */
-  --theme-bronze-hover: #795E47;
-  --theme-accent: #1A365D;
-
-  /* ── Semantic System (Strict High-Contrast Ratios) ───────────────────── */
-  --theme-success: #235E3B;
-  --theme-success-bg: #EBF4EE;
-  --theme-warning: #9A421A;
-  --theme-warning-bg: #FDF2E9;
-  --theme-danger: #9A421A;
-  --theme-danger-bg: #FDF2E9;
-  --theme-neutral: #4A453E;
-  --theme-neutral-bg: #EFECE6;
-
-  /* ── Form Controls & Active States ───────────────────────────────────── */
-  --theme-card-bg: #FFFDF9;
-  --theme-header-bg: rgba(255, 253, 249, 0.98);
-  --theme-input-bg: #FFFDF9;
-  --theme-selected: #EAE6DC;
-  --theme-glow-primary: none;
+  --theme-glow-primary: 0 4px 14px 0 rgba(79, 70, 229, 0.2);
   --theme-glow-secondary: none;
 
   color-scheme: light;
@@ -121,21 +65,21 @@
 [data-theme="dark"], .dark {
   --theme-id: "dark";
 
-  /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
-  --theme-bg: #0B0F17;                /* Deep Obsidian Midnight Canvas */
-  --theme-surface: #111827;           /* Midnight Card Surface */
-  --theme-surface-hover: #1E293B;     /* Subtle Surface Hover */
-  --theme-surface-subtle: #1E293B;    /* Inset Subdued Surface */
-  --theme-surface-low: #0F172A;       /* Secondary Low Surface */
-  --theme-sidebar: #0B0F17;           /* Deep Obsidian Sidebar */
-  --theme-border: #1E293B;            /* 1px Hairline Divider */
-  --theme-border-strong: #334155;     /* Emphasized Divider */
+  /* ── Canvas & Surfaces — Midnight Dark ────────────────────────────────── */
+  --theme-bg: #0B0F17;                /* Deep Canvas */
+  --theme-surface: #111827;           /* Card Surface */
+  --theme-surface-hover: #1E293B;     /* Surface Hover */
+  --theme-surface-subtle: #1E293B;    /* Inset Surface */
+  --theme-surface-low: #0F172A;       /* Secondary Surface */
+  --theme-sidebar: #0B0F17;           /* Sidebar */
+  --theme-border: #1E293B;            /* 1px Divider */
+  --theme-border-strong: #334155;     /* Border */
 
   /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
-  --theme-ink-primary: #F8FAFC;       /* Luminescent Primary Headings */
-  --theme-ink-secondary: #E2E8F0;     /* Crisp Body Text */
-  --theme-ink-tertiary: #94A3B8;      /* Subtitles & Timestamps */
-  --theme-ink-micro: #A1A1AA;         /* Tracked Overlines & Micro Labels */
+  --theme-ink-primary: #F8FAFC;       /* Primary Headings */
+  --theme-ink-secondary: #E2E8F0;     /* Body Text */
+  --theme-ink-tertiary: #94A3B8;      /* Subtitles */
+  --theme-ink-micro: #A1A1AA;         /* Micro Labels */
 
   --theme-text: #F8FAFC;
   --theme-text-secondary: #E2E8F0;
@@ -143,22 +87,22 @@
   --theme-text-micro: #A1A1AA;
 
   /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
-  --theme-primary: #38BDF8;           /* Electric Cyan/Sky */
-  --theme-primary-light: #60A5FA;
-  --theme-cta: #2563EB;
-  --theme-cta-hover: #1D4ED8;
+  --theme-primary: #6366F1;
+  --theme-primary-light: #818CF8;
+  --theme-cta: #4F46E5;
+  --theme-cta-hover: #4338CA;
   --theme-cta-text: #FFFFFF;
 
   /* ── Secondary Accent ─────────────────────────────────────────────────── */
-  --theme-bronze: #38BDF8;
-  --theme-bronze-hover: #0EA5E9;
-  --theme-accent: #38BDF8;
+  --theme-bronze: #F59E0B;
+  --theme-bronze-hover: #D97706;
+  --theme-accent: #6366F1;
 
   /* ── Semantic System ─────────────────────────────────────────────────── */
-  --theme-success: #22C55E;
-  --theme-success-bg: #052E16;
-  --theme-warning: #F97316;
-  --theme-warning-bg: #431407;
+  --theme-success: #10B981;
+  --theme-success-bg: #064E3B;
+  --theme-warning: #F59E0B;
+  --theme-warning-bg: #451A03;
   --theme-danger: #EF4444;
   --theme-danger-bg: #450A0A;
   --theme-neutral: #94A3B8;
@@ -168,7 +112,7 @@
   --theme-card-bg: #111827;
   --theme-header-bg: rgba(11, 15, 23, 0.95);
   --theme-input-bg: #111827;
-  --theme-selected: #1E3A5F;
+  --theme-selected: #1E293B;
   --theme-glow-primary: none;
   --theme-glow-secondary: none;
 
@@ -176,507 +120,124 @@
 }
 
 /* =========================================================================
-   2. TAILWIND @THEME BINDINGS
+   2. TAILWIND @THEME BINDINGS — 100% SANS-SERIF
    ========================================================================= */
 
 @theme {
-  --font-serif: 'Noto Serif', Georgia, Cambria, 'Times New Roman', serif;
+  --font-serif: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-sans: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
 
-  --color-ai-bg: var(--theme-bg, #F8F6F0);
-  --color-ai-card: var(--theme-surface, #FFFDF9);
-  --color-ai-card-hover: var(--theme-surface-hover, #F2EFE9);
-  --color-ai-border: var(--theme-border, #E5E0D5);
-  --color-ai-purple: var(--theme-primary, #1A365D);
-  --color-ai-purple-light: var(--theme-primary-light, #2A4A7F);
-  --color-ai-cyan: var(--theme-bronze, #8C6E54);
-  --color-ai-pink: var(--theme-primary, #1A365D);
-  --color-ai-green: var(--theme-success, #235E3B);
-  --color-ai-text: var(--theme-text, #1F1B16);
-  --color-ai-muted: var(--theme-text-muted, #70685E);
+  --color-ai-bg: var(--theme-bg, #F8FAFC);
+  --color-ai-card: var(--theme-surface, #FFFFFF);
+  --color-ai-card-hover: var(--theme-surface-hover, #F1F5F9);
+  --color-ai-border: var(--theme-border, #E2E8F0);
+  --color-ai-purple: var(--theme-primary, #4F46E5);
+  --color-ai-purple-light: var(--theme-primary-light, #6366F1);
+  --color-ai-cyan: var(--theme-bronze, #F59E0B);
+  --color-ai-pink: var(--theme-primary, #4F46E5);
+  --color-ai-green: var(--theme-success, #10B981);
+  --color-ai-text: var(--theme-text, #0F172A);
+  --color-ai-muted: var(--theme-text-muted, #64748B);
 }
 
 /* =========================================================================
-   3. BASE & GLOBAL STYLING
+   3. BASE & GLOBAL STYLING — PURE SANS-SERIF TYPOGRAPHY
    ========================================================================= */
 
 @layer base {
   html {
-    background-color: var(--theme-bg, #F8F6F0);
-    color: var(--theme-text, #1F1B16);
+    background-color: var(--theme-bg, #F8FAFC);
+    color: var(--theme-text, #0F172A);
+    font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
   body {
-    background-color: var(--theme-bg, #F8F6F0);
-    color: var(--theme-text, #1F1B16);
+    background-color: var(--theme-bg, #F8FAFC);
+    color: var(--theme-text, #0F172A);
     font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, .font-serif {
-    font-family: 'Noto Serif', Georgia, Cambria, 'Times New Roman', serif;
+  h1, h2, h3, h4, h5, h6, .font-serif {
+    font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif !important;
   }
 }
 
-/* =========================================================================
-   DARK THEME CONTRAST & LEGIBILITY RULES (SYSTEM PREFERENCE & MIDNIGHT DARK)
-   Overrides hardcoded light-theme hex tokens to ensure 100% WCAG AAA contrast
-   ========================================================================= */
-
-[data-theme="dark"], .dark {
-  color-scheme: dark;
+/* Legacy parchment / cream color migration helper */
+.bg-\[\#F8F6F0\], .bg-\[\#f8f6f0\] {
+  background-color: var(--theme-bg, #F8FAFC) !important;
 }
-
-/* Force dark theme typography on hardcoded dark text classes */
-[data-theme="dark"] .text-\[\#1F1B16\],
-.dark .text-\[\#1F1B16\],
-[data-theme="dark"] .text-\[\#1f1b16\],
-.dark .text-\[\#1f1b16\],
-[data-theme="dark"] .text-slate-900,
-.dark .text-slate-900,
-[data-theme="dark"] .text-gray-900,
-.dark .text-gray-900,
-[data-theme="dark"] .text-neutral-900,
-.dark .text-neutral-900,
-[data-theme="dark"] .text-black,
-.dark .text-black {
-  color: var(--theme-text, #F8FAFC) !important;
+.bg-\[\#FFFDF9\], .bg-\[\#fffdf9\], .bg-\[\#FAF8F3\], .bg-\[\#faf8f3\] {
+  background-color: var(--theme-surface, #FFFFFF) !important;
 }
-
-[data-theme="dark"] .text-\[\#3B352E\],
-.dark .text-\[\#3B352E\],
-[data-theme="dark"] .text-\[\#3b352e\],
-.dark .text-\[\#3b352e\],
-[data-theme="dark"] .text-slate-800,
-.dark .text-slate-800,
-[data-theme="dark"] .text-gray-800,
-.dark .text-gray-800 {
-  color: var(--theme-text-secondary, #E2E8F0) !important;
+.border-\[\#E5E0D5\], .border-\[\#e5e0d5\], .border-\[\#D5CFBF\], .border-\[\#d5cfbf\] {
+  border-color: var(--theme-border, #E2E8F0) !important;
 }
-
-[data-theme="dark"] .text-\[\#70685E\],
-.dark .text-\[\#70685E\],
-[data-theme="dark"] .text-\[\#70685e\],
-.dark .text-\[\#70685e\],
-[data-theme="dark"] .text-\[\#5C554B\],
-.dark .text-\[\#5C554B\],
-[data-theme="dark"] .text-\[\#5c554b\],
-.dark .text-\[\#5c554b\],
-[data-theme="dark"] .text-slate-600,
-.dark .text-slate-600,
-[data-theme="dark"] .text-gray-600,
-.dark .text-gray-600 {
-  color: var(--theme-text-muted, #94A3B8) !important;
+.text-\[\#1F1B16\], .text-\[\#1f1b16\] {
+  color: var(--theme-text, #0F172A) !important;
 }
-
-[data-theme="dark"] .text-\[\#1A365D\],
-.dark .text-\[\#1A365D\],
-[data-theme="dark"] .text-\[\#1a365d\],
-.dark .text-\[\#1a365d\],
-[data-theme="dark"] .text-\[\#1B2A4A\],
-.dark .text-\[\#1B2A4A\],
-[data-theme="dark"] .text-\[\#1b2a4a\],
-.dark .text-\[\#1b2a4a\] {
-  color: var(--theme-primary, #38BDF8) !important;
+.text-\[\#3B352E\], .text-\[\#3b352e\] {
+  color: var(--theme-text-secondary, #334155) !important;
 }
-
-[data-theme="dark"] .text-\[\#8C6E54\],
-.dark .text-\[\#8C6E54\],
-[data-theme="dark"] .text-\[\#8c6e54\],
-.dark .text-\[\#8c6e54\] {
-  color: #38BDF8 !important;
+.text-\[\#70685E\], .text-\[\#70685e\], .text-\[\#5C554B\], .text-\[\#5c554b\] {
+  color: var(--theme-text-muted, #64748B) !important;
 }
-
-/* Force dark theme card backgrounds on hardcoded cream/parchment surfaces */
-[data-theme="dark"] .bg-\[\#FFFDF9\],
-.dark .bg-\[\#FFFDF9\],
-[data-theme="dark"] .bg-\[\#fffdf9\],
-.dark .bg-\[\#fffdf9\],
-[data-theme="dark"] .bg-\[\#FAF8F3\],
-.dark .bg-\[\#FAF8F3\],
-[data-theme="dark"] .bg-\[\#faf8f3\],
-.dark .bg-\[\#faf8f3\],
-[data-theme="dark"] .bg-\[\#F8F6F0\],
-.dark .bg-\[\#F8F6F0\],
-[data-theme="dark"] .bg-\[\#f8f6f0\],
-.dark .bg-\[\#f8f6f0\],
-[data-theme="dark"] .bg-white,
-.dark .bg-white {
-  background-color: var(--theme-surface, #111827) !important;
+.text-\[\#1A365D\], .text-\[\#1a365d\], .text-\[\#1B2A4A\], .text-\[\#1b2a4a\] {
+  color: var(--theme-primary, #4F46E5) !important;
 }
-
-[data-theme="dark"] .bg-\[\#F2EFE9\],
-.dark .bg-\[\#F2EFE9\],
-[data-theme="dark"] .bg-\[\#f2efe9\],
-.dark .bg-\[\#f2efe9\],
-[data-theme="dark"] .bg-\[\#EFECE6\],
-.dark .bg-\[\#EFECE6\],
-[data-theme="dark"] .bg-\[\#efece6\],
-.dark .bg-\[\#efece6\],
-[data-theme="dark"] .bg-\[\#EAEFF5\],
-.dark .bg-\[\#EAEFF5\],
-[data-theme="dark"] .bg-\[\#eaeff5\],
-.dark .bg-\[\#eaeff5\] {
-  background-color: var(--theme-surface-hover, #1E293B) !important;
+.text-\[\#8C6E54\], .text-\[\#8c6e54\] {
+  color: #F59E0B !important;
 }
-
-/* Force dark borders */
-[data-theme="dark"] .border-\[\#E5E0D5\],
-.dark .border-\[\#E5E0D5\],
-[data-theme="dark"] .border-\[\#e5e0d5\],
-.dark .border-\[\#e5e0d5\],
-[data-theme="dark"] .border-\[\#D5CFBF\],
-.dark .border-\[\#D5CFBF\],
-[data-theme="dark"] .border-\[\#d5cfbf\],
-.dark .border-\[\#d5cfbf\],
-[data-theme="dark"] .border-\[\#BAC7D5\],
-.dark .border-\[\#BAC7D5\],
-[data-theme="dark"] .border-\[\#bac7d5\],
-.dark .border-\[\#bac7d5\],
-[data-theme="dark"] .border-\[\#D0DBE7\],
-.dark .border-\[\#D0DBE7\],
-[data-theme="dark"] .border-\[\#d0dbe7\],
-.dark .border-\[\#d0dbe7\] {
-  border-color: var(--theme-border, #1E293B) !important;
-}
-
-/* Form inputs & selects in dark mode */
-[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
-.dark input:not([type="checkbox"]):not([type="radio"]),
-[data-theme="dark"] select,
-.dark select,
-[data-theme="dark"] textarea,
-.dark textarea {
-  background-color: var(--theme-input-bg, #111827) !important;
-  color: var(--theme-text, #F8FAFC) !important;
-  border-color: var(--theme-border, #1E293B) !important;
-}
-
-[data-theme="dark"] input::placeholder,
-.dark input::placeholder,
-[data-theme="dark"] textarea::placeholder,
-.dark textarea::placeholder {
-  color: var(--theme-text-muted, #94A3B8) !important;
-}
-
-/* Pure White Theme adjustments */
-[data-theme="white"] .bg-\[\#F8F6F0\],
-[data-theme="white"] .bg-\[\#f8f6f0\] {
-  background-color: #FFFFFF !important;
-}
-[data-theme="white"] .bg-\[\#FFFDF9\],
-[data-theme="white"] .bg-\[\#fffdf9\],
-[data-theme="white"] .bg-\[\#FAF8F3\],
-[data-theme="white"] .bg-\[\#faf8f3\] {
-  background-color: #F8FAFC !important;
-}
-[data-theme="white"] .border-\[\#E5E0D5\],
-[data-theme="white"] .border-\[\#e5e0d5\],
-[data-theme="white"] .border-\[\#D5CFBF\],
-[data-theme="white"] .border-\[\#d5cfbf\] {
-  border-color: #E2E8F0 !important;
+.bg-\[\#1B2A4A\], .bg-\[\#142038\], .bg-\[\#1A365D\] {
+  background-color: var(--theme-primary, #4F46E5) !important;
 }
 
 /* =========================================================================
-   4. EDITORIAL TYPOGRAPHY & HIERARCHY UTILITIES
+   4. TALENTSHINE BUTTONS & CONTROLS
    ========================================================================= */
 
-.font-editorial-serif {
-  font-family: 'Noto Serif', Georgia, serif;
-}
-
-.font-editorial-sans {
-  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
-}
-
-/* Tracked Overlines & Precept Labels */
-.editorial-overline {
-  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--theme-ink-micro, #8A8277);
-}
-
-/* Hairline Dividers */
-.editorial-divider {
-  border-bottom: 1px solid var(--theme-border, #E5E0D5);
-}
-
-/* =========================================================================
-   5. RESTRAINED EDITORIAL SURFACES & CARDS (NO GLOW, NO BUBBLY CORNERS)
-   ========================================================================= */
-
-/* Replace Glassmorphic and Legacy Dark Surfaces Globally */
-.glass-panel,
-.glass-panel-cyan,
-[class*="backdrop-blur"] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: var(--theme-surface, #FFFDF9) !important;
-  border: 1px solid var(--theme-border, #E5E0D5) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 1px 2px rgba(31, 27, 22, 0.04) !important;
-}
-
-/* Universal Card & Surface Replacement */
-[class*="bg-[#191A3A]"],
-[class*="bg-[#111827]"],
-[class*="bg-[#0F1026]"],
-[class*="bg-[#0B0F19]"],
-[class*="bg-[#061524]"],
-[class*="bg-[#061A14]"],
-[class*="bg-[#1A0D18]"] {
-  background-color: var(--theme-surface, #FFFDF9) !important;
-}
-
-/* Restrain Rounding Globally — Remove 3xl / 30px Bloat */
-[class*="rounded-3xl"],
-[class*="rounded-[28px]"],
-[class*="rounded-[30px]"],
-[class*="rounded-[32px]"] {
-  border-radius: 8px !important;
-}
-
-/* =========================================================================
-   6. SOLID ACADEMIC BUTTONS (NO GRADIENTS, NO NEON, ABSOLUTE CONTRAST)
-   ========================================================================= */
-
-/* Primary CTA Button: Academic Navy #1B2A4A with Crisp White Text */
-button.bg-gradient-to-r,
-button[class*="from-purple-"],
-.bg-gradient-to-tr[class*="from-[#7C3AED]"],
-.bg-gradient-to-r[class*="from-"],
-button[class*="bg-[#1B2A4A]"],
-button[class*="bg-[#142038]"],
-button[class*="bg-[#1A365D]"],
-button[class*="bg-[#1E3A8A]"],
-button[class*="bg-blue-"],
-a[class*="bg-[#1B2A4A]"],
-a[class*="bg-[#142038]"],
-a[class*="bg-[#1A365D]"],
-a[class*="bg-[#1E3A8A]"],
-a[class*="bg-blue-"],
-.academic-btn-primary,
-.text-white-keep {
-  background-image: none !important;
+/* Primary Action Buttons */
+button.bg-indigo-600,
+.btn-primary,
+button.bg-gradient-to-r {
+  background-color: #4F46E5 !important;
   color: #FFFFFF !important;
   font-family: 'Plus Jakarta Sans', Inter, sans-serif !important;
   font-weight: 600 !important;
 }
 
-/* Ensure all button text & icons inside full blue buttons are pure white */
-button[class*="bg-[#1B2A4A]"] *,
-button[class*="bg-[#142038]"] *,
-button[class*="bg-[#1A365D]"] *,
-button[class*="bg-[#1E3A8A]"] *,
-button[class*="bg-blue-"] *,
-button.bg-gradient-to-r *,
-button[class*="from-purple-"] *,
-a[class*="bg-[#1B2A4A]"] *,
-a[class*="bg-[#142038]"] *,
-a[class*="bg-[#1A365D]"] *,
-a[class*="bg-[#1E3A8A]"] *,
-a[class*="bg-blue-"] *,
-.academic-btn-primary *,
-.text-white-keep,
-.text-white-keep * {
-  color: #FFFFFF !important;
-  fill: currentColor;
+button.bg-indigo-600:hover,
+.btn-primary:hover,
+button.bg-gradient-to-r:hover {
+  background-color: #4338CA !important;
 }
 
-button.bg-gradient-to-r,
-button[class*="from-purple-"],
-.bg-gradient-to-tr[class*="from-[#7C3AED]"],
-.bg-gradient-to-r[class*="from-"] {
-  background-color: var(--theme-cta, #1B2A4A) !important;
-  border: 1px solid var(--theme-cta, #1B2A4A) !important;
-  border-radius: 6px !important;
-  box-shadow: 0 1px 2px rgba(31, 27, 22, 0.05) !important;
+/* Secondary Button */
+.btn-secondary {
+  background-color: #F8FAFC !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #334155 !important;
 }
 
-button.bg-gradient-to-r:hover,
-button[class*="from-purple-"]:hover,
-button[class*="bg-[#1B2A4A]"]:hover,
-button[class*="bg-[#142038]"]:hover,
-button[class*="bg-[#1A365D]"]:hover,
-a[class*="bg-[#1B2A4A]"]:hover,
-a[class*="bg-[#142038]"]:hover,
-a[class*="bg-[#1A365D]"]:hover {
-  background-color: var(--theme-cta-hover, #142038) !important;
-  color: #FFFFFF !important;
+.btn-secondary:hover {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
 }
 
-/* Secondary / Bordered Button */
-button.border-purple-500\/30:not(.bg-gradient-to-r),
-button.border-purple-500\/20:not(.bg-gradient-to-r) {
-  background-color: var(--theme-surface-subtle, #F2EFE9) !important;
-  border: 1px solid var(--theme-border, #E5E0D5) !important;
-  color: var(--theme-ink-primary, #1F1B16) !important;
-  border-radius: 6px !important;
-}
-
-button.border-purple-500\/30:not(.bg-gradient-to-r):hover {
-  background-color: var(--theme-surface-hover, #EAE6DD) !important;
-}
-
-/* =========================================================================
-   7. ABSOLUTE TEXT CONTRAST & VISIBILITY OVERRIDES
-   ========================================================================= */
-
-/* Enforce dark ink for light backgrounds — NEVER apply to buttons, badges, or elements on dark backgrounds */
-.text-white:not(
-  button,
-  button *,
-  a[class*="bg-"],
-  a[class*="bg-"] *,
-  [class*="bg-[#1B2A4A]"],
-  [class*="bg-[#1B2A4A]"] *,
-  [class*="bg-[#142038]"],
-  [class*="bg-[#142038]"] *,
-  [class*="bg-[#1A365D]"],
-  [class*="bg-[#1A365D]"] *,
-  [class*="bg-[#1E3A8A]"],
-  [class*="bg-[#1E3A8A]"] *,
-  [class*="bg-[#0F172A]"],
-  [class*="bg-[#0F172A]"] *,
-  [class*="bg-blue-"],
-  [class*="bg-blue-"] *,
-  [class*="bg-indigo-"],
-  [class*="bg-indigo-"] *,
-  [class*="bg-slate-9"],
-  [class*="bg-slate-9"] *,
-  .academic-btn-primary,
-  .academic-btn-primary *,
-  .text-white-keep,
-  .text-white-keep *
-) {
-  color: var(--theme-ink-primary, #1F1B16) !important;
-}
-
-/* Legacy text color sanitization */
-.text-\[\#F8FAFC\],
-.text-\[\#F9FAFB\],
-.text-\[\#F0F9FF\],
-.text-\[\#F0FDF4\],
-.text-\[\#FFF1F2\] {
-  color: var(--theme-ink-primary, #1F1B16) !important;
-}
-
-.text-\[\#A5B4FC\],
-.text-\[\#9CA3AF\],
-.text-\[\#7DD3FC\],
-.text-\[\#86EFAC\],
-.text-\[\#FDA4AF\] {
-  color: var(--theme-ink-secondary, #3B352E) !important;
-}
-
-.text-\[\#A5B4FC\]\/70,
-.text-\[\#A5B4FC\]\/80,
-.text-\[\#A5B4FC\]\/90 {
-  color: var(--theme-ink-tertiary, #70685E) !important;
-}
-
-/* Replace legacy purple and cyan text with Academic Navy and Aged Bronze */
-.text-purple-400,
-.text-purple-300,
-.text-purple-500 {
-  color: var(--theme-primary, #1A365D) !important;
-}
-
-.text-cyan-400,
-.text-cyan-300,
-.text-cyan-500 {
-  color: var(--theme-bronze, #8C6E54) !important;
-}
-
-.text-pink-400,
-.text-pink-300 {
-  color: var(--theme-warning, #9A421A) !important;
-}
-
-/* =========================================================================
-   8. FORMS, INPUTS & TEXTAREAS
-   ========================================================================= */
-
-input,
-textarea,
-select {
-  background-color: var(--theme-input-bg, #FFFDF9) !important;
-  color: var(--theme-ink-primary, #1F1B16) !important;
-  border: 1px solid var(--theme-border, #E5E0D5) !important;
-  border-radius: 6px !important;
+/* Form Controls */
+input, textarea, select {
   font-family: 'Plus Jakarta Sans', Inter, sans-serif !important;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: var(--theme-ink-tertiary, #70685E) !important;
-  opacity: 0.9 !important;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--theme-primary, #1A365D) !important;
+input:focus, textarea:focus, select:focus {
+  border-color: #4F46E5 !important;
   outline: none !important;
-  box-shadow: 0 0 0 1px var(--theme-primary, #1A365D) !important;
-}
-
-select option {
-  background-color: #FFFDF9 !important;
-  color: #1F1B16 !important;
 }
 
 /* =========================================================================
-   9. NAVIGATION, SIDEBAR & ACTIVE STATES
-   ========================================================================= */
-
-aside {
-  background-color: var(--theme-sidebar, #F8F6F0) !important;
-  border-right: 1px solid var(--theme-border, #E5E0D5) !important;
-}
-
-aside nav a.bg-gradient-to-r {
-  background-image: none !important;
-  background-color: #EAEFF5 !important;
-  border: 1px solid #D0DBE7 !important;
-  color: var(--theme-primary, #1A365D) !important;
-  box-shadow: none !important;
-  border-radius: 6px !important;
-}
-
-aside nav a.bg-gradient-to-r * {
-  color: var(--theme-primary, #1A365D) !important;
-}
-
-aside nav a:not(.bg-gradient-to-r):hover {
-  background-color: var(--theme-surface-hover, #F2EFE9) !important;
-  color: var(--theme-ink-primary, #1F1B16) !important;
-}
-
-/* =========================================================================
-   10. REMOVE GLOWS & NEON EFFECTS
-   ========================================================================= */
-
-.glow-purple,
-.glow-cyan,
-[class*="shadow-purple-"],
-[class*="shadow-cyan-"],
-[class*="shadow-2xl"] {
-  box-shadow: 0 1px 2px rgba(31, 27, 22, 0.04) !important;
-}
-
-.glow-text-purple,
-.glow-text-cyan {
-  text-shadow: none !important;
-}
-
-/* =========================================================================
-   11. EDITORIAL SCROLLBAR
+   5. MARQUEE & SCROLLBAR
    ========================================================================= */
 
 ::-webkit-scrollbar {
@@ -684,27 +245,19 @@ aside nav a:not(.bg-gradient-to-r):hover {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--theme-bg, #F8F6F0);
+  background: var(--theme-bg, #F8FAFC);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--theme-border, #E5E0D5);
+  background: var(--theme-border, #CBD5E1);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-border-strong, #D5CFBF);
+  background: var(--theme-border-strong, #94A3B8);
 }
 
-/* =========================================================================
-   12. EDITORIAL TICKER & HORIZONTAL MARQUEE ANIMATIONS
-   ========================================================================= */
-
 @keyframes marquee-scroll {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
 }
 
 .animate-marquee {
@@ -716,4 +269,3 @@ aside nav a:not(.bg-gradient-to-r):hover {
 .animate-marquee:hover {
   animation-play-state: paused;
 }
-

@@ -34,8 +34,8 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--theme-bg,#F8F6F0)] text-[var(--theme-text,#1F1B16)] flex flex-row antialiased overflow-x-hidden font-sans transition-colors duration-150">
-      {/* Editorial Sidebar */}
+    <div className="min-h-screen bg-[var(--theme-bg,#F8FAFC)] text-[var(--theme-text,#0F172A)] flex flex-row antialiased overflow-x-hidden font-sans transition-colors duration-150">
+      {/* Sidebar */}
       <Sidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
@@ -46,22 +46,22 @@ export default function AppLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Masthead Header Bar */}
-        <header className="sticky top-0 z-30 h-16 bg-[var(--theme-header-bg,rgba(255,253,249,0.98))] border-b border-[var(--theme-border,#E5E0D5)] px-3 sm:px-6 flex items-center justify-between transition-colors shadow-xs">
+        <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between transition-colors shadow-xs">
           <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Mobile Hamburger Menu Toggle */}
             <button
               onClick={() => setMobileOpen(true)}
-              className="p-2 rounded-md bg-[var(--theme-surface-subtle,#F2EFE9)] border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] transition-colors md:hidden cursor-pointer shrink-0"
+              className="p-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors md:hidden cursor-pointer shrink-0"
               aria-label="Open Navigation Menu"
             >
               <Menu className="w-4 h-4" />
             </button>
 
             {/* Breadcrumb Hierarchy */}
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-[var(--theme-text-muted,#70685E)]">
-              <span className="font-serif font-semibold text-[var(--theme-text,#1F1B16)] tracking-tight">TalentPath</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-slate-500 font-sans">
+              <span className="font-sans font-bold text-slate-900 tracking-tight">TalentPath</span>
               <span className="opacity-50">/</span>
-              <span className="text-[var(--theme-text-secondary,#3B352E)] font-medium truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none">
+              <span className="text-slate-700 font-medium truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none">
                 {getPageTitle()}
               </span>
             </div>
@@ -69,7 +69,7 @@ export default function AppLayout() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Mobile Streak Badge */}
-            <div className="flex sm:hidden items-center gap-1 px-2 py-1 rounded-md bg-[var(--theme-surface-subtle,#F2EFE9)] border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-bronze,#8C6E54)] text-[11px] font-semibold">
+            <div className="flex sm:hidden items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-semibold">
               <span>🔥</span>
               <span>{(user?.streak ?? 0)}d</span>
             </div>
@@ -78,34 +78,32 @@ export default function AppLayout() {
             <button
               type="button"
               onClick={() => setFeedbackOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--theme-surface-low,#FAF8F3)] border border-[var(--theme-border,#E5E0D5)] hover:bg-[var(--theme-surface-hover,#F2EFE9)] text-[var(--theme-text-muted,#70685E)] hover:text-[var(--theme-text,#1F1B16)] text-xs font-semibold transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 text-xs font-semibold transition-colors cursor-pointer"
               title="Share Product Feedback"
             >
-              <MessageSquare className="w-3.5 h-3.5 text-[var(--theme-bronze,#8C6E54)]" />
+              <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
               <span>Feedback</span>
             </button>
 
             {/* Desktop Streak & XP Metrics */}
-            <div className="hidden sm:flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--theme-surface-subtle,#F2EFE9)] border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-bronze,#8C6E54)] text-xs font-semibold">
+            <div className="hidden sm:flex items-center gap-2 font-sans">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
                 <span>🔥</span>
                 <span>{(user?.streak ?? 0)}d Streak</span>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--theme-surface-subtle,#F2EFE9)] border border-[var(--theme-border,#E5E0D5)] text-[var(--theme-text-secondary,#3B352E)] text-xs font-semibold">
-                <Zap className="w-3.5 h-3.5 text-[var(--theme-text-muted,#70685E)]" />
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-800 text-xs font-semibold">
+                <Zap className="w-3.5 h-3.5 text-indigo-600" />
                 <span>{(user?.xp ?? 0)} XP</span>
               </div>
             </div>
 
             {/* Quick Action Button */}
-            <GradientButton
-              size="sm"
-              variant="primary"
+            <button
               onClick={() => navigate('/interview-setup')}
-              className="text-xs px-2.5 sm:px-3"
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-md shadow-indigo-600/20 active:scale-[0.98] cursor-pointer"
             >
               <span className="hidden sm:inline">Start </span>Practice
-            </GradientButton>
+            </button>
           </div>
         </header>
 

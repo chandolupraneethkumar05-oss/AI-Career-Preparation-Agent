@@ -344,22 +344,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Right Corner Illustration (Matching Approved Design) */}
-        <div className="hidden md:flex items-center justify-center shrink-0 w-44 lg:w-56 h-auto relative">
-          <div className="relative rounded-2xl overflow-hidden border border-slate-200/80 shadow-md group">
-            <img
-              src="/hero-illustration.jpg"
-              alt="AI Career Preparation Candidate"
-              className="w-full h-full object-cover object-right transform group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-white font-mono bg-slate-900/70 backdrop-blur-xs px-2.5 py-1 rounded-lg">
-              <span className="flex items-center gap-1 font-bold">
-                <Sparkles className="w-3 h-3 text-emerald-400" /> Live AI Engine
-              </span>
-              <span className="text-emerald-400 font-bold">88% Match</span>
-            </div>
-          </div>
+        {/* Right Corner: Candidate Boy Character (Clean, No Frames, No Badges) */}
+        <div className="hidden md:flex items-center justify-end shrink-0 w-44 lg:w-56 self-end pointer-events-none select-none">
+          <img
+            src="/boy-illustration-transparent.png"
+            alt="Candidate studying with laptop"
+            className="w-full max-h-52 object-contain"
+          />
         </div>
 
       </div>
