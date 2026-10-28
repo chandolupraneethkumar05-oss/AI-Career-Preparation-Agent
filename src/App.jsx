@@ -19,14 +19,9 @@ const MockInterviewPage = lazy(() => import('./pages/MockInterviewPage'));
 const InterviewFeedbackPage = lazy(() => import('./pages/InterviewFeedbackPage'));
 const SkillGapPage = lazy(() => import('./pages/SkillGapPage'));
 const ATSScannerPage = lazy(() => import('./pages/ATSScannerPage'));
-const DailyChallengePage = lazy(() => import('./pages/DailyChallengePage'));
 const SkillArenaPage = lazy(() => import('./pages/SkillArenaPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
-const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-const InterviewExperiencesPage = lazy(() => import('./pages/InterviewExperiencesPage'));
-const CareerJourneyPage = lazy(() => import('./pages/CareerJourneyPage'));
-const WeeklyReportPage = lazy(() => import('./pages/WeeklyReportPage'));
 
 export default function App() {
   return (
