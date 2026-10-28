@@ -26,8 +26,16 @@ import {
   Gauge,
   Globe,
   Briefcase,
-  Award
+  Award,
+  Copy,
+  Check,
+  Loader2,
+  SkipForward,
+  AlertTriangle,
+  CheckCircle,
+  BookOpen
 } from 'lucide-react';
+import { interviewApi } from '../services/interviewApi';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import CircularScore from '../components/CircularScore';
@@ -163,8 +171,59 @@ export default function InterviewFeedbackPage() {
           }
         ];
 
+  // Exemplar Model Answer state (Stage 3 Talent Shine Feature)
+  const [exemplarAnswers, setExemplarAnswers] = useState({});
+  const [loadingExemplars, setLoadingExemplars] = useState({});
+  const [expandedExemplars, setExpandedExemplars] = useState({});
+  const [copiedExemplarNum, setCopiedExemplarNum] = useState(null);
+
   // Accordion state for question-by-question breakdown (first item open by default)
   const [expandedQuestions, setExpandedQuestions] = useState({ 1: true });
+
+  const handleToggleExemplar = async (qNum, questionText, skill) => {
+    setExpandedExemplars((prev) => ({ ...prev, [qNum]: !prev[qNum] }));
+    if (exemplarAnswers[qNum]) return;
+
+    setLoadingExemplars((prev) => ({ ...prev, [qNum]: true }));
+    try {
+      const resp = await interviewApi.getQuickAnswer({
+        question: questionText,
+        topic: skill || 'Software Engineering',
+        difficulty: 'Intermediate',
+        targetRole: result.targetRole || 'Software Engineer',
+        interviewType: result.interviewType || 'Technical'
+      });
+      if (resp && resp.quick_answer) {
+        setExemplarAnswers((prev) => ({ ...prev, [qNum]: resp.quick_answer }));
+      } else {
+        setExemplarAnswers((prev) => ({
+          ...prev,
+          [qNum]: `Staff-Level Model Response:\n\n` +
+            `1. Conceptual Thesis: Clearly define core mechanisms and architectural principles for "${questionText}".\n\n` +
+            `2. Technical Trade-Offs: Contrast the standard implementation against alternative patterns (e.g. latency vs consistency, memory overhead vs throughput).\n\n` +
+            `3. Empirical Verification: Close with production metrics, boundary edge-cases, and automated monitoring safeguards.`
+        }));
+      }
+    } catch {
+      setExemplarAnswers((prev) => ({
+        ...prev,
+        [qNum]: `Staff-Level Model Response:\n\n` +
+          `1. Conceptual Thesis: Clearly define core mechanisms and architectural principles for "${questionText}".\n\n` +
+          `2. Technical Trade-Offs: Contrast the standard implementation against alternative patterns (e.g. latency vs consistency, memory overhead vs throughput).\n\n` +
+          `3. Empirical Verification: Close with production metrics, boundary edge-cases, and automated monitoring safeguards.`
+      }));
+    } finally {
+      setLoadingExemplars((prev) => ({ ...prev, [qNum]: false }));
+    }
+  };
+
+  const handleCopyExemplar = (qNum, text) => {
+    if (text) {
+      navigator.clipboard.writeText(text);
+      setCopiedExemplarNum(qNum);
+      setTimeout(() => setCopiedExemplarNum(null), 2000);
+    }
+  };
 
   const toggleQuestion = (num) => {
     setExpandedQuestions((prev) => ({
@@ -361,6 +420,54 @@ Candidate: ${user?.name || 'Candidate'}
 
       {activeTab === 'summary' && (
         <div className="space-y-8 animate-fadeIn">
+          {/* Priority Remediation Focus Banner (Talent Shine Model) */}
+          {result.questionPerformance.some(q => q.isSkipped || q.score < 70) && (
+            <GlassCard className="p-5 border-[#F0D5C0] bg-[#FDF2E9]/70 shadow-xs space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-[#9A421A]">
+                  <div className="w-8 h-8 rounded-full bg-[#FFFDF9] border border-[#F0D5C0] flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-4 h-4 text-[#9A421A]" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-sm text-[#1F1B16]">
+                      Targeted Remediation Focus Identified
+                    </h3>
+                    <p className="text-xs text-[#70685E]">
+                      The following competencies were skipped or scored below benchmark during your interview:
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="warning" size="xs">Practice Required</Badge>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                {result.questionPerformance
+                  .filter(q => q.isSkipped || q.score < 70)
+                  .map((q, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 rounded bg-[#FFFDF9] border border-[#F0D5C0] text-[#9A421A] text-xs font-mono font-bold flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#9A421A]" />
+                      {q.skill || q.dimension} {q.isSkipped ? '(Skipped)' : `(${q.score}%)`}
+                    </span>
+                  ))}
+              </div>
+
+              <div className="pt-2 border-t border-[#F0D5C0]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#70685E]">
+                <span>Recommended Action: Reinforce these specific competencies before your next mock interview round.</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/daily-challenge')}
+                  className="px-3.5 py-1.5 rounded bg-[#9A421A] hover:bg-[#7D3413] text-white font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs text-xs self-start sm:self-auto shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Start Remediation Drill →</span>
+                </button>
+              </div>
+            </GlassCard>
+          )}
+
       {/* 3. OVERALL SCORE CARD                                                    */}
       {/* ========================================================================= */}
       <GlassCard className="p-8 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs relative overflow-hidden">
@@ -1113,9 +1220,14 @@ Candidate: ${user?.name || 'Candidate'}
           </span>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {result.questionPerformance.map((item) => {
             const isExpanded = !!expandedQuestions[item.num];
+            const isExemplarOpen = !!expandedExemplars[item.num];
+            const exemplarText = exemplarAnswers[item.num];
+            const isExemplarLoading = !!loadingExemplars[item.num];
+            const isCopied = copiedExemplarNum === item.num;
+
             return (
               <GlassCard
                 key={item.num}
@@ -1133,11 +1245,19 @@ Candidate: ${user?.name || 'Candidate'}
                     <span className="w-8 h-8 rounded-sm bg-[#EAEFF5] border border-[#BAC7D5] text-[#1A365D] text-xs font-mono font-bold flex items-center justify-center shrink-0">
                       Q{item.num}
                     </span>
-                    <div className="truncate">
-                      <div className="flex items-center gap-2">
+                    <div className="truncate space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-[#8C6E54] uppercase tracking-wider font-mono">
-                          {item.dimension}
+                          {item.skill || item.dimension}
                         </span>
+                        <Badge variant="navy" size="xs">
+                          {item.difficulty || 'Intermediate'}
+                        </Badge>
+                        {item.isSkipped && (
+                          <span className="px-2 py-0.2 rounded-xs bg-[#FDF2E9] border border-[#F0D5C0] text-[#9A421A] text-[10px] font-mono font-bold">
+                            Skipped
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs sm:text-sm font-serif font-semibold text-[#1F1B16] truncate mt-0.5">
                         {item.question}
@@ -1148,7 +1268,9 @@ Candidate: ${user?.name || 'Candidate'}
                   <div className="flex items-center gap-4 shrink-0 ml-2">
                     <div className="text-right">
                       <span className="text-[10px] text-[#70685E] block uppercase font-mono">Score</span>
-                      <span className="text-sm sm:text-base font-serif font-bold text-[#1F1B16]">
+                      <span className={`text-sm sm:text-base font-serif font-bold ${
+                        item.isSkipped ? 'text-[#9A421A]' : item.score >= 80 ? 'text-[#235E3B]' : item.score >= 60 ? 'text-[#1A365D]' : 'text-[#9A421A]'
+                      }`}>
                         {item.score}/100
                       </span>
                     </div>
@@ -1161,34 +1283,119 @@ Candidate: ${user?.name || 'Candidate'}
 
                 {/* Expanded Detailed Breakdown */}
                 {isExpanded && (
-                  <div className="p-5 border-t border-[#E5E0D5] bg-[#FAF8F3] space-y-4 text-xs animate-in fade-in duration-200">
-                    {/* Full Question */}
-                    <div>
-                      <span className="font-bold text-[#70685E] uppercase tracking-wider text-[10px] block mb-1 font-mono">
+                  <div className="p-5 sm:p-6 border-t border-[#E5E0D5] bg-[#FAF8F3] space-y-5 text-xs animate-in fade-in duration-200">
+                    {/* Full Question Prompt */}
+                    <div className="space-y-1">
+                      <span className="font-bold text-[#70685E] uppercase tracking-wider text-[10px] block font-mono">
                         Prompt As Issued:
                       </span>
-                      <p className="text-[#1F1B16] font-serif font-medium p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5]">
+                      <p className="text-[#1F1B16] font-serif font-medium text-sm p-3.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] leading-relaxed shadow-2xs">
                         "{item.question}"
                       </p>
                     </div>
 
-                    {/* Candidate Answer */}
-                    <div>
-                      <span className="font-bold text-[#1A365D] uppercase tracking-wider text-[10px] block mb-1 font-mono">
-                        Candidate Answer Submitted:
+                    {/* Candidate Answer Submitted (with Skipped state handling) */}
+                    <div className="space-y-1">
+                      <span className="font-bold text-[#1A365D] uppercase tracking-wider text-[10px] block font-mono flex items-center justify-between">
+                        <span>Candidate Answer Submitted:</span>
+                        {item.isSkipped && (
+                          <span className="text-[#9A421A] text-[10px] font-bold">● Skipped by Candidate</span>
+                        )}
                       </span>
-                      <p className="text-[#1F1B16] leading-relaxed p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5]">
-                        {item.userAnswer}
-                      </p>
+
+                      {item.isSkipped ? (
+                        <div className="p-3.5 rounded-md bg-[#FDF2E9] border border-[#F0D5C0] text-[#9A421A] flex items-center gap-2">
+                          <SkipForward className="w-4 h-4 text-[#9A421A] shrink-0" />
+                          <span className="font-medium">
+                            You chose to skip this question. This competency has been logged as a priority skill gap in your preparation roadmap.
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-[#1F1B16] leading-relaxed p-3.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] shadow-2xs whitespace-pre-line">
+                          {item.userAnswer}
+                        </p>
+                      )}
                     </div>
 
-                    {/* AI Feedback */}
-                    <div className="p-3 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] flex items-start gap-2.5">
-                      <Sparkles className="w-4 h-4 text-[#1A365D] shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-serif font-bold text-[#1A365D] block mb-0.5">Faculty Evaluation Critique:</span>
-                        <p className="text-[#3B352E] leading-relaxed">{item.feedback}</p>
+                    {/* Faculty Evaluation Critique */}
+                    <div className="p-4 rounded-md bg-[#EAEFF5] border border-[#BAC7D5] space-y-2">
+                      <div className="flex items-center gap-2 text-[#1A365D]">
+                        <Sparkles className="w-4 h-4 text-[#8C6E54] shrink-0" />
+                        <span className="font-serif font-bold text-xs">Faculty Evaluation Critique:</span>
                       </div>
+                      <p className="text-[#3B352E] leading-relaxed text-xs">{item.feedback}</p>
+
+                      {item.strengths && item.strengths.length > 0 && !item.isSkipped && (
+                        <div className="pt-2 border-t border-[#BAC7D5]/60 space-y-1">
+                          <span className="font-bold text-[#235E3B] text-[11px] block">Observed Strengths:</span>
+                          <ul className="list-disc list-inside space-y-0.5 text-[#235E3B] text-[11px]">
+                            {item.strengths.map((str, idx) => (
+                              <li key={idx}>{str}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {item.areasToImprove && item.areasToImprove.length > 0 && (
+                        <div className="pt-1.5 space-y-1">
+                          <span className="font-bold text-[#9A421A] text-[11px] block">
+                            {item.isSkipped ? 'Required Competency Focus:' : 'Recommended Elevation Points:'}
+                          </span>
+                          <ul className="list-disc list-inside space-y-0.5 text-[#9A421A] text-[11px]">
+                            {item.areasToImprove.map((area, idx) => (
+                              <li key={idx}>{area}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Staff-Level Exemplar Model Answer ("What Good Looks Like") - Talent Shine Feature */}
+                    <div className="rounded-md border border-[#8C6E54]/40 bg-[#FFFDF9] p-4 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-[#8C6E54]" />
+                          <span className="font-serif font-bold text-xs text-[#1F1B16]">
+                            Staff-Level Exemplar Model Answer
+                          </span>
+                          <Badge variant="bronze" size="xs">What Good Looks Like</Badge>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleExemplar(item.num, item.question, item.skill)}
+                          className="text-xs font-semibold text-[#8C6E54] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          {isExemplarOpen ? 'Hide Model Answer' : 'Reveal Model Answer'}
+                          {isExemplarOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+
+                      {isExemplarOpen && (
+                        <div className="p-3.5 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-xs leading-relaxed text-[#1F1B16] font-serif space-y-2.5 animate-in fade-in">
+                          {isExemplarLoading ? (
+                            <div className="flex items-center gap-2 text-[#70685E] py-2">
+                              <Loader2 className="w-4 h-4 animate-spin text-[#8C6E54]" />
+                              <span>Synthesizing calibrated model answer...</span>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="whitespace-pre-line text-[13px] text-[#1F1B16]">{exemplarText}</p>
+                              <div className="pt-2 border-t border-[#E5E0D5]/60 flex items-center justify-between text-[11px] text-[#70685E]">
+                                <span>💡 Compare how this model answer structures technical trade-offs and empirical metrics.</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyExemplar(item.num, exemplarText)}
+                                  className="text-[#8C6E54] hover:underline flex items-center gap-1 cursor-pointer"
+                                >
+                                  {isCopied ? <Check className="w-3 h-3 text-[#235E3B]" /> : <Copy className="w-3 h-3" />}
+                                  <span>{isCopied ? 'Copied' : 'Copy Model Answer'}</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

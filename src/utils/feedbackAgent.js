@@ -213,18 +213,30 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
     ];
 
     questionPerformance = sessionAnswers.map((ans, idx) => {
-      const qScore = Math.round((ans.evaluation?.scores?.overall || 7.5) * 10);
+      const rawOverall = ans.evaluation?.scores?.overall ?? (ans.score != null ? ans.score / 10 : 7.5);
+      const qScore = Math.round((rawOverall <= 10 ? rawOverall * 10 : rawOverall));
       const dim = dimensionCycle[idx % dimensionCycle.length];
       const strengthText = ans.evaluation?.strengths?.[0] || 'Clear conceptual grounding with relevant domain context.';
-      const improveText = ans.evaluation?.areasToImprove?.[0] || 'Include more measurable metrics and discuss scale constraints.';
+      const improveText = ans.evaluation?.areasToImprove?.[0] || ans.evaluation?.weaknesses?.[0] || 'Include more measurable metrics and discuss scale constraints.';
+      const rawAns = ans.answerText || ans.answer || '';
+      const isSkipped = Boolean(ans.skipped) || rawAns.includes('[Skipped by candidate]') || (qScore === 0 && !rawAns);
 
       return {
         num: idx + 1,
         dimension: dim,
+        skill: ans.skill || ans.category || ans.topic || dim,
+        difficulty: ans.difficulty || ans.currentDifficulty || 'Intermediate',
         score: qScore,
         question: ans.question || `Interview Question ${idx + 1}`,
-        userAnswer: ans.answerText || ans.answer || 'Candidate verbal defense submitted.',
-        feedback: `${strengthText} ${improveText}`
+        userAnswer: isSkipped ? '[Skipped by candidate]' : (rawAns || 'Candidate verbal defense submitted.'),
+        isSkipped,
+        expectedFocus: ans.expectedFocus || '',
+        strengths: ans.evaluation?.strengths || (strengthText ? [strengthText] : []),
+        areasToImprove: ans.evaluation?.areasToImprove || ans.evaluation?.weaknesses || (improveText ? [improveText] : []),
+        feedback: isSkipped
+          ? 'This question was skipped. It has been flagged as a priority gap for targeted revision drills.'
+          : `${strengthText} ${improveText}`,
+        scores: ans.evaluation?.scores || {}
       };
     });
   }
