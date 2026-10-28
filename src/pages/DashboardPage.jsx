@@ -20,7 +20,10 @@ import {
   ArrowRight,
   Award,
   BookOpen,
-  AlertTriangle
+  AlertTriangle,
+  Pencil,
+  GraduationCap,
+  Briefcase
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -35,11 +38,28 @@ import { recommendationApi } from '../services/recommendationApi';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { user, addXP } = useAuth();
+  const { user, addXP, updateUser } = useAuth();
   const { session, history } = useInterview();
 
-  // Dialog state for "Why this recommendation?"
+  // Dialog states
   const [showRationale, setShowRationale] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+
+  // Edit Profile Form State
+  const [profileName, setProfileName] = useState(user?.name || '');
+  const [profileRole, setProfileRole] = useState(user?.targetRole || user?.role || 'Full Stack Software Engineer');
+  const [profileDifficulty, setProfileDifficulty] = useState(user?.difficulty || 'Beginner / Campus Ready');
+  const [profileGradYear, setProfileGradYear] = useState(user?.gradYear || '2026');
+
+  // Sync profile form state whenever user changes
+  useEffect(() => {
+    if (user) {
+      if (user.name) setProfileName(user.name);
+      if (user.targetRole || user.role) setProfileRole(user.targetRole || user.role);
+      if (user.difficulty) setProfileDifficulty(user.difficulty);
+      if (user.gradYear) setProfileGradYear(user.gradYear);
+    }
+  }, [user]);
 
   // Read verified state from storage and activity service
   const userActivities = useMemo(() => activityService.getActivities(), []);
@@ -88,7 +108,7 @@ export default function DashboardPage() {
   const nextHeadline = activeNextAction?.headline || activeNextAction?.title || 'System Design Fundamentals';
   const nextReason = activeNextAction?.reason || 'Based on your recent interview practice, strengthening this area would improve your preparation.';
   const nextActionBtn = activeNextAction?.action || 'Initiate 15-min Practice';
-  const nextRoute = activeNextAction?.route || '/daily-challenge';
+  const nextRoute = activeNextAction?.route || '/skill-arena';
   const nextPrimarySkill = activeNextAction?.primary_skill || activeNextAction?.primarySkill || 'Distributed Caching';
 
   // Real ATS Metrics
@@ -103,7 +123,7 @@ export default function DashboardPage() {
 
   // User details
   const firstName = user?.name ? user.name.split(' ')[0] : 'Candidate';
-  const userRole = user?.targetRole || user?.role || 'Software Engineer';
+  const userRole = user?.targetRole || user?.role || 'Full Stack Software Engineer';
 
   // Extract recent skipped skills or low-scoring skills (<70%) from the latest interview session
   const recentRemediationSkills = useMemo(() => {
@@ -142,106 +162,93 @@ export default function DashboardPage() {
             name,
             isSkipped: false,
             score: gap.score || 60,
-            reason: 'Identified as high-priority skill gap'
+            question: '',
+            reason: 'Identified competency gap for your target role'
           });
         }
       });
     }
 
-    return skills.slice(0, 3);
+    return skills;
   }, [session, liveSkillProfile]);
 
-  // Dynamic Role-Aware Daily Habits
-  const isDailyDone = storageService.get(STORAGE_KEYS.DAILY_CHALLENGE_COMPLETED, false) || hasPracticedToday;
-
-  const defaultRoleDrill = useMemo(() => {
-    const roleLower = userRole.toLowerCase();
-    if (roleLower.includes('front') || roleLower.includes('react') || roleLower.includes('web')) {
-      return {
-        title: 'Practice React State & Lifecycle',
-        subtitle: 'Component re-renders and virtual DOM drill',
-        route: '/daily-challenge'
-      };
+  // Handle Edit Profile Save
+  const handleSaveProfile = (e) => {
+    e.preventDefault();
+    if (updateUser) {
+      updateUser({
+        name: profileName.trim() || user?.name || 'Candidate',
+        targetRole: profileRole,
+        role: profileRole,
+        difficulty: profileDifficulty,
+        gradYear: profileGradYear
+      });
     }
-    if (roleLower.includes('data') || roleLower.includes('machine') || roleLower.includes('ml')) {
-      return {
-        title: 'Practice ML Evaluation & Data Drift',
-        subtitle: 'Precision/Recall trade-offs and PSI metrics drill',
-        route: '/daily-challenge'
-      };
-    }
-    return {
-      title: 'Practice Backend & Database Querying',
-      subtitle: 'Conceptual query optimization and REST API drill',
-      route: '/daily-challenge'
-    };
-  }, [userRole]);
+    setShowEditProfileModal(false);
+  };
 
-  const [habits, setHabits] = useState(() => [
-    {
-      id: 'habit-1',
-      title: defaultRoleDrill.title,
-      subtitle: defaultRoleDrill.subtitle,
-      xpReward: 50,
-      completed: Boolean(isDailyDone),
-      route: defaultRoleDrill.route
-    },
-    {
-      id: 'habit-2',
-      title: 'Complete Mock Technical Interview',
-      subtitle: 'Adaptive interview with skip support',
-      xpReward: 100,
-      completed: Boolean(hasInterviews),
-      route: '/interview-setup'
-    },
-    {
-      id: 'habit-3',
-      title: 'Review Performance & Model Answers',
-      subtitle: 'Inspect staff-level exemplars and rubrics',
-      xpReward: 35,
-      completed: Boolean(hasInterviews && session?.summaryResult),
-      route: '/interview-feedback'
-    }
-  ]);
+  // Daily Goals / Habit Tracking state
+  const [habits, setHabits] = useState(() => {
+    return [
+      {
+        id: 'mock_interview',
+        title: 'Daily Practice Session',
+        subtitle: 'Complete 1 calibrated interview scenario',
+        xpReward: 30,
+        completed: hasPracticedToday,
+        route: '/interview-setup'
+      },
+      {
+        id: 'skill_arena',
+        title: 'Targeted Skill Drill',
+        subtitle: 'Review & resolve 1 high-priority gap',
+        xpReward: 20,
+        completed: userActivities.some(a => a.type === 'challenge_completed' && a.date === new Date().toISOString().split('T')[0]),
+        route: '/skill-arena'
+      },
+      {
+        id: 'ats_check',
+        title: 'ATS Resume Calibration',
+        subtitle: 'Verify resume match score against target JD',
+        xpReward: 15,
+        completed: Boolean(atsData),
+        route: '/ats'
+      }
+    ];
+  });
 
-  const todayKey = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [, setRewardedHabits] = useState(() => storageService.getRewardedHabits(new Date().toISOString().split('T')[0]));
-
-  const toggleHabit = useCallback((id, xpReward) => {
-    setHabits((prev) =>
-      prev.map((h) => {
-        if (h.id === id) {
-          const nextState = !h.completed;
-          if (nextState) {
-            // Anti-farming: award XP only once per calendar day per habit
-            const rewardedSet = storageService.getRewardedHabits(todayKey);
-            if (!rewardedSet.has(id)) {
-              addXP(xpReward);
-              storageService.recordRewardedHabit(todayKey, id);
-              setRewardedHabits((rPrev) => new Set([...rPrev, id]));
-            }
-          }
-          return { ...h, completed: nextState };
+  const toggleHabit = (id, xpReward) => {
+    setHabits(prev => prev.map(h => {
+      if (h.id === id) {
+        const nextState = !h.completed;
+        if (nextState) {
+          addXP(xpReward);
+          activityService.logActivity({
+            type: 'habit_completed',
+            habitId: id,
+            xp: xpReward,
+            date: new Date().toISOString().split('T')[0]
+          });
         }
-        return h;
-      })
-    );
-  }, [addXP, todayKey]);
+        return { ...h, completed: nextState };
+      }
+      return h;
+    }));
+  };
 
-  const completedHabitsCount = habits.filter((h) => h.completed).length;
+  const completedHabitsCount = habits.filter(h => h.completed).length;
 
-  // Dynamic practice hours based on actual activities and mock sessions
+  // Real Practice Hours
   const practiceHours = useMemo(() => {
-    const interviewMins = (history?.length || 0) * 20;
-    const challengeMins = userActivities.filter((a) => a.type === 'challenge_completed').length * 10;
-    const arenaMins = userActivities.filter((a) => a.type === 'skill_arena_completed').length * 15;
-    const totalMins = interviewMins + challengeMins + arenaMins;
-    return totalMins > 0 ? (totalMins / 60).toFixed(1) : '0.0';
+    const interviewCount = history.length;
+    const challengeCount = userActivities.filter((a) => a.type === 'challenge_completed').length;
+    const totalMinutes = (interviewCount * 15) + (challengeCount * 5);
+    return (totalMinutes / 60).toFixed(1);
   }, [history, userActivities]);
   const targetHours = 5.0;
   const practicePercent = Math.min(100, Math.round((parseFloat(practiceHours) / targetHours) * 100));
 
-  // Recent Mock Interviews (strictly real user records, no fake mock items)
+  // Recent Mock Interviews
   const recentInterviews = useMemo(() => {
     if (hasInterviews) {
       return history.slice(0, 3).map((item, idx) => ({
@@ -262,73 +269,122 @@ export default function DashboardPage() {
   const strokeDashoffset = circumference - (readinessVal / 100) * circumference;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-16 font-sans">
+    <div className="max-w-5xl mx-auto space-y-6 pb-16 font-sans text-slate-900">
       
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 1. MASTHEAD & CANDIDATE TARGET ROLE                           */}
+      {/* 1. TALENT SHINE TOP DIVISION HERO BANNER                      */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="border-b border-[#E5E0D5] pb-5 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
+      <div className="rounded-2xl bg-white border border-slate-200/90 shadow-sm p-6 sm:p-7 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:border-slate-300">
+        
+        {/* Subtle decorative background gradient */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Left & Center Information */}
+        <div className="flex-1 space-y-4 relative z-10 w-full">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="editorial-overline">CAREER READINESS COCKPIT</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#EAEFF5] text-[#1A365D] font-bold">
-                {user?.difficulty || 'Beginner / Campus Ready'}
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+                CAREER READINESS COCKPIT
+              </span>
+              <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active Calibration
               </span>
             </div>
-            <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1F1B16] tracking-tight">
-              Welcome back, {user?.name || 'Candidate'} 👋
-            </h1>
-            <p className="text-xs sm:text-sm text-[#3B352E] mt-0.5">
-              Personalized roadmap, practice streaks, and interview readiness for <strong className="font-semibold text-[#1F1B16]">{userRole}</strong>.
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                Welcome back, {firstName} 👋
+              </h1>
+
+              {/* Edit Profile Quick Action */}
+              <button
+                type="button"
+                onClick={() => setShowEditProfileModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-indigo-600 transition-colors w-fit cursor-pointer shadow-xs"
+              >
+                <Pencil className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Edit Profile</span>
+              </button>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Targeting: <strong className="font-semibold text-slate-800">{userRole}</strong> • {user?.difficulty || 'Campus Ready 2026'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-[#8C6E54] font-semibold shadow-2xs">
-              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              <span>{streakCount > 0 ? `${streakCount}-day practice streak` : 'Start your practice streak'}</span>
+          {/* 3 Minimalist Metric Pills (Clean, No Essays) */}
+          <div className="flex items-center gap-2.5 flex-wrap pt-1">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>{currentReadiness !== null ? `${currentReadiness}% Overall Readiness` : '85% Target Readiness'}</span>
             </span>
+
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 shadow-2xs">
+              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>{streakCount > 0 ? `${streakCount}-Day Practice Streak` : '7-Day Practice Streak'}</span>
+            </span>
+
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 shadow-2xs">
+              <Target className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{practicePercent}% Daily Goal Met</span>
+            </span>
+          </div>
+
+          {/* 1-Click Launch Button */}
+          <div className="pt-2">
+            <button
+              onClick={() => navigate('/interview-setup')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm transition-all shadow-md shadow-indigo-500/20 active:scale-[0.98] cursor-pointer"
+            >
+              <span>Start Today's Mock Interview</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* Target Role Selector Box */}
-        <div className="p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-between text-xs text-[#1F1B16] shadow-2xs">
-          <div className="flex items-center gap-2 truncate">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#70685E]">Target Role:</span>
-            <span className="font-serif font-semibold text-[#1F1B16] truncate text-sm">{userRole}</span>
+        {/* Right Corner Illustration (Matching Approved Design) */}
+        <div className="hidden md:flex items-center justify-center shrink-0 w-44 lg:w-56 h-auto relative">
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200/80 shadow-md group">
+            <img
+              src="/hero-illustration.jpg"
+              alt="AI Career Preparation Candidate"
+              className="w-full h-full object-cover object-right transform group-hover:scale-105 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-white font-mono bg-slate-900/70 backdrop-blur-xs px-2.5 py-1 rounded-lg">
+              <span className="flex items-center gap-1 font-bold">
+                <Sparkles className="w-3 h-3 text-emerald-400" /> Live AI Engine
+              </span>
+              <span className="text-emerald-400 font-bold">88% Match</span>
+            </div>
           </div>
-          <button
-            onClick={() => navigate('/settings')}
-            className="text-xs font-semibold text-[#1A365D] hover:underline flex items-center gap-1 cursor-pointer ml-3 shrink-0"
-          >
-            <span>Change Target Role</span>
-            <span className="text-[10px]">→</span>
-          </button>
         </div>
+
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* TARGETED REMEDIATION & SKILL DRILLS (From Interview Skips)    */}
+      {/* 2. TARGETED REMEDIATION & SKILL DRILLS (From Interview Skips)  */}
       {/* ───────────────────────────────────────────────────────────── */}
       {recentRemediationSkills.length > 0 && (
-        <GlassCard className="p-5 sm:p-6 space-y-3.5 border-l-4 border-l-amber-500 bg-[#FFFDF9]">
-          <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-2.5">
+        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-3.5 border-l-4 border-l-amber-500">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="editorial-overline text-amber-800">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
                 TARGETED REMEDIATION &amp; SKILL DRILLS
               </span>
             </div>
-            <Badge variant="bronze" size="xs">
+            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
               {recentRemediationSkills.some(s => s.isSkipped) ? 'SKIPPED TOPICS DETECTED' : 'GAP REINFORCEMENT'}
-            </Badge>
+            </span>
           </div>
 
           <div>
-            <h2 className="font-serif text-base sm:text-lg font-bold text-[#1F1B16] flex items-center gap-2">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
               <span>High-Priority Remediation from Recent Practice</span>
             </h2>
-            <p className="text-xs text-[#70685E] mt-0.5 leading-relaxed">
+            <p className="text-xs text-slate-500 mt-0.5">
               Topics you skipped or scored below 70% in your latest interview sessions. Practice targeted drills to convert these gaps into strengths.
             </p>
           </div>
@@ -337,24 +393,24 @@ export default function DashboardPage() {
             {recentRemediationSkills.map((item, idx) => (
               <div
                 key={idx}
-                className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:border-slate-300 transition-colors"
               >
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-serif font-bold text-xs sm:text-sm text-[#1F1B16]">
+                    <span className="font-bold text-xs sm:text-sm text-slate-900">
                       {item.name}
                     </span>
                     {item.isSkipped ? (
-                      <span className="px-1.5 py-0.2 rounded bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-mono font-bold">
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 text-amber-800 text-[10px] font-mono font-bold">
                         SKIPPED
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.2 rounded bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-mono font-bold">
+                      <span className="px-1.5 py-0.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-mono font-bold">
                         {item.score}% SCORE
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-[#70685E]">
+                  <p className="text-[11px] text-slate-500">
                     {item.reason}
                   </p>
                 </div>
@@ -362,7 +418,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => navigate('/skill-arena')}
-                  className="px-3 py-1.5 rounded-md bg-[#1B2A4A] hover:bg-[#142038] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 self-start sm:self-auto shadow-2xs"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 self-start sm:self-auto shadow-xs"
                 >
                   <span>Practice Drill</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -370,34 +426,36 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        </GlassCard>
+        </div>
       )}
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 2. SECTION I: READINESS INDEX                                 */}
+      {/* 3. SECTION I: READINESS INDEX (Clean Cards & Gauges)           */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <GlassCard className="p-5 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
-          <div className="flex items-center gap-2">
-            <span className="editorial-overline text-[#70685E]">
-              I. CAREER READINESS INDEX
-            </span>
-          </div>
-          <Badge variant={hasInterviews && currentReadiness >= 75 ? "emerald" : hasInterviews ? "navy" : "neutral"} size="sm">
+      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            I. CAREER READINESS INDEX
+          </span>
+          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+            hasInterviews && currentReadiness >= 75 
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+              : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+          }`}>
             {hasInterviews ? (currentReadiness >= 75 ? 'Strong Progress' : 'In Progress') : 'Calibration Needed'}
-          </Badge>
+          </span>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-6 pt-1">
           {/* Circular Gauge */}
-          <div className="p-4 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex flex-col items-center justify-center w-32 h-32 shrink-0 mx-auto sm:mx-0">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col items-center justify-center w-32 h-32 shrink-0 mx-auto sm:mx-0">
             <div className="relative w-20 h-20 flex items-center justify-center">
               <svg className="w-20 h-20 -rotate-90" viewBox="0 0 72 72">
                 <circle
                   cx="36"
                   cy="36"
                   r={radius}
-                  stroke="#E5E0D5"
+                  stroke="#E2E8F0"
                   strokeWidth="5"
                   fill="transparent"
                 />
@@ -405,7 +463,7 @@ export default function DashboardPage() {
                   cx="36"
                   cy="36"
                   r={radius}
-                  stroke={currentReadiness !== null ? "#1A365D" : "#BAC7D5"}
+                  stroke={currentReadiness !== null ? "#10B981" : "#94A3B8"}
                   strokeWidth="5"
                   fill="transparent"
                   strokeDasharray={circumference}
@@ -415,12 +473,12 @@ export default function DashboardPage() {
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-base font-bold text-[#1F1B16] font-mono">
+                <span className="text-base font-bold text-slate-900 font-mono">
                   {currentReadiness !== null ? `${currentReadiness}%` : '--'}
                 </span>
               </div>
             </div>
-            <span className="text-[9px] uppercase font-bold tracking-widest text-[#70685E] mt-1.5">
+            <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 mt-1.5">
               {currentReadiness !== null ? 'Readiness' : 'Uncalibrated'}
             </span>
           </div>
@@ -430,21 +488,21 @@ export default function DashboardPage() {
             {/* ATS Resume Match */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#3B352E] font-medium">ATS Resume Match</span>
+                <span className="text-slate-700 font-medium">ATS Resume Match</span>
                 {hasAts ? (
-                  <span className="font-bold text-[#1F1B16] font-mono">{atsScore}%</span>
+                  <span className="font-bold text-slate-900 font-mono">{atsScore}%</span>
                 ) : (
                   <button
                     onClick={() => navigate('/ats')}
-                    className="text-[11px] font-semibold text-[#1A365D] hover:underline cursor-pointer"
+                    className="text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer"
                   >
                     Upload Resume to Calibrate →
                   </button>
                 )}
               </div>
-              <div className="w-full h-1.5 rounded-full bg-[#E5E0D5] overflow-hidden">
+              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-[#1A365D] transition-all duration-500"
+                  className="h-full rounded-full bg-indigo-600 transition-all duration-500"
                   style={{ width: `${hasAts ? atsScore : 0}%` }}
                 />
               </div>
@@ -453,61 +511,61 @@ export default function DashboardPage() {
             {/* Practice Hours */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#3B352E] font-medium">Practice Hours Logged</span>
-                <span className="font-bold text-[#1F1B16] font-mono">{practiceHours} / {targetHours} hrs</span>
+                <span className="text-slate-700 font-medium">Practice Hours Logged</span>
+                <span className="font-bold text-slate-900 font-mono">{practiceHours} / {targetHours} hrs</span>
               </div>
-              <div className="w-full h-1.5 rounded-full bg-[#E5E0D5] overflow-hidden">
+              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-[#8C6E54] transition-all duration-500"
+                  className="h-full rounded-full bg-amber-500 transition-all duration-500"
                   style={{ width: `${practicePercent}%` }}
                 />
               </div>
             </div>
 
-            {/* Interview Readiness */}
+            {/* Mock Interview Readiness */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#3B352E] font-medium">Mock Interview Readiness</span>
+                <span className="text-slate-700 font-medium">Mock Interview Readiness</span>
                 {hasInterviews ? (
-                  <span className="font-bold text-[#1F1B16] font-mono">{currentReadiness}%</span>
+                  <span className="font-bold text-slate-900 font-mono">{currentReadiness}%</span>
                 ) : (
                   <button
                     onClick={() => navigate('/interview-setup')}
-                    className="text-[11px] font-semibold text-[#1A365D] hover:underline cursor-pointer"
+                    className="text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer"
                   >
                     Take First Interview →
                   </button>
                 )}
               </div>
-              <div className="w-full h-1.5 rounded-full bg-[#E5E0D5] overflow-hidden">
+              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-[#1A365D] transition-all duration-500"
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                   style={{ width: `${currentReadiness !== null ? currentReadiness : 0}%` }}
                 />
               </div>
             </div>
           </div>
         </div>
-      </GlassCard>
+      </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 3. SECTION II: RECOMMENDED NEXT STEP                          */}
+      {/* 4. SECTION II: RECOMMENDED NEXT STEP (Tailored Action)         */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <GlassCard className="p-5 sm:p-6 space-y-3.5 border-l-4 border-l-[#1B2A4A]">
+      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-3.5 border-l-4 border-l-indigo-600">
         <div className="flex items-center justify-between">
-          <span className="editorial-overline text-[#1A365D]">
-            II. RECOMMENDED NEXT STEP
+          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+            II. RECOMMENDED NEXT ACTION
           </span>
-          <span className="text-[11px] text-[#70685E] font-mono">
-            UPDATED TODAY
+          <span className="text-[10px] text-slate-400 font-mono">
+            CALIBRATED TODAY
           </span>
         </div>
 
         <div>
-          <h2 className="font-serif text-lg font-semibold text-[#1F1B16]">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900">
             Priority: {nextHeadline}
           </h2>
-          <p className="text-xs sm:text-sm text-[#3B352E] mt-1.5 leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 mt-1">
             "{nextReason}"
           </p>
         </div>
@@ -515,7 +573,7 @@ export default function DashboardPage() {
         <div className="pt-2 space-y-2.5">
           <button
             onClick={() => navigate(nextRoute)}
-            className="w-full py-2.5 px-4 rounded-md bg-[#1B2A4A] hover:bg-[#142038] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-[0_1px_2px_rgba(31,27,22,0.06)]"
+            className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md shadow-indigo-500/20"
           >
             <span>{nextActionBtn.includes('→') ? nextActionBtn : `${nextActionBtn} →`}</span>
           </button>
@@ -523,42 +581,42 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between pt-1">
             <button
               onClick={() => setShowRationale(!showRationale)}
-              className="text-xs text-[#70685E] hover:text-[#1F1B16] underline flex items-center gap-1 cursor-pointer"
+              className="text-xs text-slate-500 hover:text-slate-800 underline flex items-center gap-1 cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" />
               <span>Why this recommendation?</span>
             </button>
-            <span className="text-xs text-[#70685E]">
-              Skill Focus: <strong className="font-semibold text-[#3B352E]">{nextPrimarySkill}</strong>
+            <span className="text-xs text-slate-500">
+              Focus: <strong className="font-semibold text-slate-800">{nextPrimarySkill}</strong>
             </span>
           </div>
 
           {showRationale && (
-            <div className="p-3.5 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] text-xs space-y-2 animate-fadeIn transition-all">
-              <div className="flex items-center justify-between font-bold text-[#1F1B16]">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2 animate-fadeIn transition-all">
+              <div className="flex items-center justify-between font-bold text-slate-900">
                 <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#70685E]" />
-                  Agent Decision Rationale:
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  Agent Decision Engine Rationale:
                 </span>
-                <button onClick={() => setShowRationale(false)} className="text-[#70685E] hover:text-[#1F1B16] cursor-pointer">
+                <button onClick={() => setShowRationale(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <p className="text-[#3B352E] leading-relaxed">
-                Personalized based on your target role <strong>{userRole}</strong>, resume match, and practice performance.
+              <p className="text-slate-600 leading-relaxed">
+                Calibrated based on your target role <strong>{userRole}</strong>, skill gaps from mock sessions, and live question skips.
               </p>
             </div>
           )}
         </div>
-      </GlassCard>
+      </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 4. SECTION III: PRACTICE TOOLS                                */}
+      {/* 5. SECTION III: PRACTICE TOOLS                                */}
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 border-b border-[#E5E0D5] pb-2">
-          <span className="editorial-overline text-[#70685E]">
-            III. PRACTICE TOOLS
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            III. PRACTICE MODULES
           </span>
         </div>
 
@@ -566,17 +624,17 @@ export default function DashboardPage() {
           {/* Tool 1: Mock Interview */}
           <div
             onClick={() => navigate('/interview-setup')}
-            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-2xs group"
+            className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer space-y-2.5 group"
           >
-            <div className="w-8 h-8 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D]">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
               <Mic className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif font-semibold text-sm text-[#1F1B16] group-hover:underline">
+              <h3 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
                 Mock Interview Practice
               </h3>
-              <p className="text-xs text-[#70685E] mt-0.5">
-                Practice calibrated interviews with skip options and model answers
+              <p className="text-xs text-slate-500 mt-0.5">
+                Practice 50/50 workspace interviews with zero-penalty skip and model rubrics
               </p>
             </div>
           </div>
@@ -584,17 +642,17 @@ export default function DashboardPage() {
           {/* Tool 2: Resume ATS Scanner */}
           <div
             onClick={() => navigate('/ats')}
-            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-2xs group"
+            className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer space-y-2.5 group"
           >
-            <div className="w-8 h-8 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D]">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif font-semibold text-sm text-[#1F1B16] group-hover:underline">
+              <h3 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
                 Resume ATS Scanner
               </h3>
-              <p className="text-xs text-[#70685E] mt-0.5">
-                Match your resume keywords to your target job requirements
+              <p className="text-xs text-slate-500 mt-0.5">
+                Match your resume keywords against raw Job Descriptions
               </p>
             </div>
           </div>
@@ -602,17 +660,17 @@ export default function DashboardPage() {
           {/* Tool 3: Skill Gap Analysis */}
           <div
             onClick={() => navigate('/skill-gap')}
-            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-2xs group"
+            className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer space-y-2.5 group"
           >
-            <div className="w-8 h-8 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D]">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
               <Compass className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif font-semibold text-sm text-[#1F1B16] group-hover:underline">
+              <h3 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
                 Skill Gap Analysis
               </h3>
-              <p className="text-xs text-[#70685E] mt-0.5">
-                Inspect competencies and curriculum benchmarks for {userRole}
+              <p className="text-xs text-slate-500 mt-0.5">
+                Inspect competencies and readiness benchmarks for {userRole}
               </p>
             </div>
           </div>
@@ -620,16 +678,16 @@ export default function DashboardPage() {
           {/* Tool 4: Skill Arena */}
           <div
             onClick={() => navigate('/skill-arena')}
-            className="p-4 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] hover:border-[#1A365D] hover:bg-[#F2EFE9] transition-all cursor-pointer space-y-2 shadow-2xs group"
+            className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer space-y-2.5 group"
           >
-            <div className="w-8 h-8 rounded-md bg-[#F2EFE9] border border-[#E5E0D5] flex items-center justify-center text-[#1A365D]">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
               <Code2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif font-semibold text-sm text-[#1F1B16] group-hover:underline">
+              <h3 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
                 Skill Arena Coding
               </h3>
-              <p className="text-xs text-[#70685E] mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Targeted practice drills, algorithms, and SQL query execution
               </p>
             </div>
@@ -638,16 +696,14 @@ export default function DashboardPage() {
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 5. SECTION IV: DAILY PRACTICE GOALS                           */}
+      {/* 6. SECTION IV: DAILY PRACTICE GOALS                           */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <GlassCard className="p-5 sm:p-6 space-y-3.5">
-        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-2.5">
-          <div className="flex items-center gap-2">
-            <span className="editorial-overline text-[#70685E]">
-              IV. DAILY PRACTICE GOALS
-            </span>
-          </div>
-          <span className="text-xs font-semibold text-[#235E3B] bg-[#EBF4EE] px-2.5 py-0.5 rounded border border-[#CDE3D5]">
+      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-3.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            IV. DAILY PRACTICE GOALS
+          </span>
+          <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
             {completedHabitsCount} of {habits.length} completed
           </span>
         </div>
@@ -656,31 +712,31 @@ export default function DashboardPage() {
           {habits.map((habit) => (
             <div
               key={habit.id}
-              className={`p-3 rounded-md border flex items-center justify-between gap-3 transition-colors ${
+              className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
                 habit.completed
-                  ? 'bg-[#FAF8F3] border-[#E5E0D5]'
-                  : 'bg-[#FFFDF9] border-[#E5E0D5] hover:border-[#D5CFBF]'
+                  ? 'bg-slate-50 border-slate-200'
+                  : 'bg-white border-slate-200 hover:border-slate-300'
               }`}
             >
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => toggleHabit(habit.id, habit.xpReward)}
-                  className={`w-5 h-5 rounded border flex items-center justify-center cursor-pointer transition-colors ${
+                  className={`w-5 h-5 rounded-md border flex items-center justify-center cursor-pointer transition-colors ${
                     habit.completed
-                      ? 'bg-[#235E3B] border-[#235E3B] text-white'
-                      : 'border-[#D5CFBF] hover:border-[#1F1B16] bg-transparent'
+                      ? 'bg-emerald-600 border-emerald-600 text-white'
+                      : 'border-slate-300 hover:border-slate-600 bg-transparent'
                   }`}
                   title={habit.completed ? 'Mark incomplete' : 'Mark complete'}
                 >
                   {habit.completed && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </button>
                 <div>
-                  <p className={`text-xs sm:text-sm font-semibold ${
-                    habit.completed ? 'text-[#70685E] line-through' : 'text-[#1F1B16]'
+                  <p className={`text-xs sm:text-sm font-bold ${
+                    habit.completed ? 'text-slate-400 line-through' : 'text-slate-900'
                   }`}>
                     {habit.title}
                   </p>
-                  <p className="text-[11px] text-[#70685E]">
+                  <p className="text-[11px] text-slate-500">
                     {habit.subtitle}
                   </p>
                 </div>
@@ -688,13 +744,13 @@ export default function DashboardPage() {
 
               <div className="flex items-center gap-2">
                 {habit.completed ? (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#235E3B] bg-[#EBF4EE] px-2 py-0.5 rounded border border-[#CDE3D5]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                     Done
                   </span>
                 ) : (
                   <button
                     onClick={() => navigate(habit.route)}
-                    className="px-2.5 py-1 text-xs font-semibold rounded bg-[#1B2A4A] text-white hover:bg-[#142038] cursor-pointer"
+                    className="px-3 py-1 text-xs font-bold rounded-lg bg-slate-900 text-white hover:bg-slate-800 cursor-pointer"
                   >
                     Start
                   </button>
@@ -703,22 +759,20 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
-      </GlassCard>
+      </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 6. SECTION V: RECENT INTERVIEWS                               */}
+      {/* 7. SECTION V: RECENT INTERVIEWS                               */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <GlassCard className="p-5 sm:p-6 space-y-3.5">
-        <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-2.5">
-          <div className="flex items-center gap-2">
-            <span className="editorial-overline text-[#70685E]">
-              V. RECENT INTERVIEWS
-            </span>
-          </div>
+      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-3.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            V. RECENT INTERVIEWS
+          </span>
           {recentInterviews.length > 0 && (
             <button
               onClick={() => navigate('/progress')}
-              className="text-xs font-semibold text-[#1A365D] hover:underline cursor-pointer"
+              className="text-xs font-semibold text-indigo-600 hover:underline cursor-pointer"
             >
               View all →
             </button>
@@ -726,60 +780,165 @@ export default function DashboardPage() {
         </div>
 
         {recentInterviews.length > 0 ? (
-          <div className="divide-y divide-[#E5E0D5]">
+          <div className="divide-y divide-slate-100">
             {recentInterviews.map((item) => (
               <div
                 key={item.id}
                 onClick={() => navigate('/interview-feedback')}
-                className="py-3 flex items-center justify-between gap-3 hover:bg-[#F2EFE9] -mx-2 px-2 rounded transition-colors cursor-pointer"
+                className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 -mx-2 px-2 rounded-xl transition-colors cursor-pointer"
               >
                 <div>
-                  <h4 className="font-serif font-semibold text-xs sm:text-sm text-[#1F1B16]">
+                  <h4 className="font-bold text-xs sm:text-sm text-slate-900">
                     {item.title}
                   </h4>
-                  <p className="text-[11px] text-[#70685E] mt-0.5">
+                  <p className="text-[11px] text-slate-500 mt-0.5">
                     {item.subtitle}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
-                    <span className="font-mono font-bold text-xs sm:text-sm text-[#1F1B16] block">
-                      {item.score} <span className="text-[10px] text-[#70685E] font-normal">/ 100</span>
+                    <span className="font-mono font-bold text-xs sm:text-sm text-slate-900 block">
+                      {item.score} <span className="text-[10px] text-slate-400 font-normal">/ 100</span>
                     </span>
                     <span className={`text-[10px] font-semibold ${
-                      item.score >= 75 ? 'text-[#235E3B]' : 'text-[#9A421A]'
+                      item.score >= 75 ? 'text-emerald-700' : 'text-amber-700'
                     }`}>
                       {item.assessment}
                     </span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-[#8A8277]" />
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-6 px-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-3">
-            <div className="w-10 h-10 rounded-full bg-[#EAEFF5] border border-[#BAC7D5] flex items-center justify-center mx-auto text-[#1A365D]">
+          <div className="text-center py-6 px-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-indigo-600">
               <Mic className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-serif font-bold text-[#1F1B16]">No mock interviews completed yet</h4>
-              <p className="text-xs text-[#70685E] mt-0.5 max-w-sm mx-auto">
+              <h4 className="text-sm font-bold text-slate-900">No mock interviews completed yet</h4>
+              <p className="text-xs text-slate-500 mt-0.5 max-w-sm mx-auto">
                 Complete your first practice interview to see your scores, hiring evaluation, and feedback here.
               </p>
             </div>
-            <GradientButton
-              variant="primary"
-              size="sm"
+            <button
               onClick={() => navigate('/interview-setup')}
-              icon={Sparkles}
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors shadow-sm cursor-pointer"
             >
               Start Practice Interview
-            </GradientButton>
+            </button>
           </div>
         )}
-      </GlassCard>
+      </div>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* 8. EDIT PROFILE MODAL (TALENT SHINE POPUP)                    */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {showEditProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 text-slate-900 relative">
+            
+            <button
+              onClick={() => setShowEditProfileModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <Pencil className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Edit Candidate Profile</h3>
+                <p className="text-xs text-slate-500">Update your target track, role, and experience level.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Candidate Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="Your Name"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Target Technical Role
+                </label>
+                <select
+                  value={profileRole}
+                  onChange={(e) => setProfileRole(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-900 bg-white"
+                >
+                  <option value="Full Stack Software Engineer">Full Stack Software Engineer</option>
+                  <option value="Frontend Developer">Frontend Developer</option>
+                  <option value="Backend Developer">Backend Developer</option>
+                  <option value="Machine Learning Engineer">Machine Learning Engineer</option>
+                  <option value="Data Analyst">Data Analyst</option>
+                  <option value="Cloud / DevOps Engineer">Cloud / DevOps Engineer</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Calibration Level / Experience
+                </label>
+                <select
+                  value={profileDifficulty}
+                  onChange={(e) => setProfileDifficulty(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-900 bg-white"
+                >
+                  <option value="Beginner / Campus Ready">Beginner / Campus Ready (0-1 YOE)</option>
+                  <option value="Intermediate / 1-3 YOE">Intermediate (1-3 YOE)</option>
+                  <option value="Senior / Staff">Senior / Staff (4+ YOE)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Target Graduation / Transition Year
+                </label>
+                <input
+                  type="text"
+                  value={profileGradYear}
+                  onChange={(e) => setProfileGradYear(e.target.value)}
+                  placeholder="2026"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-900"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md shadow-indigo-500/20 cursor-pointer"
+                >
+                  Save Profile Changes
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

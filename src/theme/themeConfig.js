@@ -7,7 +7,7 @@
  *  - dark: Midnight Scholar Deep Dark
  */
 
-export const DEFAULT_THEME = 'warm';
+export const DEFAULT_THEME = 'white';
 
 export const THEMES = [
   {
@@ -78,34 +78,34 @@ export const THEMES = [
     id: 'white',
     name: 'Pure White',
     badge: 'Clean Modern',
-    description: 'Crisp minimalist white canvas with high-contrast slate ink, subtle cool borders, and vibrant cobalt blue accents.',
+    description: 'Crisp minimalist white canvas with high-contrast slate ink, subtle cool borders, and vibrant electric indigo accents.',
     mode: 'light',
     emoji: '☀️',
     colors: {
-      bg: '#FFFFFF',
-      surface: '#F8FAFC',
+      bg: '#F8FAFC',
+      surface: '#FFFFFF',
       surfaceHover: '#F1F5F9',
       surfaceSubtle: '#F1F5F9',
       surfaceLow: '#FAFAFA',
       sidebar: '#FFFFFF',
       border: '#E2E8F0',
       borderStrong: '#CBD5E1',
-      primary: '#1E40AF',
-      primaryLight: '#3B82F6',
-      cta: '#1E40AF',
-      ctaHover: '#1D4ED8',
+      primary: '#4F46E5',
+      primaryLight: '#6366F1',
+      cta: '#4F46E5',
+      ctaHover: '#4338CA',
       ctaText: '#FFFFFF',
       secondary: '#334155',
-      bronze: '#0284C7',
-      bronzeHover: '#0369A1',
-      accent: '#1E40AF',
-      success: '#15803D',
-      successBg: '#F0FDF4',
-      warning: '#C2410C',
-      warningBg: '#FFF7ED',
-      danger: '#B91C1C',
+      bronze: '#F59E0B',
+      bronzeHover: '#D97706',
+      accent: '#4F46E5',
+      success: '#10B981',
+      successBg: '#ECFDF5',
+      warning: '#F59E0B',
+      warningBg: '#FFFBEB',
+      danger: '#EF4444',
       dangerBg: '#FEF2F2',
-      neutral: '#475569',
+      neutral: '#64748B',
       neutralBg: '#F1F5F9',
       text: '#0F172A',
       textSecondary: '#334155',
@@ -114,13 +114,13 @@ export const THEMES = [
       cardBg: '#FFFFFF',
       headerBg: 'rgba(255, 255, 255, 0.98)',
       inputBg: '#FFFFFF',
-      selected: '#E0E7FF'
+      selected: '#EEF2FF'
     },
     preview: {
-      bg: '#FFFFFF',
-      card: '#F8FAFC',
-      primary: '#1E40AF',
-      secondary: '#0284C7'
+      bg: '#F8FAFC',
+      card: '#FFFFFF',
+      primary: '#4F46E5',
+      secondary: '#10B981'
     }
   },
   {
@@ -201,7 +201,7 @@ export function resolveEffectiveTheme(themeId) {
     if (typeof window !== 'undefined' && window.matchMedia) {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'white';
     }
-    return 'warm';
+    return 'white';
   }
-  return isValidTheme(themeId) ? themeId : 'warm';
+  return isValidTheme(themeId) ? themeId : 'white';
 }

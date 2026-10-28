@@ -4,7 +4,64 @@
    1. EDITORIAL SCHOLAR & ACADEMIC CURATOR — ALEXANDRIA STYLE DESIGN SYSTEM
    ========================================================================= */
 
-:root, [data-theme="warm"], [data-theme="editorial_scholar"] {
+:root, [data-theme="white"] {
+  --theme-id: "white";
+  
+  /* ── Canvas & Surfaces — Talent Shine Clean Slate & Pure White ───────── */
+  --theme-bg: #F8FAFC;                /* Clean Neutral Canvas */
+  --theme-surface: #FFFFFF;           /* Crisp Pure White Surface */
+  --theme-surface-hover: #F1F5F9;     /* Subtle Surface Hover */
+  --theme-surface-subtle: #F1F5F9;    /* Inset Subdued Surface */
+  --theme-surface-low: #FFFFFF;       /* Clean White Low Surface */
+  --theme-sidebar: #FFFFFF;           /* Crisp Modern Sidebar */
+  --theme-border: #E2E8F0;            /* 1px Hairline Divider */
+  --theme-border-strong: #CBD5E1;     /* Emphasized Divider */
+
+  /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
+  --theme-ink-primary: #0F172A;       /* Slate-900 Headings & Key Text */
+  --theme-ink-secondary: #334155;     /* Slate-700 Descriptions */
+  --theme-ink-tertiary: #64748B;      /* Slate-500 Subtitles */
+  --theme-ink-micro: #475569;         /* Tracked Overlines & Micro Labels */
+
+  --theme-text: #0F172A;
+  --theme-text-secondary: #334155;
+  --theme-text-muted: #64748B;
+  --theme-text-micro: #475569;
+
+  /* ── Primary Accents & CTAs — Vibrant Electric Indigo ────────────────── */
+  --theme-primary: #4F46E5;           /* Electric Indigo */
+  --theme-primary-light: #6366F1;     /* Indigo-500 */
+  --theme-cta: #4F46E5;               /* Primary CTA Button */
+  --theme-cta-hover: #4338CA;         /* Indigo-700 Hover */
+  --theme-cta-text: #FFFFFF;          /* High-Contrast White Text */
+
+  /* ── Secondary Accent ─────────────────────────────────────────────────── */
+  --theme-bronze: #F59E0B;            /* Warm Amber Accent */
+  --theme-bronze-hover: #D97706;
+  --theme-accent: #4F46E5;
+
+  /* ── Semantic System ─────────────────────────────────────────────────── */
+  --theme-success: #10B981;           /* Vibrant Emerald */
+  --theme-success-bg: #ECFDF5;
+  --theme-warning: #F59E0B;
+  --theme-warning-bg: #FFFBEB;
+  --theme-danger: #EF4444;            /* Rose Alert */
+  --theme-danger-bg: #FEF2F2;
+  --theme-neutral: #64748B;
+  --theme-neutral-bg: #F1F5F9;
+
+  /* ── Form Controls & Active States ───────────────────────────────────── */
+  --theme-card-bg: #FFFFFF;
+  --theme-header-bg: rgba(255, 255, 255, 0.95);
+  --theme-input-bg: #FFFFFF;
+  --theme-selected: #EEF2FF;
+  --theme-glow-primary: 0 4px 14px 0 rgba(79, 70, 229, 0.25);
+  --theme-glow-secondary: none;
+
+  color-scheme: light;
+}
+
+[data-theme="warm"], [data-theme="editorial_scholar"] {
   --theme-id: "warm";
   
   /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
@@ -55,63 +112,6 @@
   --theme-header-bg: rgba(255, 253, 249, 0.98);
   --theme-input-bg: #FFFDF9;
   --theme-selected: #EAE6DC;
-  --theme-glow-primary: none;
-  --theme-glow-secondary: none;
-
-  color-scheme: light;
-}
-
-[data-theme="white"] {
-  --theme-id: "white";
-
-  /* ── Canvas & Surfaces ────────────────────────────────────────────────── */
-  --theme-bg: #FFFFFF;                /* Crisp Modern White */
-  --theme-surface: #F8FAFC;           /* Clean Slate Surface */
-  --theme-surface-hover: #F1F5F9;     /* Subtle Surface Hover */
-  --theme-surface-subtle: #F1F5F9;    /* Inset Subdued Surface */
-  --theme-surface-low: #FAFAFA;       /* Secondary Low Surface */
-  --theme-sidebar: #FFFFFF;           /* Crisp Modern Sidebar */
-  --theme-border: #E2E8F0;            /* 1px Hairline Divider */
-  --theme-border-strong: #CBD5E1;     /* Emphasized Divider */
-
-  /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
-  --theme-ink-primary: #0F172A;       /* Primary Headings & Important Text */
-  --theme-ink-secondary: #334155;     /* Body Text & Descriptions */
-  --theme-ink-tertiary: #64748B;      /* Subtitles & Timestamps */
-  --theme-ink-micro: #475569;         /* Tracked Overlines & Micro Labels */
-
-  --theme-text: #0F172A;
-  --theme-text-secondary: #334155;
-  --theme-text-muted: #64748B;
-  --theme-text-micro: #475569;
-
-  /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
-  --theme-primary: #1E40AF;           /* Executive Cobalt Blue */
-  --theme-primary-light: #3B82F6;
-  --theme-cta: #1E40AF;
-  --theme-cta-hover: #1D4ED8;
-  --theme-cta-text: #FFFFFF;
-
-  /* ── Secondary Accent ─────────────────────────────────────────────────── */
-  --theme-bronze: #0284C7;
-  --theme-bronze-hover: #0369A1;
-  --theme-accent: #1E40AF;
-
-  /* ── Semantic System ─────────────────────────────────────────────────── */
-  --theme-success: #15803D;
-  --theme-success-bg: #F0FDF4;
-  --theme-warning: #C2410C;
-  --theme-warning-bg: #FFF7ED;
-  --theme-danger: #B91C1C;
-  --theme-danger-bg: #FEF2F2;
-  --theme-neutral: #475569;
-  --theme-neutral-bg: #F1F5F9;
-
-  /* ── Form Controls & Active States ───────────────────────────────────── */
-  --theme-card-bg: #FFFFFF;
-  --theme-header-bg: rgba(255, 255, 255, 0.98);
-  --theme-input-bg: #FFFFFF;
-  --theme-selected: #E0E7FF;
   --theme-glow-primary: none;
   --theme-glow-secondary: none;
 
