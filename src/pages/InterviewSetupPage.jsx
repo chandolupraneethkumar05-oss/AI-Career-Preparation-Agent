@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Target,
@@ -18,7 +18,11 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
-  Zap
+  Zap,
+  Code2,
+  Tag,
+  X,
+  Plus
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -31,7 +35,51 @@ import { useInterview } from '../context/InterviewContext';
 import { profileApi } from '../services/profileApi';
 
 const FAST_PRESETS = [
-
+  {
+    id: 'fresher_fullstack',
+    title: 'Campus Fresher (Full Stack)',
+    role: 'Software Engineer',
+    type: 'Technical',
+    difficulty: 'Beginner',
+    playbook: 'general',
+    mode: 'text',
+    persona: 'julian',
+    questions: 5,
+    tag: 'Fresher • 0-1 Yrs',
+    badgeVariant: 'emerald',
+    desc: 'JavaScript/HTML/CSS basics, React component state, fundamental SQL, and REST APIs.',
+    sampleJD: "Job Role: Junior / Fresher Full Stack Developer (0-1 yrs)\nRequired Skills: HTML5, CSS3, JavaScript (ES6+), React fundamentals (props, state, basic hooks), Basic REST APIs, and simple SQL queries. Looking for fresh graduates with strong problem-solving fundamentals, direct logic, and clean code habits."
+  },
+  {
+    id: 'junior_backend',
+    title: 'Junior Python & SQL',
+    role: 'Backend Engineer',
+    type: 'Technical',
+    difficulty: 'Beginner',
+    playbook: 'general',
+    mode: 'text',
+    persona: 'julian',
+    questions: 5,
+    tag: 'Junior • 0-2 Yrs',
+    badgeVariant: 'emerald',
+    desc: 'Python fundamentals (lists, dicts, functions), basic SQL queries (JOINs, GROUP BY), and REST endpoints.',
+    sampleJD: "Job Role: Junior Backend Engineer (0-2 yrs)\nRequired Skills: Python, basic data structures (lists, dicts, tuples), SQL queries (SELECT, JOIN, aggregations), Git version control, and basic HTTP methods (GET, POST). Focus on clarity, logic, and core coding standards."
+  },
+  {
+    id: 'campus_dsa',
+    title: 'Campus DSA & Core CS',
+    role: 'Software Engineer',
+    type: 'Technical',
+    difficulty: 'Beginner',
+    playbook: 'general',
+    mode: 'text',
+    persona: 'julian',
+    questions: 5,
+    tag: 'Campus DSA',
+    badgeVariant: 'emerald',
+    desc: 'Arrays, strings, two-pointer techniques, hash maps, recursion, and Big-O notation basics.',
+    sampleJD: "Job Role: Graduate Software Development Engineer (Campus Hiring)\nRequired Skills: Data Structures (Arrays, Strings, Hash Maps, Linked Lists), Algorithms (Sorting, Searching, Two Pointers), Object-Oriented Programming (OOP), and DBMS fundamentals."
+  },
   {
     id: 'frontend_sde',
     title: 'Frontend Specialist',
@@ -43,7 +91,9 @@ const FAST_PRESETS = [
     persona: 'julian',
     questions: 5,
     tag: 'UI & React',
-    desc: 'React lifecycle, state trees, re-rendering optimization & DOM performance.'
+    badgeVariant: 'navy',
+    desc: 'React lifecycle, state trees, re-rendering optimization & DOM performance.',
+    sampleJD: "Job Role: Mid-Level Frontend Engineer (2-4 yrs)\nRequired Skills: Modern React, Next.js, Redux / Zustand, performance optimization (memo, useMemo, virtualization), TypeScript, and responsive CSS architectures."
   },
   {
     id: 'backend_sde',
@@ -56,7 +106,9 @@ const FAST_PRESETS = [
     persona: 'julian',
     questions: 5,
     tag: 'Distributed Scale',
-    desc: 'Distributed caching, database concurrency, idempotency & low-latency APIs.'
+    badgeVariant: 'bronze',
+    desc: 'Distributed caching, database concurrency, idempotency & low-latency APIs.',
+    sampleJD: "Job Role: Senior Backend Engineer (4+ yrs)\nRequired Skills: Distributed Systems, High-concurrency architectures, Redis caching strategies, PostgreSQL/NoSQL query tuning, Kafka message streaming, and horizontal scaling."
   },
   {
     id: 'ml_engineer',
@@ -69,7 +121,9 @@ const FAST_PRESETS = [
     persona: 'julian',
     questions: 5,
     tag: 'AI & Data Systems',
-    desc: 'Model architectures, transformer embeddings, loss calibration & pipelines.'
+    badgeVariant: 'bronze',
+    desc: 'Model architectures, transformer embeddings, loss calibration & pipelines.',
+    sampleJD: "Job Role: Senior Machine Learning Engineer\nRequired Skills: PyTorch, Transformer architectures, feature engineering, vector search (Faiss), MLOps deployment (Docker, Triton), model drift monitoring, and evaluation metrics."
   },
   {
     id: 'behavioral_lead',
@@ -82,9 +136,70 @@ const FAST_PRESETS = [
     persona: 'elena',
     questions: 5,
     tag: 'STAR & Influence',
-    desc: 'Cross-functional ownership, technical dispute mitigation & engineering velocity.'
+    badgeVariant: 'navy',
+    desc: 'Cross-functional ownership, technical dispute mitigation & engineering velocity.',
+    sampleJD: "Job Role: Engineering Manager / Tech Lead\nCompetencies: Cross-functional leadership, conflict resolution, mentoring junior engineers, architectural decision making, and delivering complex engineering initiatives on schedule."
   }
 ];
+
+const SAMPLE_JDS = [
+  {
+    id: 'fresher_web',
+    title: 'Junior React Frontend (0-1 yrs)',
+    role: 'Frontend Engineer',
+    difficulty: 'Beginner',
+    tag: '0-1 Yrs',
+    text: "Job Title: Junior Frontend Developer (0-1 yrs)\nExperience: Fresh graduate to 1 year\nCore Requirements:\n- Strong fundamentals in HTML5, CSS3, and JavaScript (ES6+ basics: arrow functions, map/filter, promises).\n- Practical knowledge of React (functional components, props, useState, useEffect).\n- Familiarity with consuming REST APIs using fetch() or axios.\n- Basic understanding of DOM rendering and responsive design.\n- Focus on clean syntax, readable naming conventions, and fundamental problem-solving."
+  },
+  {
+    id: 'junior_python',
+    title: 'Junior Python & SQL Backend (0-2 yrs)',
+    role: 'Backend Engineer',
+    difficulty: 'Beginner',
+    tag: '0-2 Yrs',
+    text: "Job Title: Junior Backend Engineer (0-2 yrs)\nExperience: 0-2 years\nCore Requirements:\n- Solid proficiency in Python (lists, dictionaries, functions, exception handling, string manipulation).\n- Hands-on relational database querying in SQL (SELECT, WHERE, INNER/LEFT JOIN, GROUP BY, aggregations).\n- Understanding of HTTP methods (GET, POST, PUT, DELETE) and basic RESTful endpoints.\n- Git version control fundamentals (commit, branch, pull request).\n- Direct, logical communication with good debugging skills."
+  },
+  {
+    id: 'campus_dsa',
+    title: 'Campus Fresher (DSA & OOP)',
+    role: 'Software Engineer',
+    difficulty: 'Beginner',
+    tag: 'Campus Core CS',
+    text: "Job Title: Graduate Software Development Engineer (Campus Hiring)\nEligibility: Final Year / Fresh Engineering Graduates\nCore Requirements:\n- Strong grounding in Data Structures: Arrays, Strings, Hash Tables, Linked Lists, Stacks, Queues.\n- Algorithmic thinking: Linear & Binary Search, basic Sorting, Two-Pointer approach, and Time/Space Complexity (Big-O).\n- Object-Oriented Programming (OOP) concepts: Classes, Objects, Inheritance, Polymorphism, Abstraction, Encapsulation.\n- DBMS fundamentals: Keys, Normalization, ACID properties."
+  },
+  {
+    id: 'mid_fullstack',
+    title: 'Full Stack Engineer (2-4 yrs)',
+    role: 'Software Engineer',
+    difficulty: 'Intermediate',
+    tag: '2-4 Yrs',
+    text: "Job Title: Full Stack Developer (2-4 yrs)\nExperience: 2-4 years\nCore Requirements:\n- Frontend: React / Next.js, state management, component lifecycle, performance optimization.\n- Backend: Node.js or Python (FastAPI/Django), REST API design, authentication (JWT/OAuth2).\n- Database: PostgreSQL or MongoDB, indexing, relational schema design.\n- Tooling: Docker containers, basic CI/CD, unit testing, Git workflows."
+  },
+  {
+    id: 'senior_backend',
+    title: 'Senior Distributed Backend (4+ yrs)',
+    role: 'Backend Engineer',
+    difficulty: 'Senior',
+    tag: '4+ Yrs',
+    text: "Job Title: Senior Backend Architect / Staff Engineer\nExperience: 4+ years\nCore Requirements:\n- High-throughput distributed systems design, microservices, idempotent APIs, and RPC protocols.\n- Caching strategies with Redis/Memcached, message queuing with Kafka or RabbitMQ.\n- Database sharding, partitioning, read replicas, and ACID vs BASE trade-offs.\n- Sub-50ms latency optimization, SLA management, and horizontal scalability."
+  }
+];
+
+const COMMON_TECH_KEYWORDS = [
+  'React', 'JavaScript', 'TypeScript', 'Node.js', 'Python', 'FastAPI', 'Django',
+  'SQL', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Docker', 'Kubernetes',
+  'AWS', 'Git', 'HTML5', 'CSS3', 'REST APIs', 'GraphQL', 'DSA', 'OOP',
+  'Pandas', 'PyTorch', 'Kafka', 'CI/CD'
+];
+
+function extractDetectedTech(text) {
+  if (!text) return [];
+  const lower = text.toLowerCase();
+  return COMMON_TECH_KEYWORDS.filter(k => {
+    const escaped = k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`, 'i').test(lower);
+  });
+}
 
 export default function InterviewSetupPage() {
   const navigate = useNavigate();
@@ -94,11 +209,11 @@ export default function InterviewSetupPage() {
   const [selectedPreset, setSelectedPreset] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const [targetRole, setTargetRole] = useState(user?.targetRole || user?.role || setup.targetRole || 'Machine Learning Engineer');
+  const [targetRole, setTargetRole] = useState(user?.targetRole || user?.role || setup.targetRole || 'Software Engineer');
   const [customRole, setCustomRole] = useState('');
   const [interviewType, setInterviewType] = useState(setup.interviewType || 'Technical');
   const [companyPlaybook, setCompanyPlaybook] = useState(setup.companyPlaybook || 'general');
-  const [difficulty, setDifficulty] = useState(setup.difficulty || 'Intermediate');
+  const [difficulty, setDifficulty] = useState(setup.difficulty || 'Beginner');
   const [interviewMode, setInterviewMode] = useState(setup.interviewMode || 'text');
   const [interviewerPersona, setInterviewerPersona] = useState(setup.interviewerPersona || 'julian');
   const [resumeName, setResumeName] = useState(setup.resumeFileName || 'Candidate_Resume.pdf');
@@ -106,6 +221,8 @@ export default function InterviewSetupPage() {
   const [interviewLanguage, setInterviewLanguage] = useState(setup.interviewLanguage || 'en');
   const [feedbackLanguage, setFeedbackLanguage] = useState(setup.feedbackLanguage || 'en');
   const [totalQuestions, setTotalQuestions] = useState(setup.totalQuestions || 5);
+
+  const detectedTech = useMemo(() => extractDetectedTech(jobDescription), [jobDescription]);
 
   const handleApplyPreset = (preset) => {
     setSelectedPreset(preset.id);
@@ -117,6 +234,28 @@ export default function InterviewSetupPage() {
     setInterviewMode(preset.mode);
     setInterviewerPersona(preset.persona);
     setTotalQuestions(preset.questions);
+    if (preset.sampleJD) {
+      setJobDescription(preset.sampleJD);
+    }
+  };
+
+  const handleApplySampleJD = (sample) => {
+    setJobDescription(sample.text);
+    if (sample.role) {
+      setTargetRole(sample.role);
+      setCustomRole('');
+    }
+    if (sample.difficulty) {
+      setDifficulty(sample.difficulty);
+    }
+  };
+
+  const handleAddKeywordToJD = (keyword) => {
+    setJobDescription(prev => {
+      if (!prev.trim()) return `Required Skills: ${keyword}`;
+      if (new RegExp(`\\b${keyword}\\b`, 'i').test(prev)) return prev;
+      return `${prev.trim()}, ${keyword}`;
+    });
   };
 
   const handleRoleSelect = (role) => {
@@ -175,20 +314,19 @@ export default function InterviewSetupPage() {
     navigate('/interview-ready');
   };
 
-
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-16 font-sans text-[#1F1B16]">
       {/* Header */}
       <div className="border-b border-[#E5E0D5] pb-5">
         <div className="flex items-center gap-2 mb-1.5">
           <Badge variant="navy" size="sm">STAGE 1 OF 3</Badge>
-          <span className="editorial-overline">INTERVIEW SETUP</span>
+          <span className="editorial-overline">INTERVIEW SETUP &amp; CALIBRATION</span>
         </div>
         <h1 className="text-3xl font-serif font-bold text-[#1F1B16] tracking-tight">
           Customize Your Interview
         </h1>
         <p className="text-sm text-[#70685E] mt-1">
-          Choose your target role, interview type, difficulty level, and practice preferences.
+          Choose your target role, difficulty level, and optional Job Description to calibrate questions to your exact seniority.
         </p>
       </div>
 
@@ -242,7 +380,7 @@ export default function InterviewSetupPage() {
                     <p className="text-[11px] text-[#70685E] leading-relaxed line-clamp-2">{p.desc}</p>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-[#E5E0D5] flex items-center justify-between text-[10px] text-[#70685E] font-mono">
-                    <span>{p.difficulty}</span>
+                    <span className="font-semibold text-[#1A365D]">{p.difficulty}</span>
                     <span>{p.questions} Qs</span>
                   </div>
                 </div>
@@ -270,9 +408,9 @@ export default function InterviewSetupPage() {
                 type="button"
                 onClick={() => handleRoleSelect(role)}
                 className={`
-                  p-3 rounded-md border text-left transition-all text-xs font-semibold
+                  p-3 rounded-md border text-left transition-all text-xs font-semibold cursor-pointer
                   ${targetRole === role
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
+                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
                     : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
                   }
                 `}
@@ -291,9 +429,9 @@ export default function InterviewSetupPage() {
                 if (!customRole) setCustomRole(!MOCK_ROLES.includes(targetRole) ? targetRole : '');
               }}
               className={`
-                p-3 rounded-md border text-left transition-all text-xs font-semibold
+                p-3 rounded-md border text-left transition-all text-xs font-semibold cursor-pointer
                 ${targetRole === 'Custom' || !MOCK_ROLES.includes(targetRole)
-                  ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
+                  ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
                   : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
                 }
               `}
@@ -329,14 +467,54 @@ export default function InterviewSetupPage() {
           )}
         </GlassCard>
 
-        {/* 2. Interview Type Selection */}
+        {/* 2. Difficulty Level */}
+        <GlassCard className="p-6 space-y-4">
+          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
+            <div className="w-8 h-8 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] flex items-center justify-center text-[#235E3B]">
+              <BarChart2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-serif font-bold text-[#1F1B16]">II. Difficulty Level Calibration</h3>
+              <p className="text-xs text-[#70685E]">Calibrates question depth, expected trade-offs, and scoring rubrics</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            {DIFFICULTY_LEVELS.map((diff) => (
+              <div
+                key={diff.id}
+                onClick={() => setDifficulty(diff.id)}
+                className={`
+                  p-4 rounded-md border cursor-pointer transition-all text-left
+                  ${difficulty === diff.id
+                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
+                    : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
+                  }
+                `}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-serif font-bold text-[#1F1B16]">{diff.label}</span>
+                  {difficulty === diff.id && <CheckCircle2 className="w-3.5 h-3.5 text-[#1A365D]" />}
+                </div>
+                <p className="text-[11px] text-[#70685E] leading-relaxed">{diff.desc}</p>
+                {diff.id === 'Beginner' && (
+                  <div className="mt-2 pt-1.5 border-t border-[#E5E0D5] text-[10px] text-[#235E3B] font-medium flex items-center gap-1">
+                    <span>✓ Direct logic &amp; core concepts (no harsh penalties)</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        {/* 3. Interview Focus Type Selection */}
         <GlassCard className="p-6 space-y-4">
           <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
             <div className="w-8 h-8 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#8C6E54]">
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">II. Interview Focus Type</h3>
+              <h3 className="text-base font-serif font-bold text-[#1F1B16]">III. Interview Focus Type</h3>
               <p className="text-xs text-[#70685E]">Select the interview topic and question format</p>
             </div>
           </div>
@@ -349,7 +527,7 @@ export default function InterviewSetupPage() {
                 className={`
                   p-4 rounded-md border cursor-pointer transition-all
                   ${interviewType === type.id
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
+                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
                     : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
                   }
                 `}
@@ -366,46 +544,134 @@ export default function InterviewSetupPage() {
           </div>
         </GlassCard>
 
-        {/* 3. Difficulty Level */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] flex items-center justify-center text-[#235E3B]">
-              <BarChart2 className="w-4 h-4" />
+        {/* 4. Prominent Job Description & Tech Stack Hub (Calibration Anchor) */}
+        <GlassCard className="p-6 space-y-4 border-l-4 border-l-[#235E3B] bg-[#FFFDF9]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E0D5] pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] flex items-center justify-center text-[#235E3B]">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-serif font-bold text-[#1F1B16] flex items-center gap-2">
+                  <span>IV. Job Description &amp; Target Tech Stack</span>
+                  <Badge variant="emerald" size="xs">CALIBRATION HUB</Badge>
+                </h3>
+                <p className="text-xs text-[#70685E]">
+                  Paste your target JD or click a 1-click preset to ground questions directly to your expected seniority
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">III. Difficulty Level</h3>
-              <p className="text-xs text-[#70685E]">Choose how challenging the questions and evaluations will be</p>
+            {jobDescription && (
+              <button
+                type="button"
+                onClick={() => setJobDescription('')}
+                className="text-[11px] font-mono text-[#9A421A] hover:underline flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+                <span>Clear JD</span>
+              </button>
+            )}
+          </div>
+
+          {/* 1-Click Sample JD Presets */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-[#70685E] uppercase tracking-wider">
+                1-Click Sample JD Presets:
+              </span>
+              <span className="text-[10px] text-[#235E3B] font-mono">Click to populate JD &amp; calibrate level</span>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {SAMPLE_JDS.map((sample) => (
+                <button
+                  key={sample.id}
+                  type="button"
+                  onClick={() => handleApplySampleJD(sample)}
+                  className="px-2.5 py-1.5 rounded-md bg-[#FAF8F3] hover:bg-[#EAEFF5] border border-[#E5E0D5] hover:border-[#1A365D] text-left text-xs text-[#1F1B16] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Sparkles className="w-3 h-3 text-[#235E3B] shrink-0" />
+                  <span className="font-medium">{sample.title}</span>
+                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-white text-[#70685E] border border-[#E5E0D5]">
+                    {sample.tag}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            {DIFFICULTY_LEVELS.map((diff) => (
-              <div
-                key={diff.id}
-                onClick={() => setDifficulty(diff.id)}
-                className={`
-                  p-4 rounded-md border cursor-pointer transition-all text-center
-                  ${difficulty === diff.id
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
-                    : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                  }
-                `}
-              >
-                <span className="text-sm font-serif font-bold text-[#1F1B16] block mb-1">{diff.label}</span>
-                <p className="text-[11px] text-[#70685E]">{diff.desc}</p>
+          {/* Job Description Textarea */}
+          <div className="space-y-2">
+            <textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste key responsibilities, required skills (e.g. React, JavaScript, SQL, Python), or raw Job Description text here..."
+              rows={4}
+              className="w-full p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] placeholder-[#70685E]/50 focus:outline-none focus:border-[#1A365D] transition-colors resize-none font-sans leading-relaxed"
+            />
+
+            {/* Detected Tech Stack & Grounding Feedback */}
+            <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-[#1F1B16]">
+                  <Code2 className="w-3.5 h-3.5 text-[#1A365D]" />
+                  <span>Detected Competencies Grounded from JD:</span>
+                </div>
+                <span className="text-[11px] font-mono text-[#70685E]">
+                  {detectedTech.length} skill{detectedTech.length === 1 ? '' : 's'} identified
+                </span>
               </div>
-            ))}
+
+              {detectedTech.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {detectedTech.map((tech) => (
+                    <span
+                      key={tech}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EAEFF5] border border-[#D0DBE7] text-[#1A365D] text-[11px] font-medium font-mono"
+                    >
+                      <span>{tech}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-[#70685E] italic">
+                  No specific keywords detected yet. Paste a JD or click a preset above, or click suggested chips below to ground:
+                </p>
+              )}
+
+              {/* Quick Tech Chip Inserters */}
+              <div className="pt-1.5 border-t border-[#E5E0D5]/70 flex items-center gap-1.5 flex-wrap text-[10px]">
+                <span className="text-[#70685E] font-medium">Quick Add to JD:</span>
+                {['React', 'JavaScript', 'Python', 'SQL', 'FastAPI', 'DSA', 'REST APIs', 'Git'].map((tech) => (
+                  <button
+                    key={tech}
+                    type="button"
+                    onClick={() => handleAddKeywordToJD(tech)}
+                    className="px-1.5 py-0.5 rounded bg-white hover:bg-[#EAEFF5] border border-[#E5E0D5] text-[#3B352E] font-mono transition-colors cursor-pointer"
+                  >
+                    + {tech}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] text-[11px] text-[#235E3B] flex items-start gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>
+                <strong>Talent Shine Calibration Advantage:</strong> Grounding questions in the raw JD coordinates the AI interviewer to the candidate's exact experience level, preventing overly harsh system architecture questions for beginners.
+              </span>
+            </div>
           </div>
         </GlassCard>
 
-        {/* 4. Interview Mode Selection */}
+        {/* 5. Interview Mode Selection */}
         <GlassCard className="p-6 space-y-4">
           <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
             <div className="w-8 h-8 rounded-md bg-[#FDF2E9] border border-[#F0D5C0] flex items-center justify-center text-[#9A421A]">
               <Video className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">IV. Interview Mode</h3>
+              <h3 className="text-base font-serif font-bold text-[#1F1B16]">V. Interview Mode</h3>
               <p className="text-xs text-[#70685E]">Choose between written text, voice/video, or face-to-face AI</p>
             </div>
           </div>
@@ -514,7 +780,7 @@ export default function InterviewSetupPage() {
               <span>
                 {showAdvanced
                   ? 'Hide Advanced Customization Options'
-                  : 'Show Advanced Options (Target Employer Playbook, Custom Resume & JD, Languages, Question Count)'}
+                  : 'Show Advanced Options (Target Employer Playbook, Custom Resume File, Languages, Question Count)'}
               </span>
             </span>
             {showAdvanced ? <ChevronUp className="w-4 h-4 text-[#1A365D]" /> : <ChevronDown className="w-4 h-4 text-[#1A365D]" />}
@@ -523,14 +789,14 @@ export default function InterviewSetupPage() {
 
         {showAdvanced && (
           <div className="space-y-6 pt-1 animate-in fade-in duration-200">
-            {/* 5. Company Playbook / Rubric Calibration */}
+            {/* 6. Company Playbook / Rubric Calibration */}
             <GlassCard className="p-6 space-y-4">
               <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
                 <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
                   <Briefcase className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">V. Target Employer Interview Playbook</h3>
+                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">Target Employer Interview Playbook</h3>
                   <p className="text-xs text-[#70685E]">Align the AI interviewer's questions and rubrics to specific company standards</p>
                 </div>
               </div>
@@ -543,7 +809,7 @@ export default function InterviewSetupPage() {
                     className={`
                       p-4 rounded-md border cursor-pointer transition-all flex flex-col justify-between
                       ${companyPlaybook === playbook.id
-                        ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs'
+                        ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
                         : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
                       }
                     `}
@@ -573,86 +839,71 @@ export default function InterviewSetupPage() {
               </div>
             </GlassCard>
 
-            {/* 6. Resume & Job Description */}
+            {/* 7. Resume Document Upload */}
             <GlassCard className="p-6 space-y-4">
               <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
                 <div className="w-8 h-8 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#8C6E54]">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">VI. Resume &amp; Job Description (Optional)</h3>
-                  <p className="text-xs text-[#70685E]">Upload your resume or paste job requirements to tailor questions to your background</p>
+                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">Resume Document Attachment</h3>
+                  <p className="text-xs text-[#70685E]">Upload your resume to tailor questions to your project history</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                {/* Resume Upload UI */}
-                <div>
-                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Resume File</label>
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                      if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
-                        handleResumeFile(e.dataTransfer.files[0]);
-                      }
-                    }}
-                    className={`border-2 border-dashed rounded-md p-4 text-center transition-all ${
-                      isDragging ? 'border-[#1A365D] bg-[#EAEFF5]' : 'border-[#E5E0D5] hover:border-[#1A365D] bg-[#FAF8F3]'
-                    }`}
-                  >
-                    <input
-                      type="file"
-                      id="resumeUpload"
-                      accept=".pdf,.doc,.docx,.txt"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                    <label htmlFor="resumeUpload" className="cursor-pointer block">
-                      <div className="w-9 h-9 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center mx-auto text-[#1A365D] mb-2">
-                        <Upload className="w-4 h-4" />
-                      </div>
-                      <p className="text-xs font-semibold text-[#1F1B16]">Select or drag resume document</p>
-                      <p className="text-[10px] text-[#70685E] mt-0.5">PDF or Word document up to 10MB</p>
-                    </label>
-                    {resumeError && (
-                      <div className="mt-2.5 p-2 rounded-md bg-[#FDF2E9] border border-[#F0D5C0] text-[11px] text-[#9A421A] text-left">
-                        {resumeError}
-                      </div>
-                    )}
-                    {resumeName && !resumeError && (
-                      <div className="mt-3 p-2 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-center gap-2 text-xs text-[#1A365D] font-mono">
-                        <FileCheck className="w-3.5 h-3.5 text-[#235E3B]" />
-                        <span className="truncate">{resumeName}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Job Description Textarea */}
-                <div>
-                  <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Job Description / Competency List</label>
-                  <textarea
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    placeholder="Paste key responsibilities, required tech stack, or employer rubrics..."
-                    rows={4}
-                    className="w-full p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] placeholder-[#70685E]/50 focus:outline-none focus:border-[#1A365D] transition-colors resize-none font-sans"
+              <div>
+                <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Resume File</label>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+                      handleResumeFile(e.dataTransfer.files[0]);
+                    }
+                  }}
+                  className={`border-2 border-dashed rounded-md p-4 text-center transition-all ${
+                    isDragging ? 'border-[#1A365D] bg-[#EAEFF5]' : 'border-[#E5E0D5] hover:border-[#1A365D] bg-[#FAF8F3]'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    id="resumeUpload"
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
                   />
+                  <label htmlFor="resumeUpload" className="cursor-pointer block">
+                    <div className="w-9 h-9 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center mx-auto text-[#1A365D] mb-2">
+                      <Upload className="w-4 h-4" />
+                    </div>
+                    <p className="text-xs font-semibold text-[#1F1B16]">Select or drag resume document</p>
+                    <p className="text-[10px] text-[#70685E] mt-0.5">PDF or Word document up to 10MB</p>
+                  </label>
+                  {resumeError && (
+                    <div className="mt-2.5 p-2 rounded-md bg-[#FDF2E9] border border-[#F0D5C0] text-[11px] text-[#9A421A] text-left">
+                      {resumeError}
+                    </div>
+                  )}
+                  {resumeName && !resumeError && (
+                    <div className="mt-3 p-2 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-center gap-2 text-xs text-[#1A365D] font-mono">
+                      <FileCheck className="w-3.5 h-3.5 text-[#235E3B]" />
+                      <span className="truncate">{resumeName}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </GlassCard>
 
-            {/* 7. Multilingual & Session Length */}
+            {/* 8. Multilingual & Session Length */}
             <GlassCard className="p-6 space-y-4">
               <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
                 <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
                   <Globe className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">VII. Language &amp; Session Length</h3>
+                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">Language &amp; Session Length</h3>
                   <p className="text-xs text-[#70685E]">Configure interview question language, feedback presentation, and question count</p>
                 </div>
               </div>
@@ -698,7 +949,7 @@ export default function InterviewSetupPage() {
                     <button
                       type="button"
                       onClick={() => setTotalQuestions(5)}
-                      className={`p-2.5 rounded-md border text-xs font-bold transition-all ${
+                      className={`p-2.5 rounded-md border text-xs font-bold transition-all cursor-pointer ${
                         totalQuestions === 5
                           ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D]'
                           : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
@@ -709,7 +960,7 @@ export default function InterviewSetupPage() {
                     <button
                       type="button"
                       onClick={() => setTotalQuestions(10)}
-                      className={`p-2.5 rounded-md border text-xs font-bold transition-all ${
+                      className={`p-2.5 rounded-md border text-xs font-bold transition-all cursor-pointer ${
                         totalQuestions === 10
                           ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D]'
                           : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
@@ -731,7 +982,7 @@ export default function InterviewSetupPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard')}
-          className="text-xs font-semibold text-[#70685E] hover:text-[#1F1B16] transition-colors"
+          className="text-xs font-semibold text-[#70685E] hover:text-[#1F1B16] transition-colors cursor-pointer"
         >
           Cancel &amp; Return to Dashboard
         </button>
@@ -741,7 +992,7 @@ export default function InterviewSetupPage() {
           size="lg"
           onClick={handleContinue}
           icon={ArrowRight}
-          className="px-8 text-sm"
+          className="px-8 text-sm cursor-pointer"
         >
           Start Interview Practice →
         </GradientButton>

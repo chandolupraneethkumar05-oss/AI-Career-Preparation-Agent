@@ -12,6 +12,32 @@ const resolveUserId = (id) => (id && id !== 'user-001') ? id : (storageService.g
 
 export const interviewApi = {
   /**
+   * Probes backend readiness and returns system diagnostic information.
+   */
+  async checkSystemStatus() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(`${API_BASE_URL}/ready`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          status: 'online',
+          database: data.database || 'connected',
+          scheduler: data.scheduler || 'running',
+          version: data.version || '2.0.0'
+        };
+      }
+      return { status: 'offline_ready', mode: 'client_synthesis' };
+    } catch {
+      return { status: 'offline_ready', mode: 'client_synthesis' };
+    }
+  },
+
+  /**
    * Initializes an adaptive generative AI mock interview session.
    */
   async startSession({
