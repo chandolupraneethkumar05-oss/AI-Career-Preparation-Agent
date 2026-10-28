@@ -18,9 +18,14 @@ let demoLoginInFlight = null;
  * Ensures an active JWT access token is present in storage.
  * If missing, lazily initializes a genuine token via /auth/demo-login.
  */
-export async function ensureAuthToken() {
+export async function ensureAuthToken(force = false) {
   const existingToken = storageService.getToken();
   if (existingToken) return existingToken;
+
+  // Suppress automatic background demo login if the candidate explicitly logged out
+  if (!force && typeof window !== 'undefined' && localStorage.getItem('talentpath_explicit_logout') === 'true') {
+    return null;
+  }
 
   if (demoLoginInFlight) return demoLoginInFlight;
 

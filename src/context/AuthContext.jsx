@@ -51,13 +51,16 @@ export function AuthProvider({ children }) {
         })
         .catch(() => {});
     } else {
-      // Auto-ensure demo token on initial visit
-      ensureAuthToken().then((fresh) => {
-        if (fresh) {
-          const demoUser = storageService.getCurrentUser();
-          if (demoUser) setUser(demoUser);
-        }
-      }).catch(() => {});
+      // Auto-ensure demo token on initial visit ONLY if candidate did not explicitly log out
+      const isExplicitLogout = typeof window !== 'undefined' && localStorage.getItem('talentpath_explicit_logout') === 'true';
+      if (!isExplicitLogout) {
+        ensureAuthToken().then((fresh) => {
+          if (fresh) {
+            const demoUser = storageService.getCurrentUser();
+            if (demoUser) setUser(demoUser);
+          }
+        }).catch(() => {});
+      }
     }
 
     if (user?.id) {
@@ -81,6 +84,7 @@ export function AuthProvider({ children }) {
       }
 
       const data = await res.json();
+      if (typeof window !== 'undefined') localStorage.removeItem('talentpath_explicit_logout');
       storageService.setToken(data.access_token);
 
       const authenticatedUser = {
@@ -121,6 +125,7 @@ export function AuthProvider({ children }) {
       }
 
       const data = await res.json();
+      if (typeof window !== 'undefined') localStorage.removeItem('talentpath_explicit_logout');
       storageService.setToken(data.access_token);
 
       const demoUser = {
@@ -185,6 +190,7 @@ export function AuthProvider({ children }) {
       }
 
       const data = await res.json();
+      if (typeof window !== 'undefined') localStorage.removeItem('talentpath_explicit_logout');
       storageService.setToken(data.access_token);
 
       const newUser = {
@@ -214,6 +220,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
+      if (typeof window !== 'undefined') localStorage.setItem('talentpath_explicit_logout', 'true');
       const headers = storageService.getAuthHeaders();
       if (headers.Authorization) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
