@@ -50,7 +50,18 @@ class DockerSandboxExecutor(SandboxExecutor):
                 stderr=subprocess.DEVNULL,
                 timeout=3
             )
-            self._available = (res.returncode == 0)
+            if res.returncode != 0:
+                self._available = False
+                return False
+
+            # Verify the required sandbox image is pulled and present
+            img_res = subprocess.run(
+                [docker_bin, "image", "inspect", self.image],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=3
+            )
+            self._available = (img_res.returncode == 0)
         except Exception as e:
             logger.debug(f"Docker availability check failed: {e}")
             self._available = False

@@ -3,6 +3,7 @@ Sandbox Manager and Job Coordinator
 AI Career Preparation Agent
 """
 
+import os
 import uuid
 import logging
 from typing import Dict, Optional, List, Any
@@ -37,8 +38,16 @@ class SandboxManager:
         docker_caps = self.docker_executor.get_capabilities()
         process_caps = self.process_executor.get_capabilities()
 
-        # Determine active default executor
-        default_exec = "docker" if docker_caps["available"] else "process"
+        # Determine active default executor (process is default for fast isolated execution unless overridden)
+        configured_default = os.getenv("SANDBOX_DEFAULT_EXECUTOR", "process").lower()
+        if configured_default == "docker" and docker_caps["available"]:
+            default_exec = "docker"
+        elif process_caps["available"]:
+            default_exec = "process"
+        elif docker_caps["available"]:
+            default_exec = "docker"
+        else:
+            default_exec = "process"
 
         return {
             "default_executor": default_exec,
@@ -48,7 +57,8 @@ class SandboxManager:
 
     def get_executor(self, preferred_mode: Optional[str] = None) -> SandboxExecutor:
         """Selects appropriate sandbox executor based on preference and host availability."""
-        mode = (preferred_mode or "").lower()
+        configured_default = os.getenv("SANDBOX_DEFAULT_EXECUTOR", "process").lower()
+        mode = (preferred_mode or configured_default).lower()
 
         if mode in ("docker", "container"):
             if self.docker_executor.is_available():
@@ -57,7 +67,12 @@ class SandboxManager:
                 "Docker container sandbox was requested, but the Docker daemon is unreachable or not installed. Host execution is not permitted when container isolation is requested."
             )
 
-        # Default fallback hierarchy
+        if mode == "process" and self.process_executor.is_available():
+            return self.process_executor
+
+        # Default fallback hierarchy: prefer process executor if available
+        if self.process_executor.is_available():
+            return self.process_executor
         if self.docker_executor.is_available():
             return self.docker_executor
         return self.process_executor
