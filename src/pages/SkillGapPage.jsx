@@ -328,10 +328,16 @@ export default function SkillGapPage() {
               <span className="text-5xl sm:text-6xl font-serif font-black text-[#1F1B16] tracking-tight">
                 {displayReadiness}%
               </span>
-              <span className="text-sm font-bold text-[#235E3B] flex items-center gap-1 font-mono">
-                <ArrowUpRight className="w-4 h-4" />
-                +{hasUnified ? Math.max(0, displayReadiness - 50) : analysis.improvementRate}% vs baseline
-              </span>
+              {analysis.improvementRate !== 0 ? (
+                <span className={`text-sm font-bold flex items-center gap-1 font-mono ${analysis.improvementRate > 0 ? 'text-[#235E3B]' : 'text-[#9A421A]'}`}>
+                  <ArrowUpRight className="w-4 h-4" />
+                  {analysis.improvementRate > 0 ? `+${analysis.improvementRate}%` : `${analysis.improvementRate}%`} vs baseline
+                </span>
+              ) : (
+                <span className="text-sm font-bold text-[#70685E] flex items-center gap-1 font-mono">
+                  ● Baseline Session
+                </span>
+              )}
             </div>
 
             <div className="inline-block px-3 py-1 rounded-sm bg-[#EBF4EE] border border-[#CDE5D4] text-[#235E3B] text-xs font-bold font-mono">
@@ -750,26 +756,32 @@ export default function SkillGapPage() {
           <span className="text-xs text-[#70685E]">Track your improvement across sessions</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {analysis.historicalProgress.map((item, idx) => (
-            <div
-              key={idx}
-              className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2"
-            >
-              <span className="text-xs font-serif font-bold text-[#1F1B16] block">{item.skill}</span>
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs text-[#70685E] font-mono">
-                  {item.previousScore}% → <strong className="text-[#1F1B16]">{item.currentScore}%</strong>
-                </span>
-                <span className="text-xs font-bold text-[#235E3B] flex items-center font-mono">
-                  <ArrowUpRight className="w-3.5 h-3.5" /> +{item.change}%
-                </span>
+        {analysis.historicalProgress && analysis.historicalProgress.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {analysis.historicalProgress.map((item, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2"
+              >
+                <span className="text-xs font-serif font-bold text-[#1F1B16] block">{item.skill}</span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs text-[#70685E] font-mono">
+                    {item.previousScore}% → <strong className="text-[#1F1B16]">{item.currentScore}%</strong>
+                  </span>
+                  <span className={`text-xs font-bold flex items-center font-mono ${item.change >= 0 ? 'text-[#235E3B]' : 'text-[#9A421A]'}`}>
+                    <ArrowUpRight className="w-3.5 h-3.5" /> {item.change >= 0 ? `+${item.change}%` : `${item.change}%`}
+                  </span>
+                </div>
+                <ProgressBar value={item.currentScore} height="h-1.5" />
+                <p className="text-[10px] text-[#70685E] italic mt-1 font-mono">{item.period}</p>
               </div>
-              <ProgressBar value={item.currentScore} height="h-1.5" />
-              <p className="text-[10px] text-[#70685E] italic mt-1 font-mono">{item.period}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-4 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] text-xs text-[#70685E] text-center">
+            Initial diagnostic complete. Complete a second session to begin automated longitudinal tracking.
+          </div>
+        )}
       </GlassCard>
 
       {/* ========================================================================= */}

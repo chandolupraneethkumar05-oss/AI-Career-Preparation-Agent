@@ -6,8 +6,13 @@ AI Career Preparation Agent
 import os
 from pathlib import Path
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Automatically load environment variables from backend/.env and root .env
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR.parent / ".env")
+
 DEFAULT_DB_PATH = BASE_DIR / "career_agent.db"
 
 
@@ -34,10 +39,11 @@ class Settings(BaseModel):
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
 
-    # SQLite Database Configuration
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
+    # SQLite Database Configuration (Always resolve to canonical backend/career_agent.db)
+    DATABASE_URL: str = (
         f"sqlite:///{DEFAULT_DB_PATH.as_posix()}"
+        if not os.getenv("DATABASE_URL") or os.getenv("DATABASE_URL") == "sqlite:///./career_agent.db"
+        else os.getenv("DATABASE_URL")
     )
 
     # Recordings Media Storage Directory

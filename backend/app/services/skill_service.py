@@ -390,11 +390,9 @@ def get_user_skill_profile(db: Session, user_id: str, target_role: Optional[str]
 
         if matching_scores:
             axis_score = int(round(sum(matching_scores) / len(matching_scores)))
-        elif not has_any_data:
-            # If candidate has 0 interviews and 0 resume scans, reflect honest 0 unrated state
-            axis_score = 0
         else:
-            axis_score = fallback_score
+            # Zero-Fabrication: If no demonstrated evidence exists for this axis, score is 0 (untested)
+            axis_score = 0
 
         radar_data.append(RadarAxisScore(subject=axis_name, score=axis_score))
 

@@ -263,3 +263,23 @@ def verify_stream_ticket(ticket: str, session_id: str) -> Optional[str]:
         return None
 
     return payload.get("sub")
+
+
+def create_password_reset_token(user_id: str, email: str, expires_minutes: int = 30) -> str:
+    """Creates a short-lived signed JWT for secure password recovery."""
+    data = {
+        "sub": user_id,
+        "email": email,
+        "purpose": "password_reset"
+    }
+    return create_access_token(data, expires_delta=timedelta(minutes=expires_minutes))
+
+
+def decode_password_reset_token(token: str, db: Optional[Any] = None) -> Optional[Dict[str, Any]]:
+    """Verifies a password reset token, ensuring purpose matches and token is not revoked."""
+    claims = decode_access_token(token, db=db)
+    if not claims:
+        return None
+    if claims.get("purpose") != "password_reset":
+        return None
+    return claims

@@ -4,7 +4,7 @@ AI Career Preparation Agent
 """
 
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from .profile import UserResponse
 
 
@@ -25,3 +25,26 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: UserResponse
     is_demo: bool = False
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=128, description="Registered candidate email address")
+
+
+class ForgotPasswordResponse(BaseModel):
+    success: bool
+    message: str
+    email: str
+    reset_token: Optional[str] = Field(None, description="One-time signed reset token for sandbox/local recovery")
+    reset_link: Optional[str] = Field(None, description="Direct password recovery URL")
+    delivered_via: str = "email"
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=10, description="One-time signed password reset JWT token")
+    new_password: str = Field(..., min_length=6, max_length=72, description="New account password (6-72 characters)")
+
+
+class ResetPasswordResponse(BaseModel):
+    success: bool
+    message: str

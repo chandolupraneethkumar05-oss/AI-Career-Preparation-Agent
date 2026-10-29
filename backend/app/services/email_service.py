@@ -9,7 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger("email_service")
@@ -32,6 +32,16 @@ class BaseEmailService(ABC):
         subject: Optional[str] = None,
         cta_url: str = "http://localhost:5173/daily-challenge"
     ) -> Dict[str, Any]:
+        pass
+
+    def send_generic_email(
+        self,
+        recipient_email: str,
+        subject: str,
+        html_body: str,
+        plain_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Sends a generic HTML/plain-text email."""
         pass
 
     def build_html_template(
@@ -240,6 +250,35 @@ class DevelopmentEmailService(BaseEmailService):
         }
 
 
+    def send_generic_email(
+        self,
+        recipient_email: str,
+        subject: str,
+        html_body: str,
+        plain_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            print("\n" + "=" * 80)
+            print("[GENERIC EMAIL NOTIFICATION - DEVELOPMENT MODE]")
+            print(f"Timestamp: {now_iso}")
+            print(f"Recipient: {recipient_email}")
+            print(f"Subject:   {subject}")
+            print("Status:    Simulated in Development Mode")
+            print("=" * 80 + "\n")
+        except Exception:
+            pass
+        return {
+            "status": "development",
+            "delivered": False,
+            "email_sent": False,
+            "mode": "development",
+            "recipient": recipient_email,
+            "subject": subject,
+            "timestamp": now_iso
+        }
+
+
 class SMTPEmailService(BaseEmailService):
     """
     Real SMTP delivery service using TLS/SSL credentials from environment.
@@ -330,6 +369,35 @@ class SMTPEmailService(BaseEmailService):
                 "timestamp": now_iso,
                 "explanation": f"SMTP dispatch failed: {str(exc)}"
             }
+
+
+    def send_generic_email(
+        self,
+        recipient_email: str,
+        subject: str,
+        html_body: str,
+        plain_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{self.sender_name} <{self.sender}>"
+        msg["To"] = recipient_email
+        if plain_text:
+            msg.attach(MIMEText(plain_text, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+        try:
+            if self.use_tls:
+                server = smtplib.SMTP(self.host, self.port, timeout=12)
+                server.starttls()
+            else:
+                server = smtplib.SMTP_SSL(self.host, self.port, timeout=12)
+            if self.user and self.password:
+                server.login(self.user, self.password)
+            server.sendmail(self.sender, [recipient_email], msg.as_string())
+            server.quit()
+            return {"status": "sent", "delivered": True, "email_sent": True, "mode": "smtp", "recipient": recipient_email}
+        except Exception as exc:
+            return {"status": "failed", "delivered": False, "email_sent": False, "mode": "smtp", "error": str(exc)}
 
 
 class ResendEmailService(BaseEmailService):
@@ -440,6 +508,37 @@ class ResendEmailService(BaseEmailService):
                 "timestamp": now_iso,
                 "explanation": f"Resend dispatch failed: {str(exc)}"
             }
+
+
+    def send_generic_email(
+        self,
+        recipient_email: str,
+        subject: str,
+        html_body: str,
+        plain_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "from": self.from_email,
+            "to": [recipient_email],
+            "subject": subject,
+            "html": html_body
+        }
+        if plain_text:
+            payload["text"] = plain_text
+        try:
+            req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=12) as response:
+                if response.status in [200, 201]:
+                    data = json.loads(response.read().decode("utf-8"))
+                    return {"status": "sent", "delivered": True, "email_sent": True, "mode": "resend", "id": data.get("id"), "recipient": recipient_email}
+        except Exception as exc:
+            return {"status": "failed", "delivered": False, "email_sent": False, "mode": "resend", "error": str(exc)}
+        return {"status": "failed", "delivered": False, "email_sent": False, "mode": "resend"}
 
 
 def get_email_service() -> BaseEmailService:

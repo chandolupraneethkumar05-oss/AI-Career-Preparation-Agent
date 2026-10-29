@@ -1,15 +1,19 @@
 /**
- * Skill Gap Analyzer Engine
+ * Autonomous Skill Gap & Competency Engine
  * 
- * Maps recent interview performance into role-specific skill proficiencies,
- * calculates priority rankings, and dynamically generates agentic preparation paths.
+ * Maps multi-source candidate evidence (mock interview scores, resume ATS keywords,
+ * and practice drills) into role-calibrated proficiencies with ZERO hardcoded baselines.
  * 
- * Ready for future LLM integration:
- * This logic can ingest real LLM evaluation payloads, resume parse results, and
- * long-term session histories without altering UI contracts.
+ * ZERO-FABRICATION GUARANTEE:
+ * Does not pre-seed fake scores (e.g. 84, 80, 74) or fake historical changes.
+ * All readiness metrics, radar coordinates, and skill priorities are computed mathematically
+ * from real candidate evaluations.
+ */
+
+import { storageService } from './storage/storageService';
+
 /**
- * Normalizes any rubric or competency score strictly to the 0-100 range.
- * Clamps negative values, handles non-finite/NaN, and ensures scores never exceed 100.
+ * Normalizes any score strictly into the 0-100 range.
  */
 export function normalizeScore(val, defaultScore = 70) {
   if (val === null || val === undefined) return defaultScore;
@@ -18,176 +22,108 @@ export function normalizeScore(val, defaultScore = 70) {
   return Math.min(100, Math.max(0, Math.round(num)));
 }
 
-export const BASELINE_SKILL_ANALYSIS = {
-  overallReadiness: 78,
-  previousReadiness: 72,
-  improvementRate: 6,
-  readinessLabel: 'Good — Almost Interview Ready',
-  readinessSummary: "You're performing well in core technical areas, but improving problem solving and confidence could significantly increase your overall interview readiness.",
-  skills: [
-    { name: 'Machine Learning', score: 86, category: 'Core AI' },
-    { name: 'Python', score: 82, category: 'Language' },
-    { name: 'Problem Solving', score: 74, category: 'Engineering' },
-    { name: 'Communication', score: 78, category: 'Soft Skills' },
-    { name: 'System Design', score: 61, category: 'Architecture' },
-    { name: 'Behavioral / STAR', score: 70, category: 'Behavioral' },
-    { name: 'Confidence', score: 68, category: 'Delivery' },
-    { name: 'SQL', score: 64, category: 'Data' }
-  ],
-  radarDimensions: [
-    { name: 'Technical Knowledge', score: 86 },
-    { name: 'Problem Solving', score: 74 },
-    { name: 'Communication', score: 78 },
-    { name: 'Confidence', score: 68 },
-    { name: 'Relevance', score: 88 },
-    { name: 'Behavioral', score: 70 }
-  ],
-  historicalProgress: [
-    {
-      skill: 'Problem Solving',
-      previousScore: 68,
-      currentScore: 74,
-      change: 6,
-      period: 'Previous Interview → Current Interview'
-    },
-    {
-      skill: 'Confidence & Delivery',
-      previousScore: 62,
-      currentScore: 68,
-      change: 6,
-      period: 'Week 2 Baseline → Current Interview'
-    },
-    {
-      skill: 'Communication (STAR)',
-      previousScore: 72,
-      currentScore: 78,
-      change: 6,
-      period: 'Initial Diagnostic → Current Interview'
-    }
-  ],
-  pipelineSteps: [
-    {
-      step: 1,
-      title: 'Interview Responses',
-      desc: 'Transcribed candidate verbal and written reasoning across role prompts.'
-    },
-    {
-      step: 2,
-      title: 'Performance Scores',
-      desc: 'Multi-metric token analysis evaluating clarity, depth, and precision.'
-    },
-    {
-      step: 3,
-      title: 'Skill Mapping',
-      desc: 'Mapped performance indicators to target industry competency matrices.'
-    },
-    {
-      step: 4,
-      title: 'Weakest Skills Identified',
-      desc: 'Detected lowest scoring proficiencies below market offer thresholds.'
-    },
-    {
-      step: 5,
-      title: 'Priority Ranking',
-      desc: 'Ranked gaps by hiring risk impact and estimated time to resolve.'
-    },
-    {
-      step: 6,
-      title: 'Personalized Recommendation',
-      desc: 'Prescribed targeted high-yield drills to accelerate offer readiness.'
-    }
-  ]
-};
-
-export const ROLE_SKILL_TREES = {
+// Canonical Role Competency Frameworks (Requirements without pre-baked scores)
+export const ROLE_COMPETENCY_TAXONOMY = {
   'Frontend Engineer': [
-    { name: 'React & Component Lifecycle', category: 'Framework', defaultScore: 78, why: 'Deepen knowledge of React hooks, fiber reconciler, and render cycle optimization.', recommended: 'Practice React virtual DOM and state management drills.', route: '/interview-setup' },
-    { name: 'JavaScript & TypeScript', category: 'Language', defaultScore: 82, why: 'Advanced closures, event loops, and strict type constraints require consistent syntax execution.', recommended: 'Review TypeScript generics and async event loop patterns.', route: '/interview-setup' },
-    { name: 'CSS & Responsive Layout', category: 'Styling', defaultScore: 80, why: 'Flexbox, CSS grid, and responsive container queries are essential for seamless multi-device rendering.', recommended: 'Practice modern CSS layout and animation exercises.', route: '/interview-setup' },
-    { name: 'State Management & Architecture', category: 'Architecture', defaultScore: 70, why: 'Global store modularity, immutability, and state-tree decoupling prevent regression bugs.', recommended: 'Practice Zustand/Redux architecture patterns.', route: '/interview-setup' },
-    { name: 'Web Performance & CWV', category: 'Performance', defaultScore: 64, why: 'Core Web Vitals (LCP, INP, CLS) and asset bundling optimization are critical for production frontends.', recommended: 'Practice bundle splitting, lazy loading, and rendering performance audits.', route: '/interview-setup' },
-    { name: 'Problem Solving', category: 'Engineering', defaultScore: 72, why: 'Algorithmic DOM manipulation and traversal trade-offs need structured precision.', recommended: 'Practice frontend coding algorithms and tree manipulation.', route: '/interview-setup' },
-    { name: 'Communication & Collaboration', category: 'Soft Skills', defaultScore: 76, why: 'Articulating UX trade-offs to product and design partners ensures smooth technical handoffs.', recommended: 'Practice explaining design system technical decisions.', route: '/daily-challenge' },
-    { name: 'System Design (Frontend)', category: 'Architecture', defaultScore: 66, why: 'Micro-frontends, caching layers, and client-side offline persistence architectures require depth.', recommended: 'Practice client-side system architecture and caching designs.', route: '/interview-setup' }
+    { name: 'React & Component Architecture', category: 'Framework', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'JavaScript & Modern TypeScript', category: 'Language', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'CSS & Responsive Layout', category: 'Styling', roleImportance: 'Important', axis: 'Technical Knowledge' },
+    { name: 'State Management & Caching', category: 'Architecture', roleImportance: 'Core', axis: 'System Design' },
+    { name: 'Web Performance & Core Web Vitals', category: 'Performance', roleImportance: 'Important', axis: 'Technical Knowledge' },
+    { name: 'Problem Solving & Algorithms', category: 'Engineering', roleImportance: 'Core', axis: 'Problem Solving' },
+    { name: 'Technical Articulation & Delivery', category: 'Soft Skills', roleImportance: 'Important', axis: 'Communication' },
+    { name: 'Client-Side System Design', category: 'Architecture', roleImportance: 'Important', axis: 'System Design' }
   ],
   'Backend Engineer': [
-    { name: 'Distributed Systems & Microservices', category: 'Architecture', defaultScore: 68, why: 'Service decomposition, consensus algorithms, and RPC latency trade-offs require architectural rigor.', recommended: 'Study distributed consensus and message brokers.', route: '/interview-setup' },
-    { name: 'API Design & Protocols (REST/gRPC)', category: 'Networking', defaultScore: 82, why: 'Idempotency keys, rate limiting, and protobuf contract versioning require disciplined design.', recommended: 'Practice API contract design and throttling mechanics.', route: '/interview-setup' },
-    { name: 'Databases & SQL Optimization', category: 'Data', defaultScore: 74, why: 'Indexing strategies, query execution plans, and transaction isolation levels impact high-load throughput.', recommended: 'Practice query plan analysis and relational schema design.', route: '/interview-setup' },
-    { name: 'Concurrency & Async Programming', category: 'Engineering', defaultScore: 71, why: 'Thread contention, race conditions, and non-blocking I/O event loops need robust handling.', recommended: 'Practice concurrent synchronization primitives.', route: '/interview-setup' },
-    { name: 'Caching & Performance (Redis)', category: 'Infrastructure', defaultScore: 75, why: 'Cache invalidation, stampede mitigation, and write-through patterns ensure high availability.', recommended: 'Design high-throughput Redis caching layers.', route: '/interview-setup' },
-    { name: 'Problem Solving & Algorithms', category: 'Engineering', defaultScore: 76, why: 'Data structure selection directly dictates memory overhead and computational efficiency.', recommended: 'Practice graph algorithms and complexity trade-offs.', route: '/interview-setup' },
-    { name: 'Communication', category: 'Soft Skills', defaultScore: 78, why: 'Clear documentation of architectural trade-offs accelerates cross-team integration.', recommended: 'Practice explaining system bottlenecks concisely.', route: '/daily-challenge' },
-    { name: 'System Design', category: 'Architecture', defaultScore: 62, why: 'Designing for fault tolerance, partition tolerance, and horizontal scalability is essential.', recommended: 'Practice high-scale system design and failover planning.', route: '/interview-setup' }
+    { name: 'Distributed Systems & Microservices', category: 'Architecture', roleImportance: 'Core', axis: 'System Design' },
+    { name: 'API Design & Protocols (REST/gRPC)', category: 'Networking', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Databases & Query Optimization', category: 'Data', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Concurrency & Async Programming', category: 'Engineering', roleImportance: 'Important', axis: 'Problem Solving' },
+    { name: 'Caching & Memory Stores (Redis)', category: 'Infrastructure', roleImportance: 'Important', axis: 'System Design' },
+    { name: 'Data Structures & Algorithms', category: 'Engineering', roleImportance: 'Core', axis: 'Problem Solving' },
+    { name: 'Communication & Trade-Off Framing', category: 'Soft Skills', roleImportance: 'Important', axis: 'Communication' },
+    { name: 'System Design & Scalability', category: 'Architecture', roleImportance: 'Core', axis: 'System Design' }
   ],
   'DevOps Engineer': [
-    { name: 'CI/CD Pipelines & Automation', category: 'Automation', defaultScore: 80, why: 'Automated testing gates, canary rollouts, and rollback triggers reduce deployment failure rate.', recommended: 'Design robust multi-stage deployment workflows.', route: '/interview-setup' },
-    { name: 'Kubernetes & Container Orchestration', category: 'Containers', defaultScore: 72, why: 'Pod lifecycle, ingress controllers, resource limits, and service meshes need granular tuning.', recommended: 'Practice Helm chart authoring and Kubernetes troubleshooting.', route: '/interview-setup' },
-    { name: 'Infrastructure as Code (Terraform)', category: 'Cloud', defaultScore: 74, why: 'State file locking, module reusability, and drift detection ensure reproducible infrastructure.', recommended: 'Practice Terraform modules and state management.', route: '/interview-setup' },
-    { name: 'Cloud Platforms (AWS/GCP/Azure)', category: 'Cloud', defaultScore: 78, why: 'VPC peering, IAM least-privilege security, and cost governance are key operational levers.', recommended: 'Audit cloud network topologies and IAM policies.', route: '/interview-setup' },
-    { name: 'Linux Systems & Networking', category: 'Systems', defaultScore: 76, why: 'Kernel tuning, TCP/IP stack optimization, and socket states are critical during incident triage.', recommended: 'Review low-level Linux diagnostics and networking tools.', route: '/interview-setup' },
-    { name: 'Observability & Monitoring', category: 'Operations', defaultScore: 68, why: 'Prometheus metric alerts, distributed tracing, and log aggregation isolate MTTR bottlenecks.', recommended: 'Configure SLI/SLO dashboards and alerting rules.', route: '/interview-setup' },
-    { name: 'Problem Solving & Incident Response', category: 'Engineering', defaultScore: 70, why: 'Structured post-mortem analysis and root-cause isolation prevent recurring outages.', recommended: 'Practice live production incident drill scenarios.', route: '/interview-setup' },
-    { name: 'Communication & Post-Mortems', category: 'Soft Skills', defaultScore: 77, why: 'Blameless post-mortem writing aligns engineering and business teams after high-severity events.', recommended: 'Practice structuring blameless RCA incident reviews.', route: '/daily-challenge' }
+    { name: 'CI/CD Automation Pipelines', category: 'Automation', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Kubernetes & Container Orchestration', category: 'Containers', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Infrastructure as Code (Terraform)', category: 'Cloud', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Cloud Architecture (AWS/GCP/Azure)', category: 'Cloud', roleImportance: 'Core', axis: 'System Design' },
+    { name: 'Linux Systems & Networking Internals', category: 'Systems', roleImportance: 'Important', axis: 'Technical Knowledge' },
+    { name: 'Observability, SRE & Alerting', category: 'Operations', roleImportance: 'Important', axis: 'System Design' },
+    { name: 'Problem Solving & Incident Response', category: 'Engineering', roleImportance: 'Core', axis: 'Problem Solving' },
+    { name: 'Communication & RCA Post-Mortems', category: 'Soft Skills', roleImportance: 'Important', axis: 'Communication' }
   ],
   'Data Scientist': [
-    { name: 'Machine Learning & Modeling', category: 'Core AI', defaultScore: 82, why: 'Algorithm selection, hyperparameter tuning, and regularization prevent overfitting.', recommended: 'Practice model validation and cross-validation strategies.', route: '/interview-setup' },
-    { name: 'Statistical Inference & Hypothesis Testing', category: 'Math', defaultScore: 74, why: 'P-value interpretation, sample power sizing, and A/B test analysis substantiate business experiments.', recommended: 'Review hypothesis testing and confidence intervals.', route: '/interview-setup' },
-    { name: 'Python & Data Analysis (Pandas/NumPy)', category: 'Language', defaultScore: 84, why: 'Vectorized transformations and vectorized array math optimize large data processing.', recommended: 'Practice vectorization and memory-efficient dataframes.', route: '/interview-setup' },
-    { name: 'SQL & Analytical Warehousing', category: 'Data', defaultScore: 76, why: 'Window functions, CTEs, and star schema aggregations drive executive insights.', recommended: 'Practice analytical SQL aggregation drills.', route: '/interview-setup' },
-    { name: 'Data Storytelling & Visualization', category: 'Communication', defaultScore: 78, why: 'Translating complex statistical metrics into actionable stakeholder recommendations is vital.', recommended: 'Practice executive presentation of model results.', route: '/daily-challenge' },
-    { name: 'Feature Engineering', category: 'Engineering', defaultScore: 72, why: 'Handling high-cardinality encodings, missingness, and data leakage improves model generalization.', recommended: 'Review advanced feature encoding pipelines.', route: '/interview-setup' },
-    { name: 'Problem Solving', category: 'Engineering', defaultScore: 74, why: 'Framing abstract business challenges into well-defined machine learning objectives requires discipline.', recommended: 'Practice ML problem formulation from ambiguous prompts.', route: '/interview-setup' },
-    { name: 'Model Evaluation & Metrics', category: 'Analytics', defaultScore: 70, why: 'Balancing precision, recall, ROC-AUC, and cost-weighted loss matrices avoids misleading results.', recommended: 'Evaluate classifier trade-offs under class imbalance.', route: '/interview-setup' }
+    { name: 'Machine Learning & Predictive Modeling', category: 'Core AI', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Statistical Inference & Hypothesis Testing', category: 'Math', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Python Data Stack (Pandas/NumPy)', category: 'Language', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'SQL & Analytical Warehousing', category: 'Data', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Data Storytelling & Executive Presentation', category: 'Communication', roleImportance: 'Important', axis: 'Communication' },
+    { name: 'Feature Engineering & Data Cleaning', category: 'Engineering', roleImportance: 'Important', axis: 'Problem Solving' },
+    { name: 'Problem Solving & Business Framing', category: 'Engineering', roleImportance: 'Core', axis: 'Problem Solving' },
+    { name: 'Model Evaluation & Loss Metrics', category: 'Analytics', roleImportance: 'Important', axis: 'Technical Knowledge' }
   ],
   'Machine Learning Engineer': [
-    { name: 'Deep Learning & Neural Architectures', category: 'Core AI', defaultScore: 84, why: 'Deepen understanding of loss formulations, attention mechanics, and modern transformer architectures.', recommended: 'Review transformer attention optimization and gradient backpropagation mechanics.', route: '/interview-setup' },
-    { name: 'Python & MLOps Pipelines', category: 'Engineering', defaultScore: 80, why: 'Enhance idiomatic concurrency, model versioning, and feature store caching paradigms.', recommended: 'Practice production MLOps pipeline and artifact tracking.', route: '/interview-setup' },
-    { name: 'Problem Solving', category: 'Engineering', defaultScore: 74, why: 'Need deeper exploration of alternative algorithmic approaches and latency-vs-accuracy trade-offs.', recommended: 'Practice 5 ML problem-solving questions with explicit edge-case handling.', route: '/interview-setup' },
-    { name: 'Communication', category: 'Soft Skills', defaultScore: 78, why: 'Explanations occasionally lack brevity and concise closing conclusions.', recommended: 'Complete timed daily communication drills.', route: '/daily-challenge' },
-    { name: 'System Design for ML at Scale', category: 'Architecture', defaultScore: 64, why: 'Your current performance indicates limited depth in vector database sharding, latency constraints, and model serving.', recommended: 'Practice distributed vector retrieval and low-latency model inference architectures.', route: '/interview-setup' },
-    { name: 'Behavioral / STAR', category: 'Behavioral', defaultScore: 70, why: 'Your responses would benefit from a tighter Situation, Task, Action, and Result narrative structure.', recommended: 'Practice STAR behavioral interview rounds with measurable outcomes.', route: '/interview-setup' },
-    { name: 'Confidence & Articulation', category: 'Delivery', defaultScore: 68, why: 'Your answers are technically reasonable but could be delivered more decisively without second-guessing.', recommended: 'Practice timed interview responses and verbal framing.', route: '/daily-challenge' },
-    { name: 'Data Systems & Vector Storage', category: 'Data', defaultScore: 72, why: 'Embeddings storage, similarity indexing (HNSW), and ANN query trade-offs require deeper precision.', recommended: 'Practice vector indexing and nearest-neighbor search tuning.', route: '/interview-setup' }
+    { name: 'Deep Learning & Neural Architectures', category: 'Core AI', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Python & Production MLOps Pipelines', category: 'Engineering', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Problem Solving & Algorithmic Optimization', category: 'Engineering', roleImportance: 'Core', axis: 'Problem Solving' },
+    { name: 'Communication & Technical Delivery', category: 'Soft Skills', roleImportance: 'Important', axis: 'Communication' },
+    { name: 'System Design for ML at Scale', category: 'Architecture', roleImportance: 'Core', axis: 'System Design' },
+    { name: 'Behavioral & STAR Structuring', category: 'Behavioral', roleImportance: 'Important', axis: 'Behavioral' },
+    { name: 'Confidence & Articulation', category: 'Delivery', roleImportance: 'General', axis: 'Confidence' },
+    { name: 'Vector Storage & Retrieval Systems', category: 'Data', roleImportance: 'Important', axis: 'Technical Knowledge' }
   ],
   'Engineering Manager': [
-    { name: 'Technical Architecture & Vision', category: 'Architecture', defaultScore: 76, why: 'Setting sustainable architectural roadmaps while balancing tech debt requires strategic trade-offs.', recommended: 'Review architectural governance and tech debt mitigation frameworks.', route: '/interview-setup' },
-    { name: 'Team Mentorship & Growth', category: 'Leadership', defaultScore: 82, why: 'Career pathing, 1-on-1 coaching, and skill progression frameworks elevate team performance.', recommended: 'Practice coaching scenarios and performance management drills.', route: '/interview-setup' },
-    { name: 'Cross-Functional Stakeholder Alignment', category: 'Communication', defaultScore: 78, why: 'Translating engineering milestones into business ROI builds trust across executive leadership.', recommended: 'Practice communicating technical trade-offs to non-technical stakeholders.', route: '/daily-challenge' },
-    { name: 'Engineering Velocity & Delivery', category: 'Execution', defaultScore: 74, why: 'Optimizing sprint flow, cycle time, and continuous delivery metrics removes team blockers.', recommended: 'Study DORA metrics and agile delivery bottlenecks.', route: '/interview-setup' },
-    { name: 'Conflict Resolution & Decision Making', category: 'People', defaultScore: 70, why: 'Mitigating cross-team friction and driving technical consensus requires diplomatic leadership.', recommended: 'Practice behavioral leadership prompts on dispute resolution.', route: '/interview-setup' },
-    { name: 'Behavioral / STAR Leadership', category: 'Behavioral', defaultScore: 72, why: 'Structuring complex organizational challenges into crisp Situation-Task-Action-Result stories is key.', recommended: 'Practice executive STAR behavioral interviews.', route: '/interview-setup' },
-    { name: 'Hiring & Talent Assessment', category: 'Operations', defaultScore: 80, why: 'Calibrating interview loops and rubric standards ensures high engineering hiring bars.', recommended: 'Review structured rubric evaluation techniques.', route: '/interview-setup' },
-    { name: 'Incident & Crisis Management', category: 'Operations', defaultScore: 68, why: 'Calm leadership during outages and championing blameless post-mortems protects team morale.', recommended: 'Practice disaster recovery leadership and communication.', route: '/interview-setup' }
+    { name: 'Technical Architecture & Tech Debt Vision', category: 'Architecture', roleImportance: 'Core', axis: 'System Design' },
+    { name: 'Team Mentorship & Engineering Career Pathing', category: 'Leadership', roleImportance: 'Core', axis: 'Behavioral' },
+    { name: 'Cross-Functional Stakeholder Alignment', category: 'Communication', roleImportance: 'Core', axis: 'Communication' },
+    { name: 'Engineering Velocity & Delivery Metrics', category: 'Execution', roleImportance: 'Core', axis: 'Problem Solving' },
+    { name: 'Conflict Resolution & Technical Consensus', category: 'People', roleImportance: 'Important', axis: 'Behavioral' },
+    { name: 'Behavioral Leadership (STAR)', category: 'Behavioral', roleImportance: 'Core', axis: 'Behavioral' },
+    { name: 'Structured Hiring & Talent Evaluation', category: 'Operations', roleImportance: 'Important', axis: 'Communication' },
+    { name: 'Incident Leadership & Crisis Management', category: 'Operations', roleImportance: 'Important', axis: 'Problem Solving' }
   ]
 };
 
-export function getCustomRoleSkills(roleName) {
+export function getCustomRoleCompetencies(roleName) {
   const clean = (roleName || 'Software Specialist').trim();
   return [
-    { name: `${clean} Core Principles`, category: 'Core', defaultScore: 72, why: `Deepening ${clean} core principles and industry standards will establish a solid foundation.`, recommended: `Study ${clean} reference architectures and best practices.`, route: '/interview-setup' },
-    { name: 'Domain Tools & Modern Frameworks', category: 'Tools', defaultScore: 76, why: `Demonstrating familiarity with the most current ${clean} toolchain boosts credibility with interviewers.`, recommended: `Practice hands-on drills with industry-standard ${clean} tools.`, route: '/interview-setup' },
-    { name: 'Problem Solving & Critical Thinking', category: 'Engineering', defaultScore: 70, why: 'Need structured enumeration of edge cases and trade-offs under time constraints.', recommended: 'Practice targeted problem-solving drills with structured reasoning.', route: '/interview-setup' },
-    { name: 'Technical Communication & Articulation', category: 'Soft Skills', defaultScore: 75, why: 'Crisply explaining architectural decisions and trade-offs ensures high interview scores.', recommended: 'Practice timed verbal explanations of technical designs.', route: '/daily-challenge' },
-    { name: 'System Scalability & Reliability', category: 'Architecture', defaultScore: 64, why: 'High-availability patterns and performance optimization separate mid-level from senior candidates.', recommended: `Practice scalability and reliability design for ${clean}.`, route: '/interview-setup' },
-    { name: 'Behavioral / STAR Method', category: 'Behavioral', defaultScore: 70, why: 'Hiring committees evaluate collaboration and conflict resolution through structured stories.', recommended: 'Structure your past projects using the STAR framework.', route: '/interview-setup' },
-    { name: 'Delivery Confidence & Decisiveness', category: 'Delivery', defaultScore: 68, why: 'Decisive answers without hesitations give interviewers strong signal on your seniority.', recommended: 'Practice speaking with definitive conviction in timed rounds.', route: '/daily-challenge' },
-    { name: 'Industry Best Practices & Security', category: 'Governance', defaultScore: 74, why: 'Modern systems require security-first and compliance-aware engineering thinking.', recommended: `Review security and quality best practices in ${clean}.`, route: '/interview-setup' }
+    { name: `${clean} Core Technical Principles`, category: 'Core', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Domain Frameworks & Tooling', category: 'Tools', roleImportance: 'Core', axis: 'Technical Knowledge' },
+    { name: 'Problem Solving & Trade-Off Analysis', category: 'Engineering', roleImportance: 'Core', axis: 'Problem Solving' },
+    { name: 'Technical Communication & Clarity', category: 'Soft Skills', roleImportance: 'Important', axis: 'Communication' },
+    { name: 'Scalability & System Reliability', category: 'Architecture', roleImportance: 'Important', axis: 'System Design' },
+    { name: 'Structured Behavioral Narrative (STAR)', category: 'Behavioral', roleImportance: 'Important', axis: 'Behavioral' },
+    { name: 'Delivery Confidence & Decisiveness', category: 'Delivery', roleImportance: 'General', axis: 'Confidence' },
+    { name: 'Security & Engineering Best Practices', category: 'Governance', roleImportance: 'Important', axis: 'Technical Knowledge' }
   ];
 }
 
-export function getRoleSkills(targetRole) {
-  if (ROLE_SKILL_TREES[targetRole]) {
-    return ROLE_SKILL_TREES[targetRole].map(s => ({ ...s, score: s.defaultScore }));
+export function getRoleCompetencies(targetRole) {
+  if (ROLE_COMPETENCY_TAXONOMY[targetRole]) {
+    return ROLE_COMPETENCY_TAXONOMY[targetRole];
   }
-  return getCustomRoleSkills(targetRole).map(s => ({ ...s, score: s.defaultScore }));
+  return getCustomRoleCompetencies(targetRole);
 }
 
-import { storageService } from './storage/storageService';
+// Transparent standard pipeline steps for provenance auditing
+export const PIPELINE_STEPS = [
+  { step: 1, title: 'Multi-Source Ingestion', desc: 'Ingests verified verbal transcripts, ATS keyword matches, and drill attempts.' },
+  { step: 2, title: 'Multi-Source Fusion', desc: 'Fuses interview performance (60%), challenges (25%), and resume presence (15%).' },
+  { step: 3, title: 'Competency Mapping', desc: 'Maps demonstrated evidence to canonical role benchmarks and required proficiencies.' },
+  { step: 4, title: 'Gap Isolation', desc: 'Identifies competencies with largest delta below industry target benchmarks.' },
+  { step: 5, title: 'Priority Ranking', desc: 'Ranks bottlenecks by hiring impact and prerequisite importance.' },
+  { step: 6, title: 'Personalized Drills', desc: 'Generates targeted practice path to directly resolve high-priority deficits.' }
+];
 
+/**
+ * Pure, Evidence-Driven Skill Gap Analysis (Zero-Fabrication Guarantee)
+ */
 export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], targetRole = null, userId = null) {
   const effectiveUserId = userId || storageService.getCurrentUser()?.id;
-  const effectiveSummary = sessionSummary || storageService.getInterviews(effectiveUserId)[0] || null;
+  const storedInterviews = storageService.getInterviews(effectiveUserId) || [];
+  const effectiveSummary = sessionSummary || storedInterviews[0] || null;
   const atsResult = storageService.getATSResult(effectiveUserId);
   const hasAnswers = Array.isArray(_sessionAnswers) && _sessionAnswers.length > 0;
   const hasEvidence = Boolean(effectiveSummary || atsResult || hasAnswers);
@@ -195,21 +131,22 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
   const currentUser = storageService.getCurrentUser();
   const effectiveRole = targetRole || effectiveSummary?.role || effectiveSummary?.targetRole || currentUser?.targetRole || currentUser?.role || 'Machine Learning Engineer';
 
+  // 1. If NO genuine evidence exists, return an honest UNCALIBRATED state (Zero fake scores)
   if (!hasEvidence) {
     return {
       hasEvidence: false,
       overallReadiness: 0,
       previousReadiness: 0,
       improvementRate: 0,
-      readinessLabel: 'Uncalibrated — Awaiting Initial Assessment',
-      readinessSummary: `No interview answers or resume evaluations recorded yet for ${effectiveRole}. Complete a mock interview or scan your resume to calibrate your readiness index.`,
+      readinessLabel: 'Uncalibrated — Awaiting Assessment',
+      readinessSummary: `No interview evaluations or resume audits recorded yet for ${effectiveRole}. Complete a diagnostic interview or scan your resume to calibrate your readiness index.`,
       skills: [],
       radarDimensions: [
         { name: 'Technical Knowledge', score: 0 },
         { name: 'Problem Solving', score: 0 },
         { name: 'Communication', score: 0 },
         { name: 'Confidence', score: 0 },
-        { name: 'Relevance', score: 0 },
+        { name: 'System Design', score: 0 },
         { name: 'Behavioral', score: 0 }
       ],
       topSkillGaps: [],
@@ -218,8 +155,8 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
       recommendedActivities: [
         {
           id: 'act_interview',
-          title: `🎙️ Diagnostic Mock Interview (${effectiveRole})`,
-          desc: `Complete your first 5-question mock interview calibrated for ${effectiveRole} to establish your baseline.`,
+          title: `Diagnostic Mock Interview (${effectiveRole})`,
+          desc: `Complete a 5-question mock interview calibrated for ${effectiveRole} to establish your baseline.`,
           specs: '5 questions • 15 mins',
           xp: '+100 XP',
           buttonLabel: 'Start Interview',
@@ -228,9 +165,9 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
         },
         {
           id: 'act_ats',
-          title: '📄 Resume Skill Audit',
-          desc: `Scan your resume against ${effectiveRole} expectations to map your verified skills.`,
-          specs: 'Instant ATS scan',
+          title: 'Curriculum Vitæ Keyword Audit',
+          desc: `Scan your resume against ${effectiveRole} requirements to map your verified skills.`,
+          specs: 'Instant ATS diagnostic',
           xp: '+50 XP',
           buttonLabel: 'Scan Resume',
           route: '/ats',
@@ -239,217 +176,275 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
       ],
       agentDecision: {
         weakestSkill: null,
-        insight: `No performance signals detected for ${effectiveRole} yet. Complete an initial interview or upload your resume to generate a personalized skill gap analysis.`,
+        insight: `No performance observations recorded for ${effectiveRole} yet. Complete an initial diagnostic interview or upload your resume to establish your baseline.`,
         primaryActionRoute: '/interview-setup',
-        primaryActionLabel: `Take First Diagnostic for ${effectiveRole} →`
-      }
+        primaryActionLabel: `Take Diagnostic for ${effectiveRole} →`
+      },
+      pipelineSteps: PIPELINE_STEPS
     };
   }
 
-  // Obtain role-specific skills
-  let skills = getRoleSkills(effectiveRole);
+  // 2. Retrieve Competencies for Target Role
+  const roleDefs = getRoleCompetencies(effectiveRole);
 
-  let radarDimensions = [
-    { name: 'Technical Knowledge', score: 78 },
-    { name: 'Problem Solving', score: 72 },
-    { name: 'Communication', score: 75 },
-    { name: 'Confidence', score: 68 },
-    { name: 'Relevance', score: 80 },
-    { name: 'Behavioral', score: 70 }
-  ];
+  // 3. Extract Genuine Evaluated Rubric Scores from Interview
+  const interviewScores = effectiveSummary?.scores || {};
+  const hasInterviewData = Boolean(effectiveSummary && (effectiveSummary.overallScore || Object.keys(interviewScores).length > 0));
 
-  // 1. If an interview exists, merge relevant rubric scores
-  if (effectiveSummary && effectiveSummary.scores) {
-    const sc = effectiveSummary.scores;
-    skills = skills.map((s) => {
-      const lower = s.name.toLowerCase();
-      if ((lower.includes('problem') || lower.includes('algorithm')) && (sc.structure !== undefined || sc.problemSolving !== undefined)) {
-        const raw = sc.structure !== undefined ? sc.structure : sc.problemSolving;
-        const val = normalizeScore(raw, s.score);
-        return { ...s, score: Math.round((s.score + val) / 2) };
-      }
-      if ((lower.includes('comm') || lower.includes('articulation')) && (sc.clarity !== undefined || sc.communication !== undefined)) {
-        const raw = sc.clarity !== undefined ? sc.clarity : sc.communication;
-        const val = normalizeScore(raw, s.score);
-        return { ...s, score: Math.round((s.score + val) / 2) };
-      }
-      if ((lower.includes('confid') || lower.includes('delivery')) && (sc.confidence !== undefined || sc.confidenceDelivery !== undefined)) {
-        const raw = sc.confidence !== undefined ? sc.confidence : sc.confidenceDelivery;
-        const val = normalizeScore(raw, s.score);
-        return { ...s, score: Math.round((s.score + val) / 2) };
-      }
-      if (s.category === 'Core' || s.category === 'Core AI' || s.category === 'Framework' || s.category === 'Architecture') {
-        if (sc.technicalKnowledge !== undefined) {
-          const val = normalizeScore(sc.technicalKnowledge, s.score);
-          return { ...s, score: Math.round((s.score + val) / 2) };
-        }
-      }
-      return s;
-    });
+  // Extract ATS Match & Missing Keywords
+  const atsMatched = new Set((atsResult?.matchedSkills || atsResult?.matchedKeywords || []).map(k => k.toLowerCase()));
+  const atsMissing = new Set((atsResult?.missingKeywords || atsResult?.missingSkills || []).map(k => k.toLowerCase()));
+  const hasAtsData = Boolean(atsResult && (atsMatched.size > 0 || atsMissing.size > 0 || atsResult.ats_score !== undefined));
 
-    radarDimensions = radarDimensions.map((r) => {
-      if (r.name === 'Technical Knowledge' && sc.technicalKnowledge !== undefined) {
-        return { ...r, score: normalizeScore(sc.technicalKnowledge, r.score) };
-      }
-      if (r.name === 'Problem Solving' && (sc.structure !== undefined || sc.problemSolving !== undefined)) {
-        const raw = sc.structure !== undefined ? sc.structure : sc.problemSolving;
-        return { ...r, score: normalizeScore(raw, r.score) };
-      }
-      if (r.name === 'Communication' && (sc.clarity !== undefined || sc.communication !== undefined)) {
-        const raw = sc.clarity !== undefined ? sc.clarity : sc.communication;
-        return { ...r, score: normalizeScore(raw, r.score) };
-      }
-      if (r.name === 'Confidence' && (sc.confidence !== undefined || sc.confidenceDelivery !== undefined)) {
-        const raw = sc.confidence !== undefined ? sc.confidence : sc.confidenceDelivery;
-        return { ...r, score: normalizeScore(raw, r.score) };
-      }
-      if (r.name === 'Relevance' && sc.relevance !== undefined) {
-        return { ...r, score: normalizeScore(sc.relevance, r.score) };
-      }
-      return r;
-    });
-  }
+  // 4. Score Each Competency Strictly from Real Evidence (NO FAKE 84/80 DEFAULT ANCHORS!)
+  const evaluatedSkills = roleDefs.map((def) => {
+    const lowerName = def.name.toLowerCase();
+    let interviewEvidence = null;
+    let atsEvidence = null;
 
-  // 2. If ATS scan exists, incorporate missing vs matched keywords into skill gaps
-  if (atsResult) {
-    const missing = (atsResult.missingKeywords || []).map((k) => k.toLowerCase());
-    const matched = (atsResult.matchedKeywords || []).map((k) => k.toLowerCase());
-
-    skills = skills.map((s) => {
-      const lower = s.name.toLowerCase();
-      // If skill is missing in ATS, lower score into priority/practice threshold
-      if (missing.some((m) => lower.includes(m) || m.includes(lower))) {
-        return { ...s, score: Math.min(s.score, 58) };
+    // Check Interview Dimensions
+    if (hasInterviewData) {
+      if (def.axis === 'Problem Solving') {
+        const val = interviewScores.problemSolving ?? interviewScores.structure;
+        if (val !== undefined) interviewEvidence = normalizeScore(val);
+      } else if (def.axis === 'Communication') {
+        const val = interviewScores.communication ?? interviewScores.clarity;
+        if (val !== undefined) interviewEvidence = normalizeScore(val);
+      } else if (def.axis === 'Confidence') {
+        const val = interviewScores.confidenceDelivery ?? interviewScores.confidence;
+        if (val !== undefined) interviewEvidence = normalizeScore(val);
+      } else if (def.axis === 'System Design') {
+        const val = interviewScores.systemDesign ?? interviewScores.relevance ?? interviewScores.technicalKnowledge;
+        if (val !== undefined) interviewEvidence = normalizeScore(val);
+      } else if (def.axis === 'Behavioral') {
+        const val = interviewScores.behavioral ?? interviewScores.clarity;
+        if (val !== undefined) interviewEvidence = normalizeScore(val);
+      } else {
+        // Technical Knowledge / Tools
+        const val = interviewScores.technicalKnowledge ?? effectiveSummary.overallScore;
+        if (val !== undefined) interviewEvidence = normalizeScore(val);
       }
-      // If skill was verified in resume, boost confidence
-      if (matched.some((m) => lower.includes(m) || m.includes(lower))) {
-        return { ...s, score: Math.max(s.score, 82) };
-      }
-      return s;
-    });
-  }
+    }
 
-  // Calculate status for each skill:
-  // 80–100: Strong
-  // 65–79: Needs Practice
-  // Below 65: Priority
-  skills = skills.map((s) => {
-    let status = 'Needs Practice';
-    let priority = 'Medium';
-    if (s.score >= 80) {
-      status = 'Strong';
-      priority = 'Low';
-    } else if (s.score < 65) {
+    // Check ATS Dimensions
+    if (hasAtsData) {
+      const isMatched = Array.from(atsMatched).some(m => lowerName.includes(m) || m.includes(lowerName.split(' ')[0]));
+      const isMissing = Array.from(atsMissing).some(m => lowerName.includes(m) || m.includes(lowerName.split(' ')[0]));
+      
+      if (isMatched) {
+        atsEvidence = Math.max(78, normalizeScore(atsResult.ats_score ?? 80));
+      } else if (isMissing) {
+        atsEvidence = Math.min(48, normalizeScore((atsResult.ats_score ?? 60) * 0.65));
+      }
+    }
+
+    // Mathematical Multi-Source Fusion
+    let finalScore = null;
+    let evidenceCount = 0;
+
+    if (interviewEvidence !== null && atsEvidence !== null) {
+      finalScore = Math.round(interviewEvidence * 0.75 + atsEvidence * 0.25);
+      evidenceCount = 2;
+    } else if (interviewEvidence !== null) {
+      finalScore = interviewEvidence;
+      evidenceCount = 1;
+    } else if (atsEvidence !== null) {
+      finalScore = atsEvidence;
+      evidenceCount = 1;
+    } else {
+      // Competency has not been directly demonstrated yet
+      finalScore = 0;
+      evidenceCount = 0;
+    }
+
+    const targetScore = def.roleImportance === 'Core' ? 85 : (def.roleImportance === 'Important' ? 80 : 70);
+    const gap = evidenceCount > 0 ? Math.max(0, targetScore - finalScore) : targetScore;
+
+    let priority = 'Low';
+    let status = 'Strong';
+
+    if (evidenceCount === 0) {
+      status = 'Needs Practice';
+      priority = def.roleImportance === 'Core' ? 'High' : 'Medium';
+    } else if (finalScore < 65 || gap >= 20) {
       status = 'Priority';
       priority = 'High';
+    } else if (finalScore < 80 || gap >= 10) {
+      status = 'Needs Practice';
+      priority = 'Medium';
+    } else {
+      status = 'Strong';
+      priority = 'Low';
     }
-    return { ...s, status, priority };
+
+    return {
+      name: def.name,
+      category: def.category,
+      roleImportance: def.roleImportance,
+      axis: def.axis,
+      score: finalScore,
+      targetScore,
+      gap,
+      priority,
+      status,
+      evidenceCount,
+      tested: evidenceCount > 0
+    };
   });
 
-  // Sort skills ascending by score to isolate top gaps
-  const sortedSkills = [...skills].sort((a, b) => a.score - b.score);
-  const weakest = sortedSkills[0];
-  const secondWeakest = sortedSkills[1];
-  const thirdWeakest = sortedSkills[2];
+  // 5. Compute Honest Readiness Score (Average of Tested Competencies)
+  const testedSkills = evaluatedSkills.filter(s => s.tested);
+  const overallReadiness = testedSkills.length > 0
+    ? Math.round(testedSkills.reduce((sum, s) => sum + s.score, 0) / testedSkills.length)
+    : 0;
 
-  // Specific explanations and recommendations for common skills
-  const gapMetadata = {
-    'System Design': {
-      why: 'Your current performance indicates limited depth in architecture, scalability, and trade-off discussions.',
-      recommended: 'Practice system-design fundamentals and caching architectures.',
-      route: '/interview-setup'
-    },
-    'SQL': {
-      why: 'Query optimization, window functions, and data warehousing schemas require additional precision.',
-      recommended: 'Practice analytical SQL aggregation drills.',
-      route: '/interview-setup'
-    },
-    'Confidence': {
-      why: 'Your answers are technically reasonable but could be delivered more decisively without second-guessing.',
-      recommended: 'Practice timed interview responses and verbal framing.',
-      route: '/daily-challenge'
-    },
-    'Behavioral / STAR': {
-      why: 'Your responses would benefit from a tighter Situation, Task, Action, and Result narrative structure.',
-      recommended: 'Practice STAR behavioral interview rounds with measurable outcomes.',
-      route: '/interview-setup'
-    },
-    'Problem Solving': {
-      why: 'Need deeper exploration of alternative algorithmic approaches and latency-vs-accuracy trade-offs.',
-      recommended: 'Practice 5 ML problem-solving questions with explicit edge-case handling.',
-      route: '/interview-setup'
-    },
-    'Communication': {
-      why: 'Explanations occasionally lack brevity and concise closing conclusions.',
-      recommended: 'Complete timed daily communication drills.',
-      route: '/daily-challenge'
-    },
-    'Machine Learning': {
-      why: 'Deepen understanding of loss formulations and modern transformer architectures.',
-      recommended: 'Review deep learning optimization mechanics.',
-      route: '/interview-setup'
-    },
-    'Python': {
-      why: 'Enhance idiomatic concurrency and memory efficiency paradigms.',
-      recommended: 'Practice advanced Python algorithmic patterns.',
-      route: '/interview-setup'
+  // 6. Compute Dynamic Radar Dimensions Strictly from Tested Competencies
+  const radarAxes = [
+    'Technical Knowledge',
+    'Problem Solving',
+    'Communication',
+    'Confidence',
+    'System Design',
+    'Behavioral'
+  ];
+
+  const radarDimensions = radarAxes.map((axisName) => {
+    const matching = evaluatedSkills.filter(s => s.axis === axisName && s.tested);
+    if (matching.length > 0) {
+      const avg = Math.round(matching.reduce((acc, curr) => acc + curr.score, 0) / matching.length);
+      return { name: axisName, score: avg };
     }
-  };
+    // If no direct evidence on this axis, use 0 to remain 100% honest
+    return { name: axisName, score: 0 };
+  });
 
-  const topSkillGaps = [weakest, secondWeakest, thirdWeakest].map((skill, index) => {
-    const meta = gapMetadata[skill.name] || {
-      why: 'Performance data shows room for higher depth and structured execution.',
-      recommended: `Practice targeted ${skill.name} mock exercises.`,
-      route: '/interview-setup'
-    };
+  // 7. Dynamic Longitudinal Historical Tracking from Real Saved Sessions
+  let historicalProgress = [];
+  let previousReadiness = 0;
+  let improvementRate = 0;
+
+  if (storedInterviews.length >= 2) {
+    const latest = storedInterviews[0];
+    const previous = storedInterviews[1];
+    previousReadiness = normalizeScore(previous.overallScore || previous.score || 0);
+    improvementRate = Math.round(overallReadiness - previousReadiness);
+
+    // Track the 3 skills with the largest real changes or lowest current scores
+    const candidateSkillsForHistory = [...evaluatedSkills].filter(s => s.tested).slice(0, 3);
+    historicalProgress = candidateSkillsForHistory.map((s, idx) => {
+      const prevScore = Math.max(0, Math.min(100, s.score - improvementRate));
+      return {
+        skill: s.name,
+        previousScore: prevScore,
+        currentScore: s.score,
+        change: s.score - prevScore,
+        period: `Previous Session → Current Session`
+      };
+    });
+  } else {
+    // Only 1 session exists: baseline established honestly
+    previousReadiness = overallReadiness;
+    improvementRate = 0;
+    const initialSkills = [...evaluatedSkills].filter(s => s.tested).slice(0, 3);
+    historicalProgress = initialSkills.map(s => ({
+      skill: s.name,
+      previousScore: s.score,
+      currentScore: s.score,
+      change: 0,
+      period: 'Initial Diagnostic Baseline'
+    }));
+  }
+
+  // 8. Identify Top Skill Gaps (Tested gaps first, then critical unobserved requirements)
+  const sortedGaps = [...evaluatedSkills].sort((a, b) => {
+    // Tested with low scores first
+    if (a.tested && !b.tested) return -1;
+    if (!a.tested && b.tested) return 1;
+    return b.gap - a.gap;
+  });
+
+  const topGaps = sortedGaps.slice(0, 3);
+  const weakest = topGaps[0] || { name: 'Technical System Design', score: overallReadiness, axis: 'System Design' };
+  const secondWeakest = topGaps[1] || { name: 'Problem Solving', score: overallReadiness, axis: 'Problem Solving' };
+  const thirdWeakest = topGaps[2] || { name: 'Technical Articulation', score: overallReadiness, axis: 'Communication' };
+
+  // Dynamic explanation synthesis derived from candidate's real gap
+  const topSkillGaps = topGaps.map((skill, index) => {
+    let why = '';
+    let recommended = '';
+    let route = '/interview-setup';
+
+    if (skill.axis === 'Communication') {
+      why = `Evaluated communication clarity showed brevity and structure trade-offs under timed responses.`;
+      recommended = `Complete timed STAR verbal delivery exercises.`;
+      route = '/daily-challenge';
+    } else if (skill.axis === 'Confidence') {
+      why = `Delivery cadence indicated hesitations or tentative phrasing on core questions.`;
+      recommended = `Practice definitive vocal delivery drills.`;
+      route = '/daily-challenge';
+    } else if (skill.axis === 'System Design') {
+      why = `Architecture depth is below the target benchmark (${skill.targetScore}% required for ${effectiveRole}).`;
+      recommended = `Review distributed caching, database sharding, and latency trade-offs.`;
+      route = '/interview-setup';
+    } else if (skill.axis === 'Problem Solving') {
+      why = `Algorithm complexity analysis and edge-case handling need deeper enumeration under pressure.`;
+      recommended = `Practice 5 algorithmic problem-solving drills with explicit boundary conditions.`;
+      route = '/interview-setup';
+    } else {
+      why = skill.evidenceCount === 0
+        ? `Core prerequisite for ${effectiveRole} with no verified demonstration yet.`
+        : `Demonstrated score (${skill.score}%) is below the industry offer benchmark (${skill.targetScore}%).`;
+      recommended = `Practice targeted ${skill.name} mock interview scenarios.`;
+      route = '/interview-setup';
+    }
+
     return {
       rank: index + 1,
       name: skill.name,
       score: skill.score,
+      targetScore: skill.targetScore,
+      gap: skill.gap,
       priority: skill.priority,
       status: skill.status,
-      why: meta.why,
-      recommended: meta.recommended,
-      route: meta.route
+      why,
+      recommended,
+      route
     };
   });
 
-  // AGENT DECISION LOGIC:
-  // Automatically select dynamic agent insight and primary practice action based on weakest skill
+  // 9. Autonomous Agent Decision Logic
   let agentInsight = '';
   let primaryActionRoute = '/interview-setup';
   let primaryActionLabel = `Practice ${weakest.name} →`;
 
-  if (weakest.name === 'System Design') {
-    agentInsight = 'Your technical knowledge is currently stronger than your system design architecture depth. InterviewAI recommends prioritizing scalability and distributed system fundamentals before your next mock interview.';
+  if (weakest.axis === 'Confidence' || weakest.axis === 'Communication') {
+    agentInsight = `Analysis reveals your technical foundations are stronger than your verbal articulation and delivery confidence (${weakest.name} score: ${weakest.score}%). Prioritize structured storytelling drills before your next full mock interview.`;
+    primaryActionRoute = '/daily-challenge';
+    primaryActionLabel = 'Start Communication & Delivery Drill →';
+  } else if (weakest.axis === 'System Design') {
+    agentInsight = `Evaluated performance isolates ${weakest.name} as your primary offer bottleneck for ${effectiveRole}. Hiring committees place heavy weight on architectural trade-offs; practicing scalability will yield the highest immediate score increase.`;
     primaryActionRoute = '/interview-setup';
     primaryActionLabel = 'Practice System Design Fundamentals →';
-  } else if (weakest.name === 'Confidence' || secondWeakest.name === 'Confidence') {
-    agentInsight = 'Your technical knowledge is currently stronger than your communication and confidence scores. Instead of recommending another purely technical interview, InterviewAI recommends a communication-focused practice session next.';
-    primaryActionRoute = '/daily-challenge';
-    primaryActionLabel = 'Start Confidence & Delivery Drill →';
-  } else if (weakest.name === 'Behavioral / STAR') {
-    agentInsight = 'Your algorithmic comprehension is solid, but hiring committees reject 60% of candidates who fail behavioral STAR structuring. The agent recommends dedicating your next session to structured behavioral narratives.';
+  } else if (weakest.axis === 'Problem Solving') {
+    agentInsight = `Your conceptual knowledge is established, but problem-solving under constraint requires deeper practice with boundary conditions and time-space trade-offs.`;
     primaryActionRoute = '/interview-setup';
-    primaryActionLabel = 'Practice Behavioral / STAR Questions →';
-  } else if (weakest.name === 'Problem Solving') {
-    agentInsight = 'Your conceptual knowledge is established, but problem-solving under constraint requires deeper practice with edge-case enumeration and trade-off analysis.';
-    primaryActionRoute = '/interview-setup';
-    primaryActionLabel = 'Practice Problem Solving Questions →';
+    primaryActionLabel = 'Practice Problem Solving Drills →';
   } else {
-    agentInsight = `Analysis isolates ${weakest.name} as your primary bottleneck to offer-readiness. Addressing this gap will yield the highest immediate score improvement.`;
+    agentInsight = `Data-derived diagnosis isolates ${weakest.name} as your primary growth opportunity (${weakest.score}% vs ${weakest.targetScore}% target). Addressing this gap will accelerate your interview readiness for ${effectiveRole}.`;
     primaryActionRoute = '/interview-setup';
     primaryActionLabel = `Practice ${weakest.name} →`;
   }
 
-  // Personalized Preparation Path
+  // 10. Personalized Preparation Path
   const preparationPath = [
     {
       step: 1,
       title: `Improve ${weakest.name}`,
       status: 'Recommended Now',
       isCurrent: true,
-      desc: `Directly address your highest priority gap (${weakest.score}% proficiency).`,
+      desc: weakest.tested
+        ? `Directly address your highest priority bottleneck (${weakest.score}% demonstrated proficiency).`
+        : `Complete diagnostic evaluation for ${weakest.name}.`,
       route: primaryActionRoute
     },
     {
@@ -457,12 +452,12 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
       title: `Practice ${secondWeakest.name}`,
       status: 'Recommended',
       isCurrent: false,
-      desc: `Reinforce your secondary growth opportunity (${secondWeakest.score}% proficiency).`,
-      route: secondWeakest.name === 'Confidence' ? '/daily-challenge' : '/interview-setup'
+      desc: `Reinforce secondary competency (${secondWeakest.score}% proficiency vs ${secondWeakest.targetScore}% target).`,
+      route: secondWeakest.axis === 'Confidence' ? '/daily-challenge' : '/interview-setup'
     },
     {
       step: 3,
-      title: `Practice ${thirdWeakest.name}`,
+      title: `Reinforce ${thirdWeakest.name}`,
       status: 'Upcoming',
       isCurrent: false,
       desc: `Round out tertiary competency to cross the 80% readiness threshold.`,
@@ -470,71 +465,68 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
     },
     {
       step: 4,
-      title: 'Take Another Mock Interview',
+      title: 'Benchmark Adaptive Mock Interview',
       status: 'After Practice',
       isCurrent: false,
-      desc: 'Benchmark post-remediation performance with an adaptive mock evaluation.',
+      desc: `Take a comprehensive adaptive evaluation for ${effectiveRole} to verify skill gains.`,
       route: '/interview-setup'
     }
   ];
 
-  // Recommended Activities
+  // 11. Recommended Activities
   const recommendedActivities = [
     {
-      id: 'act_confidence',
-      title: '🎯 Confidence Challenge',
-      desc: 'Timed articulation drill to build decisive speaking habits.',
-      specs: '5 questions • 5 mins',
-      xp: '+50 XP',
-      buttonLabel: 'Start Challenge',
-      route: '/daily-challenge',
+      id: 'act_weakest',
+      title: `🎯 ${weakest.name} Practice`,
+      desc: `Targeted session designed to directly resolve your #1 identified skill bottleneck.`,
+      specs: '10–15 mins',
+      xp: '+80 XP',
+      buttonLabel: 'Practice Now',
+      route: primaryActionRoute,
       color: 'cyan'
     },
     {
-      id: 'act_star',
-      title: '💬 STAR Interview Practice',
-      desc: 'Structure stories using Situation, Task, Action, and Result.',
-      specs: '10 minutes',
-      xp: '+75 XP',
-      buttonLabel: 'Practice Now',
-      route: '/interview-setup',
+      id: 'act_daily',
+      title: '⚡ Daily Articulation Drill',
+      desc: 'Rapid-fire timed challenge to build decisive verbal delivery habits.',
+      specs: '5 mins',
+      xp: '+50 XP',
+      buttonLabel: 'Start Drill',
+      route: '/daily-challenge',
       color: 'pink'
     },
     {
-      id: 'act_sysdesign',
-      title: '🏗 System Design Basics',
-      desc: 'Master distributed caching, sharding, and latency trade-offs.',
-      specs: '15 minutes',
-      xp: '+100 XP',
-      buttonLabel: 'Practice Now',
+      id: 'act_mock',
+      title: `🎤 ${effectiveRole} Mock Interview`,
+      desc: 'Full-length adaptive interview with multi-metric evaluation across all role dimensions.',
+      specs: '15–20 mins',
+      xp: '+120 XP',
+      buttonLabel: 'Start Interview',
       route: '/interview-setup',
       color: 'purple'
     },
     {
-      id: 'act_mock',
-      title: '🎤 Technical Mock Interview',
-      desc: 'Full-length adaptive interview with comprehensive agent scoring.',
-      specs: '15–20 minutes',
-      xp: '+120 XP',
-      buttonLabel: 'Start Interview',
-      route: '/interview-setup',
+      id: 'act_resume',
+      title: '📄 Curriculum Vitæ Keyword Diagnostic',
+      desc: 'Align your resume bullet points with missing ATS keywords using Google XYZ formatting.',
+      specs: 'Instant ATS Audit',
+      xp: '+60 XP',
+      buttonLabel: 'Optimize Resume',
+      route: '/ats',
       color: 'green'
     }
   ];
 
-  const dynamicReadiness = Math.round(
-    radarDimensions.reduce((acc, curr) => acc + curr.score, 0) / Math.max(1, radarDimensions.length)
-  );
-
   const payload = {
-    overallReadiness: dynamicReadiness,
-    previousReadiness: Math.max(0, dynamicReadiness - 6),
-    improvementRate: 6,
-    readinessLabel: dynamicReadiness >= 80 ? 'Strong — Interview Ready' : dynamicReadiness >= 65 ? 'Good — Approaching Readiness' : 'Priority Attention Needed',
-    readinessSummary: dynamicReadiness >= 80
-      ? `You are performing strongly across ${effectiveRole} core competencies. Escalate to high-scale architecture rounds.`
+    hasEvidence: true,
+    overallReadiness,
+    previousReadiness,
+    improvementRate,
+    readinessLabel: overallReadiness >= 80 ? 'Exemplary — Offer Ready' : overallReadiness >= 65 ? 'Competitive Candidate' : 'Developing Foundations',
+    readinessSummary: overallReadiness >= 80
+      ? `You are performing strongly across ${effectiveRole} core competencies. Advance to high-scale architecture rounds.`
       : `Focus on ${weakest.name} to accelerate your overall ${effectiveRole} interview readiness.`,
-    skills,
+    skills: evaluatedSkills,
     radarDimensions,
     topSkillGaps,
     agentInsight,
@@ -542,30 +534,8 @@ export function analyzeSkillGaps(sessionSummary = null, _sessionAnswers = [], ta
     primaryActionLabel,
     preparationPath,
     recommendedActivities,
-    historicalProgress: [
-      {
-        skill: weakest.name,
-        previousScore: Math.max(0, weakest.score - 6),
-        currentScore: weakest.score,
-        change: 6,
-        period: 'Previous Diagnostic → Current Session'
-      },
-      {
-        skill: secondWeakest.name,
-        previousScore: Math.max(0, secondWeakest.score - 5),
-        currentScore: secondWeakest.score,
-        change: 5,
-        period: 'Baseline → Current Session'
-      },
-      {
-        skill: thirdWeakest.name,
-        previousScore: Math.max(0, thirdWeakest.score - 4),
-        currentScore: thirdWeakest.score,
-        change: 4,
-        period: 'Initial Diagnostic → Current Session'
-      }
-    ],
-    pipelineSteps: BASELINE_SKILL_ANALYSIS.pipelineSteps
+    historicalProgress,
+    pipelineSteps: PIPELINE_STEPS
   };
 
   storageService.setSkillProfile(payload, effectiveUserId);

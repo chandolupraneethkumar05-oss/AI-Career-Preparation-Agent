@@ -54,14 +54,37 @@ export default function InterviewFeedbackPage() {
 
   const [activeTab, setActiveTab] = useState('summary');
 
+  // Synthesize feedback from real session answers and evaluations
+  const result = synthesizeInterviewFeedback(session.summaryResult, session.answers, setup);
+  const fallbackNotice = result.fallbackNotice || session.summaryResult?.fallbackNotice || null;
+
   // Company Playbook & Hiring Committee Calibration resolution
   const activePlaybookId = session.summaryResult?.companyPlaybook || setup.companyPlaybook || 'general';
   const activePlaybook = getCompanyPlaybook(activePlaybookId);
   const rubricMatrix = session.summaryResult?.rubricMatrix || session.rubricMatrix || {};
-  const overallScoreVal = session.summaryResult?.scores?.overall || 75;
+  const overallScoreVal = session.summaryResult?.scores?.overall || result.overallScore || 75;
+
+  const topStrength = (result.strengths && result.strengths[0]) || 'core engineering fundamentals';
+  const topImprovement = (result.improvements && result.improvements[0]) || 'high-scale architecture trade-offs';
+  const activeRoleName = setup.targetRole || session.summaryResult?.target_role || 'Software Engineer';
+
+  const dynamicReasoning = session.summaryResult?.hiringCommittee?.reasoning ||
+    (overallScoreVal >= 88
+      ? `Exceptional consensus: Candidate demonstrated mastery in ${topStrength}. Recommended as a strong benchmark hire for ${activeRoleName} with immediate production readiness.`
+      : overallScoreVal >= 78
+      ? `Hire consensus: Candidate cleared the technical bar in ${topStrength}. Demonstrates solid engineering execution with focus recommended on ${topImprovement}.`
+      : overallScoreVal >= 68
+      ? `Lean Hire consensus: Candidate demonstrates coachability and solid basics, but exhibits notable gaps in ${topImprovement}. Recommended for targeted drills before final loop.`
+      : `No Hire consensus: Candidate showed foundational gaps in ${topImprovement}. Further structured revision required before meeting the ${activeRoleName} benchmark.`);
+
+  const dynamicSeniorityScope = session.summaryResult?.seniorityBenchmark?.scope ||
+    (overallScoreVal >= 80
+      ? `Demonstrated independent architectural formulation and trade-off depth in ${topStrength}. Exhibits senior-level technical ownership.`
+      : `Demonstrated competent execution on fundamental questions, with opportunity to deepen scale analysis and failure recovery in ${topImprovement}.`);
+
   const hiringCommittee = session.summaryResult?.hiringCommittee || {
     verdict: overallScoreVal >= 88 ? 'Strong Hire' : overallScoreVal >= 78 ? 'Hire' : overallScoreVal >= 68 ? 'Lean Hire' : overallScoreVal >= 55 ? 'Lean No Hire' : 'No Hire',
-    reasoning: 'Candidate demonstrates solid execution and domain competence with identified focus areas.',
+    reasoning: dynamicReasoning,
     rubricCoveragePct: 75,
     verifiedCount: 3,
     totalCompetencies: 4,
@@ -72,9 +95,7 @@ export default function InterviewFeedbackPage() {
   const seniorityBenchmark = session.summaryResult?.seniorityBenchmark || {
     level: hiringCommittee.seniorityLevel || 'L4 — Mid-Level / SDE II',
     title: overallScoreVal >= 80 ? 'Senior Technical Lead / SDE III' : 'Mid-Level Software Engineer / SDE II',
-    scope: overallScoreVal >= 80
-      ? 'Independent solution formulation, clear trade-off articulation, mastery of distributed patterns, and effective coachability.'
-      : 'Competent execution of core algorithms and standard system paradigms with occasional coach guidance on advanced scalability questions.',
+    scope: dynamicSeniorityScope,
     targetYears: overallScoreVal >= 80 ? '5–7 Years Industry Equivalent' : '2–4 Years Industry Equivalent',
     status: overallScoreVal >= 80 ? 'Senior Bar Exceeded' : 'Target Seniority Met'
   };
@@ -109,9 +130,7 @@ export default function InterviewFeedbackPage() {
     }
   };
 
-  // Synthesize prototype feedback using the isolated agent logic
-  const result = synthesizeInterviewFeedback(session.summaryResult, session.answers, setup);
-  const fallbackNotice = result.fallbackNotice || session.summaryResult?.fallbackNotice || null;
+
 
   // Video session detection & communication metrics resolution
   const isVideoSession = setup.interviewMode === 'video' || session.interviewMode === 'video' || Boolean(session.recordingData);

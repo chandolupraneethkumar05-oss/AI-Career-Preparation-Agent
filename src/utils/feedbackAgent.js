@@ -53,6 +53,11 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
 
   const overall = scores.overall || Math.round((techScore + relScore + commScore + probScore + confScore) / 5);
 
+  // Extract actual verified concepts and gaps from candidate answers
+  const identifiedSkills = Array.from(new Set(sessionAnswers.flatMap(a => a.evaluation?.detectedTopics || (a.skill ? [a.skill] : [])))).filter(Boolean);
+  const identifiedGaps = Array.from(new Set(sessionAnswers.flatMap(a => a.evaluation?.missingConcepts || a.evaluation?.areasToImprove || a.evaluation?.weaknesses || []))).filter(Boolean);
+  const identifiedStrengths = Array.from(new Set(sessionAnswers.flatMap(a => a.evaluation?.strengths || []))).filter(Boolean);
+
   const rubricScores = {
     technicalKnowledge: techScore,
     problemSolving: probScore,
@@ -68,8 +73,8 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
       shortName: 'Technical Depth',
       score: techScore,
       explanation: techScore >= 80
-        ? `Strong domain command of ${targetRole} principles, frameworks, and architecture.`
-        : `Developing domain foundations for ${targetRole}; deepen your understanding of core mechanisms.`,
+        ? (identifiedSkills.length ? `Demonstrated solid technical command in ${identifiedSkills.slice(0, 3).join(', ')}.` : `Strong domain command of ${targetRole} principles, frameworks, and architecture.`)
+        : (identifiedGaps.length ? `Identified specific gaps in ${identifiedGaps.slice(0, 2).join(' and ')}; review these architecture principles.` : `Developing domain foundations for ${targetRole}; deepen your understanding of core mechanisms.`),
       color: '#1A365D'
     },
     {
@@ -79,7 +84,7 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
       score: probScore,
       explanation: probScore >= 80
         ? 'Systematic trade-off analysis, edge-case coverage, and structural problem breakdown.'
-        : 'Good reasoning, but make sure to enumerate edge cases and justify trade-offs under constraints.',
+        : (identifiedGaps.length ? `Could strengthen trade-off analysis regarding ${identifiedGaps[0]}.` : 'Good reasoning, but make sure to enumerate edge cases and justify trade-offs under constraints.'),
       color: '#8C6E54'
     },
     {

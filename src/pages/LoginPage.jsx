@@ -17,6 +17,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { authApi } from '../services/authApi';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -37,6 +39,22 @@ export default function LoginPage() {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
+
+  // Check for reset_token query parameter in URL on mount
+  useEffect(() => {
+    const token = new URLSearchParams(location.search).get('reset_token');
+    if (token) {
+      setResetToken(token);
+      setResetSent(true);
+      setShowForgotModal(true);
+    }
+  }, [location.search]);
 
   // Extract redirect query parameter if present
   const queryParams = new URLSearchParams(location.search);
@@ -94,10 +112,48 @@ export default function LoginPage() {
     setAuthStatus('idle');
   };
 
-  const handleSendReset = (e) => {
+  const handleSendReset = async (e) => {
     e.preventDefault();
     if (!resetEmail) return;
-    setResetSent(true);
+    setIsSendingReset(true);
+    setResetError('');
+    try {
+      const res = await authApi.forgotPassword(resetEmail);
+      setResetSent(true);
+      if (res.reset_token) {
+        setResetToken(res.reset_token);
+      }
+    } catch (err) {
+      setResetError(err.message || 'Could not send reset instructions. Please verify your email.');
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  const handleCompleteReset = async (e) => {
+    e.preventDefault();
+    if (!resetToken || !newPassword) return;
+    if (newPassword.length < 6) {
+      setResetError('Password must be at least 6 characters.');
+      return;
+    }
+    setIsResettingPassword(true);
+    setResetError('');
+    try {
+      await authApi.resetPassword(resetToken, newPassword);
+      setPasswordResetSuccess(true);
+      setPassword(newPassword);
+      if (resetEmail) setEmail(resetEmail);
+      setTimeout(() => {
+        setShowForgotModal(false);
+        setResetSent(false);
+        setPasswordResetSuccess(false);
+      }, 2200);
+    } catch (err) {
+      setResetError(err.message || 'Could not reset password. Please try requesting a new link.');
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   // SVG Radial Gauge Calculations for 92% readiness
@@ -479,22 +535,75 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {resetSent ? (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-2">
-                <div className="flex items-center gap-2 font-bold text-emerald-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Reset Instructions Dispatched!</span>
+            {resetError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{resetError}</span>
+              </div>
+            )}
+
+            {passwordResetSuccess ? (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-2 text-center animate-in fade-in">
+                <div className="flex items-center justify-center gap-2 font-bold text-emerald-900">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  <span className="text-sm">Password Successfully Reset!</span>
                 </div>
-                <p className="leading-relaxed">
-                  We've sent recovery steps to <strong className="font-semibold text-emerald-950">{resetEmail}</strong>. Check your inbox to set a new password.
-                </p>
-                <div className="pt-2">
+                <p className="text-slate-600">Your account is updated. Signing you in...</p>
+              </div>
+            ) : resetSent ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-emerald-900">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Recovery Request Processed</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    Instructions sent to <strong className="font-semibold text-emerald-950">{resetEmail || 'your email'}</strong>. You can also set your new password directly below:
+                  </p>
+                </div>
+
+                <form onSubmit={handleCompleteReset} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      New Password (min. 6 characters)
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new strong password"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isResettingPassword || !newPassword}
+                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isResettingPassword ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Updating Password...</span>
+                      </>
+                    ) : (
+                      <span>Set New Password & Sign In</span>
+                    )}
+                  </button>
+                </form>
+
+                <div className="pt-1">
                   <button
                     type="button"
-                    onClick={handleAutoFillDemo}
-                    className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors cursor-pointer"
+                    onClick={() => {
+                      setResetSent(false);
+                      setResetError('');
+                    }}
+                    className="w-full py-2 text-center text-xs text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
                   >
-                    Or Auto-Fill Demo Credentials & Sign In Now
+                    ← Enter a different email
                   </button>
                 </div>
               </div>
@@ -509,7 +618,7 @@ export default function LoginPage() {
                     required
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="praneeth@example.com"
+                    placeholder="candidate@example.com"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                   />
                 </div>
@@ -517,9 +626,17 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <button
                     type="submit"
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    disabled={isSendingReset}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
                   >
-                    Send Reset Instructions
+                    {isSendingReset ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Verifying & Sending...</span>
+                      </>
+                    ) : (
+                      <span>Send Reset Instructions</span>
+                    )}
                   </button>
 
                   <button

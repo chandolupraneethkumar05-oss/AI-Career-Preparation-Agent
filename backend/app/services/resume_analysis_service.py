@@ -381,9 +381,43 @@ class ResumeAnalysisService:
                     if llm_analysis.get("summary"):
                         summary_text = llm_analysis["summary"]
                     if llm_analysis.get("score_breakdown"):
-                        breakdown_data.update(llm_analysis["score_breakdown"])
-        except Exception:
-            pass
+                        sb = llm_analysis["score_breakdown"]
+                        if isinstance(sb, dict):
+                            breakdown_data = [
+                                {
+                                    "label": "Skill & Keyword Match",
+                                    "score": round((sb.get("keyword_match_score", 70) / 100) * 40),
+                                    "max": 40,
+                                    "percentage": sb.get("keyword_match_score", 70),
+                                    "status": "Strong" if sb.get("keyword_match_score", 70) >= 75 else ("Good" if sb.get("keyword_match_score", 70) >= 50 else "Needs Improvement")
+                                },
+                                {
+                                    "label": "Target-Role Alignment",
+                                    "score": round((sb.get("section_completeness_score", 70) / 100) * 25),
+                                    "max": 25,
+                                    "percentage": sb.get("section_completeness_score", 70),
+                                    "status": "Strong" if sb.get("section_completeness_score", 70) >= 75 else ("Good" if sb.get("section_completeness_score", 70) >= 50 else "Needs Improvement")
+                                },
+                                {
+                                    "label": "Project Impact & Metrics",
+                                    "score": round((sb.get("quantifiable_impact_score", 65) / 100) * 20),
+                                    "max": 20,
+                                    "percentage": sb.get("quantifiable_impact_score", 65),
+                                    "status": "Strong" if sb.get("quantifiable_impact_score", 65) >= 75 else ("Good" if sb.get("quantifiable_impact_score", 65) >= 50 else "Needs Improvement")
+                                },
+                                {
+                                    "label": "Document Structure & Completeness",
+                                    "score": round((sb.get("format_readability_score", 75) / 100) * 15),
+                                    "max": 15,
+                                    "percentage": sb.get("format_readability_score", 75),
+                                    "status": "Strong" if sb.get("format_readability_score", 75) >= 75 else ("Good" if sb.get("format_readability_score", 75) >= 50 else "Needs Improvement")
+                                }
+                            ]
+                        elif isinstance(sb, list):
+                            breakdown_data = sb
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Resume analysis LLM enhancement: {e}")
 
         # 8. Persist to Database & Update Career State (if DB session active)
         analysis_id = f"ats-{uuid.uuid4().hex[:12]}"
