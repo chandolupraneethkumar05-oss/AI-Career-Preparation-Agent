@@ -6,12 +6,16 @@ AI Career Preparation Agent
 import os
 from pathlib import Path
 from pydantic import BaseModel
-from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# Automatically load environment variables from backend/.env and root .env
-load_dotenv(BASE_DIR / ".env")
-load_dotenv(BASE_DIR.parent / ".env")
+
+try:
+    from dotenv import load_dotenv
+    # Automatically load environment variables from backend/.env and root .env
+    load_dotenv(BASE_DIR / ".env")
+    load_dotenv(BASE_DIR.parent / ".env")
+except ImportError:
+    pass
 
 DEFAULT_DB_PATH = BASE_DIR / "career_agent.db"
 
