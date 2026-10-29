@@ -175,15 +175,34 @@ def run_all_tests():
 
     def make_domain_answer(q_obj):
         skill = getattr(q_obj, 'skill', '') or 'Engineering Architecture'
-        question = getattr(q_obj, 'question', '') or 'Technical Interview Question'
-        return (
-            f"Regarding {skill} and the question '{question}': In my previous engineering project, our objective was to "
-            f"design and implement an architectural solution addressing {skill}. I implemented an end-to-end pipeline "
-            f"focusing on scalability, resilience, and maintainability. A critical engineering trade-off was latency versus throughput "
-            f"(tradeoff analysis); by choosing an asynchronous event-driven design instead of synchronous blocking execution, "
-            f"we mitigated the primary bottleneck. We optimized performance to achieve a p99 latency under 15ms with 99.9% availability, "
-            f"resulting in a 45% reduction in compute overhead and robust production stability."
-        )
+        question = getattr(q_obj, 'question', '') or getattr(q_obj, 'question_text', '') or 'Technical Interview Question'
+        q_lower = question.lower()
+        s_lower = skill.lower()
+        if 'sec' in q_lower or 'sec' in s_lower:
+            return (
+                f"Regarding {skill} and the question '{question}': In our engineering architecture, we integrate security standards by "
+                f"shifting left into our CI/CD pipelines. We run automated static application security testing (SAST) and software composition "
+                f"analysis (SCA) on every pull request, blocking builds with critical vulnerabilities. For container security, images are "
+                f"scanned with Trivy before registry deployment. We manage secrets using HashiCorp Vault with automated rotation, avoiding "
+                f"hardcoded credentials. In runtime staging, we run dynamic testing (DAST) and continuous compliance monitoring against CIS "
+                f"benchmarks, catching 90% of vulnerabilities before production while maintaining high delivery velocity and reliability."
+            )
+        elif 'ml' in q_lower or 'model' in q_lower or 'data' in q_lower or 'ai' in s_lower:
+            return (
+                f"Regarding {skill} and the question '{question}': In our machine learning engineering pipelines, we structure workflows with "
+                f"modular stages for data ingestion, feature transformation, model training, and evaluation. To prevent data leakage, we strictly "
+                f"partition train, validation, and test sets before scaling or imputation. During model serving, we optimize throughput versus "
+                f"latency trade-offs using model quantization and batching, maintaining a p99 latency under 20ms. We track experiment parameters "
+                f"and weights with MLflow, and monitor data drift using Kolmogorov-Smirnov tests and PSI with automated retraining triggers."
+            )
+        else:
+            return (
+                f"Regarding {skill} and the question '{question}': In our production systems, we address {skill} by establishing robust architectural "
+                f"principles focused on fault tolerance and maintainability. A key trade-off is latency versus throughput (tradeoff analysis); by "
+                f"implementing asynchronous message queues and connection pooling, we prevent system bottlenecks during peak demand. We maintain "
+                f"comprehensive unit and integration tests in CI/CD, alongside distributed tracing and metric alerts, achieving 99.95% availability "
+                f"and reducing p99 latency by 35% with predictable resource utilization."
+            )
 
     # --------------------------------------------------------------------------
     # Test 4: Submit High-Scoring Substantive Answer to Q1
