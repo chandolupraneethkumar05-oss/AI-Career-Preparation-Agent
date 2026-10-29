@@ -27,3 +27,4 @@ torch>=2.0.0
 
 # Speech Recognition & Audio Transcription
 faster-whisper>=1.0.0
+av<19.0.0

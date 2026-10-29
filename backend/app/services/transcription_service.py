@@ -20,6 +20,17 @@ logger = logging.getLogger(__name__)
 # Global singleton for lazily cached Whisper model
 _WHISPER_MODEL = None
 
+try:
+    import av
+    if hasattr(av, "open"):
+        _orig_av_open = av.open
+        def _safe_av_open(*args, **kwargs):
+            kwargs.pop("metadata_errors", None)
+            return _orig_av_open(*args, **kwargs)
+        av.open = _safe_av_open
+except Exception:
+    pass
+
 
 def get_whisper_model(model_size: str = "tiny"):
     """
