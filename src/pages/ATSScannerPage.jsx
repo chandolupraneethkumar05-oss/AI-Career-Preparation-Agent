@@ -21,6 +21,7 @@ import GradientButton from '../components/GradientButton';
 import CircularScore from '../components/CircularScore';
 import ProgressBar from '../components/ProgressBar';
 import Badge from '../components/Badge';
+import SegmentedControl from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { resumeApi } from '../services/resumeApi';
 import { storageService } from '../utils/storage/storageService';
@@ -263,30 +264,17 @@ export default function ATSScannerPage() {
         <GlassCard className="lg:col-span-5 p-6 space-y-4 border-[#E5E0D5] bg-[#FFFDF9] shadow-xs">
           <div className="flex items-center justify-between border-b border-[#E5E0D5] pb-3">
             <h3 className="text-xs font-bold text-[#1F1B16] uppercase tracking-wider font-mono">1. Select Curriculum Vitæ</h3>
-            <div className="flex items-center gap-1 bg-[#F4EFE6] p-0.5 rounded border border-[#E5E0D5]">
-              <button
-                type="button"
-                onClick={() => setInputMode('file')}
-                className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors ${
-                  inputMode === 'file'
-                    ? 'bg-[#1A365D] text-white font-bold'
-                    : 'text-[#5C554B] hover:text-[#1F1B16]'
-                }`}
-              >
-                File Upload
-              </button>
-              <button
-                type="button"
-                onClick={() => setInputMode('text')}
-                className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors ${
-                  inputMode === 'text'
-                    ? 'bg-[#1A365D] text-white font-bold'
-                    : 'text-[#5C554B] hover:text-[#1F1B16]'
-                }`}
-              >
-                Paste Text
-              </button>
-            </div>
+            <SegmentedControl
+              options={[
+                { id: 'file', label: 'File Upload', icon: Upload },
+                { id: 'text', label: 'Paste Text', icon: FileText }
+              ]}
+              value={inputMode}
+              onChange={setInputMode}
+              size="sm"
+              fullWidth={false}
+              ariaLabel="Resume input mode selector"
+            />
           </div>
 
           {inputMode === 'file' ? (
@@ -385,16 +373,21 @@ export default function ATSScannerPage() {
 
       </div>
 
-      {/* Scanning Active Progress State */}
+      {/* Scanning Active Progress State with Holographic Laser Scanner */}
       {isScanning && (
-        <GlassCard className="p-6 border-[#BAC7D5] bg-[#FFFDF9] text-center space-y-4 shadow-xs">
-          <div className="flex items-center justify-center gap-2 text-[#1A365D] font-bold text-sm font-serif">
-            <RefreshCw className="w-4 h-4 animate-spin text-[#1A365D]" />
-            <span>Extracting Text &amp; Calculating Evaluative Metrics... ({scanProgress}%)</span>
+        <GlassCard className="relative p-6 border-indigo-200 bg-white text-center space-y-4 shadow-sm overflow-hidden">
+          {/* Holographic Laser Sweep Line */}
+          <div className="animate-laser">
+            <div className="h-[2px] bg-indigo-400 w-full shadow-[0_0_8px_#6366f1]" />
+          </div>
+
+          <div className="flex items-center justify-center gap-2 text-indigo-700 font-bold text-sm">
+            <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+            <span>Deterministic ATS Diagnostic in Progress ({scanProgress}%)</span>
           </div>
           <ProgressBar value={scanProgress} height="h-2" />
-          <p className="text-xs text-[#70685E]">
-            Parsing document structure, normalizing canonical competencies, and calibrating with Unified Skill Profile.
+          <p className="text-xs text-slate-500">
+            Scanning document syntax, extracting technical keywords via canonical taxonomy, and computing rubric scores...
           </p>
         </GlassCard>
       )}

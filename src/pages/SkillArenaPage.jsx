@@ -28,6 +28,8 @@ import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
 import CodeEditor from '../components/CodeEditor';
+import SegmentedControl from '../components/SegmentedControl';
+import XpRewardPopup from '../components/XpRewardPopup';
 import { useAuth } from '../context/AuthContext';
 import { skillArenaApi } from '../services/skillArenaApi';
 import { skillApi } from '../services/skillApi';
@@ -92,6 +94,7 @@ export default function SkillArenaPage() {
   const [isTestingCode, setIsTestingCode] = useState(false);
   const [sandboxRunResult, setSandboxRunResult] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
+  const [awardedXp, setAwardedXp] = useState(null);
 
   // Skill Profile & Career Focus State
   const [careerFocusSkill, setCareerFocusSkill] = useState('Core Competency');
@@ -217,6 +220,7 @@ export default function SkillArenaPage() {
       if (result) {
         setEvaluationResult(result);
         if (result.xp_earned) {
+          setAwardedXp(result.xp_earned);
           updateUser({
             xp: (user?.xp || 0) + result.xp_earned,
             streak: result.streak || user?.streak || 1
@@ -232,7 +236,14 @@ export default function SkillArenaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F0] text-[#1F1B16] p-6 lg:p-10">
+    <div className="min-h-screen bg-[#F8F6F0] text-[#1F1B16] p-6 lg:p-10 relative">
+      {awardedXp && (
+        <XpRewardPopup
+          amount={awardedXp}
+          onComplete={() => setAwardedXp(null)}
+          className="top-24 right-8"
+        />
+      )}
       <div className="max-w-6xl mx-auto space-y-8">
         {/* =========================================================================
             HEADER & CAREER FOCUS BANNER
@@ -328,38 +339,20 @@ export default function SkillArenaPage() {
         )}
 
         {/* =========================================================================
-            MODE SELECTOR
+            MODE SELECTOR (HIGH-DENSITY SEGMENTED CONTROL)
            ========================================================================= */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {PRACTICE_MODES.map((mode) => {
-            const Icon = mode.icon;
-            const isSelected = selectedMode === mode.id;
-            return (
-              <button
-                key={mode.id}
-                onClick={() => handleModeChange(mode.id)}
-                className={`
-                  p-3.5 rounded-md border text-left transition-all duration-200 flex flex-col justify-between gap-2 cursor-pointer
-                  ${isSelected
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1A365D] shadow-xs'
-                    : 'bg-[#FFFDF9] hover:bg-[#FAF8F3] border-[#E5E0D5] text-[#3B352E]'}
-                `}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Icon className={`w-4 h-4 ${isSelected ? 'text-[#1A365D]' : 'text-[#8C6E54]'}`} />
-                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#1A365D]" />}
-                </div>
-                <div>
-                  <div className={`text-xs font-bold ${isSelected ? 'text-[#1A365D]' : 'text-[#1F1B16]'}`}>
-                    {mode.label}
-                  </div>
-                  <div className="text-[10px] text-[#70685E] line-clamp-1">
-                    {mode.description}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+        <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <SegmentedControl
+            options={PRACTICE_MODES.map((mode) => ({
+              id: mode.id,
+              label: mode.label,
+              icon: mode.icon,
+              description: mode.description
+            }))}
+            value={selectedMode}
+            onChange={handleModeChange}
+            ariaLabel="Practice mode selector"
+          />
         </div>
 
         {/* =========================================================================
@@ -612,7 +605,9 @@ export default function SkillArenaPage() {
                     }`}>
                       <div className="flex items-center gap-3">
                         {evaluationResult.correctness ? (
-                          <CheckCircle2 className="w-6 h-6 text-[#235E3B]" />
+                          <svg className="w-6 h-6 text-[#235E3B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path className="draw-check" d="M20 6L9 17L4 12" />
+                          </svg>
                         ) : (
                           <XCircle className="w-6 h-6 text-[#9A421A]" />
                         )}

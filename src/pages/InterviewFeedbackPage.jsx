@@ -41,6 +41,7 @@ import GradientButton from '../components/GradientButton';
 import CircularScore from '../components/CircularScore';
 import ProgressBar from '../components/ProgressBar';
 import Badge from '../components/Badge';
+import SegmentedControl from '../components/SegmentedControl';
 import RecordingReview from '../components/video/RecordingReview';
 import { getCompanyPlaybook } from '../data/companyPlaybooks';
 import { useInterview } from '../context/InterviewContext';
@@ -375,60 +376,18 @@ Candidate: ${user?.name || 'Candidate'}
       {/* ========================================================================= */}
       {/* TAB NAVIGATION STRIP (Executive Review Architecture)                      */}
       {/* ========================================================================= */}
-      <div className="flex border-b border-[#E5E0D5] gap-1 overflow-x-auto bg-[#FFFDF9] p-1.5 rounded-md border border-[#E5E0D5] shadow-xs sticky top-2 z-30">
-        <button
-          type="button"
-          onClick={() => setActiveTab('summary')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-sm text-xs font-serif font-bold transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'summary'
-              ? 'bg-[#1B2A4A] text-white shadow-xs'
-              : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9]'
-          }`}
-        >
-          <Award className="w-3.5 h-3.5" />
-          <span>Executive Verdict & Summary</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('competencies')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-sm text-xs font-serif font-bold transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'competencies'
-              ? 'bg-[#1B2A4A] text-white shadow-xs'
-              : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9]'
-          }`}
-        >
-          <Target className="w-3.5 h-3.5" />
-          <span>Competency & Rubrics Matrix</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('questions')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-sm text-xs font-serif font-bold transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'questions'
-              ? 'bg-[#1B2A4A] text-white shadow-xs'
-              : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9]'
-          }`}
-        >
-          <MessageSquare className="w-3.5 h-3.5" />
-          <span>Question-by-Question Audit ({result.questionPerformance?.length || 0})</span>
-        </button>
-
-        {(commMetrics || isVideoSession) && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('recording')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-sm text-xs font-serif font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'recording'
-                ? 'bg-[#1B2A4A] text-white shadow-xs'
-                : 'text-[#5C554B] hover:text-[#1F1B16] hover:bg-[#F2EFE9]'
-            }`}
-          >
-            <Mic className="w-3.5 h-3.5" />
-            <span>Media & Delivery Review</span>
-          </button>
-        )}
+      <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-2xs sticky top-2 z-30">
+        <SegmentedControl
+          options={[
+            { id: 'summary', label: 'Executive Verdict & Summary', icon: Award },
+            { id: 'competencies', label: 'Competency Matrix', icon: Target },
+            { id: 'questions', label: `Question Audit (${result.questionPerformance?.length || 0})`, icon: MessageSquare },
+            ...(commMetrics || isVideoSession ? [{ id: 'recording', label: 'Media & Delivery', icon: Mic }] : [])
+          ]}
+          value={activeTab}
+          onChange={setActiveTab}
+          ariaLabel="Feedback Report Navigation"
+        />
       </div>
 
       {activeTab === 'summary' && (

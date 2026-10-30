@@ -269,3 +269,115 @@ input:focus, textarea:focus, select:focus {
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* =========================================================================
+   6. HIGH-ENGAGEMENT FUNCTIONAL MICRO-ANIMATIONS (60 FPS)
+   ========================================================================= */
+
+/* Holographic Laser Sweep Beam */
+@keyframes laser-sweep {
+  0% { top: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 96%; opacity: 0; }
+}
+
+.animate-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: none;
+  z-index: 20;
+  animation: laser-sweep 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  background: linear-gradient(180deg, rgba(79, 70, 229, 0) 0%, rgba(79, 70, 229, 0.35) 75%, #4F46E5 100%);
+  box-shadow: 0 4px 18px rgba(79, 70, 229, 0.6);
+}
+
+/* Organic Speech & Audio Waveform Bars */
+@keyframes wave-pulse-1 { 0%, 100% { height: 6px; } 50% { height: 26px; } }
+@keyframes wave-pulse-2 { 0%, 100% { height: 10px; } 50% { height: 34px; } }
+@keyframes wave-pulse-3 { 0%, 100% { height: 16px; } 50% { height: 42px; } }
+@keyframes wave-pulse-4 { 0%, 100% { height: 8px; } 50% { height: 30px; } }
+@keyframes wave-pulse-5 { 0%, 100% { height: 6px; } 50% { height: 20px; } }
+
+.wave-bar-1 { animation: wave-pulse-1 0.75s ease-in-out infinite; }
+.wave-bar-2 { animation: wave-pulse-2 0.65s ease-in-out infinite 0.1s; }
+.wave-bar-3 { animation: wave-pulse-3 0.85s ease-in-out infinite 0.2s; }
+.wave-bar-4 { animation: wave-pulse-4 0.70s ease-in-out infinite 0.15s; }
+.wave-bar-5 { animation: wave-pulse-5 0.80s ease-in-out infinite 0.05s; }
+
+/* Celebratory +XP Floating Badge */
+@keyframes xp-spring-float {
+  0% { transform: translateY(12px) scale(0.8); opacity: 0; }
+  25% { transform: translateY(-4px) scale(1.12); opacity: 1; }
+  70% { transform: translateY(-20px) scale(1.0); opacity: 1; }
+  100% { transform: translateY(-40px) scale(0.92); opacity: 0; }
+}
+
+.animate-xp-rise {
+  animation: xp-spring-float 1.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Habit Streak Flame Glow */
+@keyframes flame-glow {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.4)); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.8)); }
+}
+
+.animate-flame {
+  display: inline-block;
+  animation: flame-glow 1.8s ease-in-out infinite;
+}
+
+/* SVG Checkmark Draw Animation */
+@keyframes check-draw {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.draw-check {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: check-draw 0.35s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+/* Radar Sweep Rotation */
+@keyframes radar-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-radar-sweep {
+  transform-origin: 50% 50%;
+  animation: radar-rotate 4s linear infinite;
+}
+
+/* Ambient Floating Hover Effect */
+@keyframes ambient-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+.animate-float {
+  animation: ambient-float 3.5s ease-in-out infinite;
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-laser,
+  .wave-bar-1,
+  .wave-bar-2,
+  .wave-bar-3,
+  .wave-bar-4,
+  .wave-bar-5,
+  .animate-xp-rise,
+  .animate-flame,
+  .draw-check,
+  .animate-radar-sweep,
+  .animate-float,
+  .animate-marquee {
+    animation: none !important;
+    transition: none !important;
+  }
+}

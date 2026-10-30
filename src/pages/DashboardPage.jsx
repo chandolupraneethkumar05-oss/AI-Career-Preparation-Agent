@@ -322,7 +322,9 @@ export default function DashboardPage() {
             </span>
 
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 shadow-2xs">
-              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span className="animate-flame">
+                <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              </span>
               <span>{streakCount > 0 ? `${streakCount}-Day Practice Streak` : '7-Day Practice Streak'}</span>
             </span>
 
@@ -344,13 +346,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Right Corner: Candidate Boy Character (Clean, No Frames, No Badges) */}
-        <div className="hidden md:flex items-center justify-center shrink-0 w-48 lg:w-60 pointer-events-none select-none">
-          <img
-            src="/boy-illustration-transparent.png"
-            alt="Candidate studying with laptop"
-            className="w-full h-auto max-h-56 object-contain"
-          />
+        {/* Right Corner: Compact Flight Deck Side-Spot Art (~140px-160px) */}
+        <div className="hidden md:flex items-center justify-center shrink-0 w-36 sm:w-44 select-none">
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-xs bg-slate-50/80 animate-float transition-transform hover:scale-102">
+            <img
+              src="/career_flight_deck_hero.jpg"
+              alt="Career Flight Deck Command Center"
+              className="w-full h-auto object-cover max-h-36 sm:max-h-40"
+            />
+          </div>
         </div>
 
       </div>

@@ -35,6 +35,7 @@ import CircularScore from '../components/CircularScore';
 import RecordingControls from '../components/video/RecordingControls';
 import InterviewProcessingModal from '../components/video/InterviewProcessingModal';
 import AiInterviewerAvatar from '../components/video/AiInterviewerAvatar';
+import VoiceWaveformIndicator from '../components/VoiceWaveformIndicator';
 import CodeDisputationSandbox from '../components/CodeDisputationSandbox';
 import { getCompanyPlaybook } from '../data/companyPlaybooks';
 import { getInterviewerPersona } from '../data/interviewerPersonas';
@@ -1252,13 +1253,10 @@ export default function MockInterviewPage() {
                         : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#70685E]'
                     }`}>
                       <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${
-                          isInterviewerSpeaking
-                            ? 'bg-[#8C6E54] animate-pulse'
-                            : isRecordingAnswer
-                            ? 'bg-[#235E3B] animate-ping'
-                            : 'bg-[#70685E]'
-                        }`} />
+                        <VoiceWaveformIndicator
+                          isActive={isInterviewerSpeaking || isRecordingAnswer}
+                          label={isInterviewerSpeaking ? 'AI Voice Active' : isRecordingAnswer ? 'Mic Live' : ''}
+                        />
                         <span>
                           {isInterviewerSpeaking
                             ? 'Interviewer is speaking... Listen attentively'

@@ -3,16 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   Target,
   Layers,
-  BarChart2,
   FileText,
   Upload,
   ArrowRight,
   CheckCircle2,
   FileCheck,
-  Globe,
   Video,
   MessageSquare,
-  Shield,
   Briefcase,
   Sparkles,
   Users,
@@ -20,16 +17,16 @@ import {
   ChevronUp,
   Zap,
   Code2,
-  Tag,
   X,
-  Plus
+  Clock
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
+import SegmentedControl from '../components/SegmentedControl';
+import SelectDropdown from '../components/SelectDropdown';
 import { MOCK_ROLES, INTERVIEW_TYPES, DIFFICULTY_LEVELS } from '../data/mockData';
 import { COMPANY_PLAYBOOKS } from '../data/companyPlaybooks';
-import { INTERVIEWER_PERSONAS } from '../data/interviewerPersonas';
 import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
 import { profileApi } from '../services/profileApi';
@@ -100,7 +97,7 @@ const FAST_PRESETS = [
     title: 'Backend & Scalability',
     role: 'Backend Engineer',
     type: 'System Design',
-    difficulty: 'Senior',
+    difficulty: 'Advanced',
     playbook: 'amazon',
     mode: 'text',
     persona: 'julian',
@@ -115,7 +112,7 @@ const FAST_PRESETS = [
     title: 'Machine Learning',
     role: 'Machine Learning Engineer',
     type: 'Technical',
-    difficulty: 'Senior',
+    difficulty: 'Advanced',
     playbook: 'google',
     mode: 'text',
     persona: 'julian',
@@ -130,7 +127,7 @@ const FAST_PRESETS = [
     title: 'Behavioral & Leadership',
     role: 'Engineering Manager',
     type: 'Behavioral',
-    difficulty: 'Staff',
+    difficulty: 'Advanced',
     playbook: 'general',
     mode: 'text',
     persona: 'elena',
@@ -179,7 +176,7 @@ const SAMPLE_JDS = [
     id: 'senior_backend',
     title: 'Senior Distributed Backend (4+ yrs)',
     role: 'Backend Engineer',
-    difficulty: 'Senior',
+    difficulty: 'Advanced',
     tag: '4+ Yrs',
     text: "Job Title: Senior Backend Architect / Staff Engineer\nExperience: 4+ years\nCore Requirements:\n- High-throughput distributed systems design, microservices, idempotent APIs, and RPC protocols.\n- Caching strategies with Redis/Memcached, message queuing with Kafka or RabbitMQ.\n- Database sharding, partitioning, read replicas, and ACID vs BASE trade-offs.\n- Sub-50ms latency optimization, SLA management, and horizontal scalability."
   }
@@ -227,7 +224,7 @@ export default function InterviewSetupPage() {
     setTargetRole(preset.role);
     setCustomRole('');
     setInterviewType(preset.type);
-    setDifficulty(preset.difficulty);
+    setDifficulty(preset.difficulty === 'Senior' ? 'Advanced' : preset.difficulty);
     setCompanyPlaybook(preset.playbook);
     setInterviewMode(preset.mode);
     setInterviewerPersona(preset.persona);
@@ -244,7 +241,7 @@ export default function InterviewSetupPage() {
       setCustomRole('');
     }
     if (sample.difficulty) {
-      setDifficulty(sample.difficulty);
+      setDifficulty(sample.difficulty === 'Senior' ? 'Advanced' : sample.difficulty);
     }
   };
 
@@ -254,13 +251,6 @@ export default function InterviewSetupPage() {
       if (new RegExp(`\\b${keyword}\\b`, 'i').test(prev)) return prev;
       return `${prev.trim()}, ${keyword}`;
     });
-  };
-
-  const handleRoleSelect = (role) => {
-    setTargetRole(role);
-    if (role !== 'Custom') {
-      setCustomRole('');
-    }
   };
 
   const [isDragging, setIsDragging] = useState(false);
@@ -312,43 +302,104 @@ export default function InterviewSetupPage() {
     navigate('/interview-ready');
   };
 
+  // Predefined role dropdown options
+  const roleDropdownOptions = [
+    ...MOCK_ROLES.map(r => ({ value: r, label: r })),
+    { value: 'Custom', label: '+ Other / Custom Target Role...' }
+  ];
+
+  // Difficulty options for SegmentedControl
+  const difficultyOptions = DIFFICULTY_LEVELS.map(d => ({
+    id: d.id,
+    label: d.label,
+    description: d.id === 'Beginner'
+      ? `${d.desc} — Direct logic, foundational concepts & encouraging rubric.`
+      : d.desc
+  }));
+
+  // Interview Focus Type options for SegmentedControl
+  const interviewTypeOptions = INTERVIEW_TYPES.map(t => ({
+    id: t.id,
+    label: t.label,
+    description: t.desc
+  }));
+
+  // Interview Mode options for SegmentedControl
+  const interviewModeOptions = [
+    {
+      id: 'text',
+      label: 'Written Text',
+      icon: MessageSquare,
+      badge: 'Code',
+      description: 'Draft responses with real-time technical rubrics, reasoning feedback, and Live Coding Sandbox.'
+    },
+    {
+      id: 'video',
+      label: 'Video Interview',
+      icon: Video,
+      badge: 'Audio',
+      description: 'Uses webcam & microphone. Evaluates speech pacing (WPM), articulation, and answer structure.'
+    },
+    {
+      id: 'face_to_face',
+      label: 'Face-to-Face AI',
+      icon: Users,
+      badge: 'Avatar',
+      description: 'Split-screen video call with an interactive AI interviewer who speaks aloud with synced speech.'
+    }
+  ];
+
+  // Question count options for SegmentedControl
+  const questionCountOptions = [
+    { id: 5, label: 'Concise (5 Questions)', badge: '~15 Mins', description: 'Quick calibrated session for daily practice & consistency.' },
+    { id: 10, label: 'Exhaustive (10 Questions)', badge: '~30 Mins', description: 'Comprehensive technical and architectural assessment across all competency axes.' }
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16 font-sans text-[#1F1B16]">
-      {/* Header */}
-      <div className="border-b border-[#E5E0D5] pb-5">
-        <div className="flex items-center gap-2 mb-1.5">
+    <div className="max-w-4xl mx-auto space-y-6 pb-16 font-sans text-slate-900">
+      
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* HEADER                                                        */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <div className="border-b border-slate-200 pb-4">
+        <div className="flex items-center gap-2 mb-1">
           <Badge variant="navy" size="sm">STAGE 1 OF 3</Badge>
-          <span className="editorial-overline">INTERVIEW SETUP &amp; CALIBRATION</span>
+          <span className="text-xs font-mono font-bold tracking-wider text-indigo-700 uppercase">
+            CALIBRATION &amp; SETUP
+          </span>
         </div>
-        <h1 className="text-3xl font-serif font-bold text-[#1F1B16] tracking-tight">
-          Customize Your Interview
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          Customize Your Interview Session
         </h1>
-        <p className="text-sm text-[#70685E] mt-1">
-          Choose your target role, difficulty level, and optional Job Description to calibrate questions to your exact seniority.
+        <p className="text-xs sm:text-sm text-slate-600 mt-1">
+          Configure target role, difficulty level, and optional Job Description to calibrate questions to your exact seniority.
         </p>
       </div>
 
       <div className="space-y-6">
-        {/* 0. 1-Click Practice Presets */}
-        <GlassCard className="p-5 sm:p-6 space-y-4 border-l-4 border-l-[#1A365D] bg-[#FFFDF9]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E0D5] pb-3">
+
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* 1. 1-CLICK PRACTICE PRESETS (KEPT AS DISCOVERY CARDS)         */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        <GlassCard className="p-5 sm:p-6 space-y-3.5 border-l-4 border-l-indigo-600 bg-white shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-[#1B2A4A] flex items-center justify-center text-white">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs">
                 <Zap className="w-4 h-4 text-amber-300" />
               </div>
               <div>
-                <h3 className="text-sm sm:text-base font-serif font-bold text-[#1F1B16] flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
                   <span>1-Click Practice Presets</span>
                   <Badge variant="navy" size="xs">RECOMMENDED</Badge>
                 </h3>
-                <p className="text-xs text-[#70685E]">Select an industry-calibrated preset to configure your interview in one click</p>
+                <p className="text-xs text-slate-500">Select an industry-calibrated template to configure all knobs in one click</p>
               </div>
             </div>
             {selectedPreset && (
               <button
                 type="button"
                 onClick={handleContinue}
-                className="px-3.5 py-1.5 rounded-md bg-[#1B2A4A] hover:bg-[#142038] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
+                className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
               >
                 <span>Launch Selected Preset</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -363,22 +414,22 @@ export default function InterviewSetupPage() {
                 <div
                   key={p.id}
                   onClick={() => handleApplyPreset(p)}
-                  className={`p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between text-left ${
+                  className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between text-left ${
                     isSelected
-                      ? 'bg-[#EAEFF5] border-[#1A365D] ring-1 ring-[#1A365D] shadow-xs'
-                      : 'bg-[#FAF8F3] border-[#E5E0D5] hover:border-[#1A365D]'
+                      ? 'bg-indigo-50/70 border-indigo-500 ring-2 ring-indigo-500/20 shadow-xs'
+                      : 'bg-slate-50/60 border-slate-200 hover:border-indigo-400 hover:bg-white'
                   }`}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-mono font-bold text-[#1A365D]">{p.tag}</span>
-                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#1A365D]" />}
+                      <span className="text-[10px] uppercase font-mono font-bold text-indigo-700">{p.tag}</span>
+                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />}
                     </div>
-                    <h4 className="font-serif text-xs font-bold text-[#1F1B16] leading-tight">{p.title}</h4>
-                    <p className="text-[11px] text-[#70685E] leading-relaxed line-clamp-2">{p.desc}</p>
+                    <h4 className="text-xs font-bold text-slate-900 leading-tight">{p.title}</h4>
+                    <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">{p.desc}</p>
                   </div>
-                  <div className="mt-2.5 pt-2 border-t border-[#E5E0D5] flex items-center justify-between text-[10px] text-[#70685E] font-mono">
-                    <span className="font-semibold text-[#1A365D]">{p.difficulty}</span>
+                  <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                    <span className="font-semibold text-indigo-700">{p.difficulty}</span>
                     <span>{p.questions} Qs</span>
                   </div>
                 </div>
@@ -387,175 +438,103 @@ export default function InterviewSetupPage() {
           </div>
         </GlassCard>
 
-        {/* 1. Target Role Selection */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
-              <Target className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">I. Select Target Role</h3>
-              <p className="text-xs text-[#70685E]">Choose the job role you want to practice for</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-            {MOCK_ROLES.map((role) => (
-              <button
-                key={role}
-                type="button"
-                onClick={() => handleRoleSelect(role)}
-                className={`
-                  p-3 rounded-md border text-left transition-all text-xs font-semibold cursor-pointer
-                  ${targetRole === role
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
-                    : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                  }
-                `}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{role}</span>
-                  {targetRole === role && <CheckCircle2 className="w-3.5 h-3.5 text-[#1A365D]" />}
-                </div>
-              </button>
-            ))}
-
-            <button
-              type="button"
-              onClick={() => {
-                setTargetRole('Custom');
-                if (!customRole) setCustomRole(!MOCK_ROLES.includes(targetRole) ? targetRole : '');
-              }}
-              className={`
-                p-3 rounded-md border text-left transition-all text-xs font-semibold cursor-pointer
-                ${targetRole === 'Custom' || !MOCK_ROLES.includes(targetRole)
-                  ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
-                  : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                }
-              `}
-            >
-              <div className="flex items-center justify-between">
-                <span>+ Other / Custom Role</span>
-                {(targetRole === 'Custom' || !MOCK_ROLES.includes(targetRole)) && (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#1A365D]" />
-                )}
-              </div>
-            </button>
-          </div>
-
-          {(targetRole === 'Custom' || !MOCK_ROLES.includes(targetRole)) && (
-            <div className="pt-2 border-t border-[#E5E0D5] space-y-1.5 animate-in fade-in">
-              <label className="block text-xs font-semibold text-[#8C6E54]">
-                Specify Custom Target Role:
-              </label>
-              <input
-                type="text"
-                value={targetRole === 'Custom' ? customRole : targetRole}
-                onChange={(e) => {
-                  setTargetRole('Custom');
-                  setCustomRole(e.target.value);
-                }}
-                placeholder="e.g., Senior iOS Engineer, DevSecOps Specialist, Product Manager, Embedded Systems Lead..."
-                className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#1A365D] text-[#1F1B16] text-sm focus:outline-none ring-1 ring-[#1A365D]"
-              />
-              <p className="text-[11px] text-[#70685E]">
-                Our AI and Gemini LLM will synthesize role-specific questions and evaluation rubrics tailored to this discipline.
-              </p>
-            </div>
-          )}
-        </GlassCard>
-
-        {/* 2. Difficulty Level */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] flex items-center justify-center text-[#235E3B]">
-              <BarChart2 className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">II. Difficulty Level Calibration</h3>
-              <p className="text-xs text-[#70685E]">Calibrates question depth, expected trade-offs, and scoring rubrics</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            {DIFFICULTY_LEVELS.map((diff) => (
-              <div
-                key={diff.id}
-                onClick={() => setDifficulty(diff.id)}
-                className={`
-                  p-4 rounded-md border cursor-pointer transition-all text-left
-                  ${difficulty === diff.id
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
-                    : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                  }
-                `}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-serif font-bold text-[#1F1B16]">{diff.label}</span>
-                  {difficulty === diff.id && <CheckCircle2 className="w-3.5 h-3.5 text-[#1A365D]" />}
-                </div>
-                <p className="text-[11px] text-[#70685E] leading-relaxed">{diff.desc}</p>
-                {diff.id === 'Beginner' && (
-                  <div className="mt-2 pt-1.5 border-t border-[#E5E0D5] text-[10px] text-[#235E3B] font-medium flex items-center gap-1">
-                    <span>✓ Direct logic &amp; core concepts (no harsh penalties)</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-
-        {/* 3. Interview Focus Type Selection */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#8C6E54]">
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* 2. CORE CALIBRATION CONTROLS (HIGH-DENSITY COMPACT FORM)       */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        <GlassCard className="p-5 sm:p-6 space-y-5 bg-white shadow-xs">
+          <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">III. Interview Focus Type</h3>
-              <p className="text-xs text-[#70685E]">Select the interview topic and question format</p>
+              <h3 className="text-base font-bold text-slate-900">Core Calibration &amp; Parameters</h3>
+              <p className="text-xs text-slate-500">Fine-tune target role, seniority level, topic focus, and delivery mode</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            {INTERVIEW_TYPES.map((type) => (
-              <div
-                key={type.id}
-                onClick={() => setInterviewType(type.id)}
-                className={`
-                  p-4 rounded-md border cursor-pointer transition-all
-                  ${interviewType === type.id
-                    ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
-                    : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                  }
-                `}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-serif font-bold text-[#1F1B16]">{type.label}</span>
-                  <Badge variant={type.badge === 'Core' ? 'emerald' : type.badge === 'System' ? 'navy' : 'bronze'} size="sm">
-                    {type.badge}
-                  </Badge>
-                </div>
-                <p className="text-xs text-[#70685E] leading-relaxed">{type.desc}</p>
-              </div>
-            ))}
+          <div className="space-y-5">
+            {/* Target Role Dropdown with Custom Input Extension */}
+            <SelectDropdown
+              label="I. Target Job Role"
+              value={MOCK_ROLES.includes(targetRole) ? targetRole : 'Custom'}
+              onChange={(val) => {
+                if (val === 'Custom') {
+                  setTargetRole('Custom');
+                  if (!customRole) setCustomRole(!MOCK_ROLES.includes(targetRole) ? targetRole : '');
+                } else {
+                  setTargetRole(val);
+                  setCustomRole('');
+                }
+              }}
+              options={roleDropdownOptions}
+              icon={Target}
+              isCustom={targetRole === 'Custom' || !MOCK_ROLES.includes(targetRole)}
+              customValue={targetRole === 'Custom' ? customRole : targetRole}
+              onCustomChange={(val) => {
+                setTargetRole('Custom');
+                setCustomRole(val);
+              }}
+              customPlaceholder="e.g. Senior iOS Engineer, DevSecOps Specialist, Product Manager..."
+              helperText="Our Gemini AI models calibrate question complexity, tech stacks, and grading rubrics according to this role."
+            />
+
+            {/* Difficulty Calibration (Segmented Radio Group) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                II. Seniority &amp; Difficulty Level
+              </label>
+              <SegmentedControl
+                options={difficultyOptions}
+                value={difficulty}
+                onChange={setDifficulty}
+                ariaLabel="Difficulty calibration"
+              />
+            </div>
+
+            {/* Interview Focus Type (Segmented Radio Group) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                III. Interview Focus Area
+              </label>
+              <SegmentedControl
+                options={interviewTypeOptions}
+                value={interviewType}
+                onChange={setInterviewType}
+                ariaLabel="Interview Focus Type"
+              />
+            </div>
+
+            {/* Interview Delivery Mode (Segmented Radio Group) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                IV. Delivery Mode
+              </label>
+              <SegmentedControl
+                options={interviewModeOptions}
+                value={interviewMode}
+                onChange={setInterviewMode}
+                ariaLabel="Interview Delivery Mode"
+              />
+            </div>
           </div>
         </GlassCard>
 
-        {/* 4. Prominent Job Description & Tech Stack Hub (Calibration Anchor) */}
-        <GlassCard className="p-6 space-y-4 border-l-4 border-l-[#235E3B] bg-[#FFFDF9]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E0D5] pb-3">
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* 3. JOB DESCRIPTION & TARGET TECH STACK (CALIBRATION HUB)     */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        <GlassCard className="p-5 sm:p-6 space-y-4 border-l-4 border-l-emerald-600 bg-white shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] flex items-center justify-center text-[#235E3B]">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
                 <FileText className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-serif font-bold text-[#1F1B16] flex items-center gap-2">
-                  <span>IV. Job Description &amp; Target Tech Stack</span>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>Job Description &amp; Target Tech Stack</span>
                   <Badge variant="emerald" size="xs">CALIBRATION HUB</Badge>
                 </h3>
-                <p className="text-xs text-[#70685E]">
-                  Paste your target JD or click a 1-click preset to ground questions directly to your expected seniority
+                <p className="text-xs text-slate-500">
+                  Paste your target JD or click a sample to ground interview questions directly to your expected seniority
                 </p>
               </div>
             </div>
@@ -563,7 +542,7 @@ export default function InterviewSetupPage() {
               <button
                 type="button"
                 onClick={() => setJobDescription('')}
-                className="text-[11px] font-mono text-[#9A421A] hover:underline flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+                className="text-[11px] font-mono text-rose-600 hover:underline flex items-center gap-1 self-start sm:self-auto cursor-pointer"
               >
                 <X className="w-3 h-3" />
                 <span>Clear JD</span>
@@ -574,10 +553,10 @@ export default function InterviewSetupPage() {
           {/* 1-Click Sample JD Presets */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[#70685E] uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                 1-Click Sample JD Presets:
               </span>
-              <span className="text-[10px] text-[#235E3B] font-mono">Click to populate JD &amp; calibrate level</span>
+              <span className="text-[10px] text-emerald-700 font-mono">Click to populate &amp; calibrate</span>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -586,11 +565,11 @@ export default function InterviewSetupPage() {
                   key={sample.id}
                   type="button"
                   onClick={() => handleApplySampleJD(sample)}
-                  className="px-2.5 py-1.5 rounded-md bg-[#FAF8F3] hover:bg-[#EAEFF5] border border-[#E5E0D5] hover:border-[#1A365D] text-left text-xs text-[#1F1B16] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-left text-xs text-slate-800 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                 >
-                  <Sparkles className="w-3 h-3 text-[#235E3B] shrink-0" />
+                  <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
                   <span className="font-medium">{sample.title}</span>
-                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-white text-[#70685E] border border-[#E5E0D5]">
+                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-white text-slate-500 border border-slate-200">
                     {sample.tag}
                   </span>
                 </button>
@@ -604,18 +583,18 @@ export default function InterviewSetupPage() {
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste key responsibilities, required skills (e.g. React, JavaScript, SQL, Python), or raw Job Description text here..."
-              rows={4}
-              className="w-full p-3 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-xs text-[#1F1B16] placeholder-[#70685E]/50 focus:outline-none focus:border-[#1A365D] transition-colors resize-none font-sans leading-relaxed"
+              rows={3}
+              className="w-full p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-colors resize-none font-sans leading-relaxed"
             />
 
             {/* Detected Tech Stack & Grounding Feedback */}
-            <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] space-y-2">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 font-semibold text-[#1F1B16]">
-                  <Code2 className="w-3.5 h-3.5 text-[#1A365D]" />
+                <div className="flex items-center gap-1.5 font-semibold text-slate-900">
+                  <Code2 className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Detected Competencies Grounded from JD:</span>
                 </div>
-                <span className="text-[11px] font-mono text-[#70685E]">
+                <span className="text-[11px] font-mono text-slate-500">
                   {detectedTech.length} skill{detectedTech.length === 1 ? '' : 's'} identified
                 </span>
               </div>
@@ -625,326 +604,170 @@ export default function InterviewSetupPage() {
                   {detectedTech.map((tech) => (
                     <span
                       key={tech}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EAEFF5] border border-[#D0DBE7] text-[#1A365D] text-[11px] font-medium font-mono"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-medium font-mono"
                     >
                       <span>{tech}</span>
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-[#70685E] italic">
+                <p className="text-[11px] text-slate-500 italic">
                   No specific keywords detected yet. Paste a JD or click a preset above, or click suggested chips below to ground:
                 </p>
               )}
 
               {/* Quick Tech Chip Inserters */}
-              <div className="pt-1.5 border-t border-[#E5E0D5]/70 flex items-center gap-1.5 flex-wrap text-[10px]">
-                <span className="text-[#70685E] font-medium">Quick Add to JD:</span>
+              <div className="pt-1.5 border-t border-slate-200/80 flex items-center gap-1.5 flex-wrap text-[10px]">
+                <span className="text-slate-500 font-medium">Quick Add to JD:</span>
                 {['React', 'JavaScript', 'Python', 'SQL', 'FastAPI', 'DSA', 'REST APIs', 'Git'].map((tech) => (
                   <button
                     key={tech}
                     type="button"
                     onClick={() => handleAddKeywordToJD(tech)}
-                    className="px-1.5 py-0.5 rounded bg-white hover:bg-[#EAEFF5] border border-[#E5E0D5] text-[#3B352E] font-mono transition-colors cursor-pointer"
+                    className="px-1.5 py-0.5 rounded bg-white hover:bg-indigo-50 border border-slate-200 text-slate-700 font-mono transition-colors cursor-pointer"
                   >
                     + {tech}
                   </button>
                 ))}
               </div>
             </div>
-
-            <div className="p-2.5 rounded-md bg-[#EBF4EE] border border-[#C2E0C6] text-[11px] text-[#235E3B] flex items-start gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <span>
-                <strong>Talent Shine Calibration Advantage:</strong> Grounding questions in the raw JD coordinates the AI interviewer to the candidate's exact experience level, preventing overly harsh system architecture questions for beginners.
-              </span>
-            </div>
           </div>
         </GlassCard>
 
-        {/* 5. Interview Mode Selection */}
-        <GlassCard className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-            <div className="w-8 h-8 rounded-md bg-[#FDF2E9] border border-[#F0D5C0] flex items-center justify-center text-[#9A421A]">
-              <Video className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-serif font-bold text-[#1F1B16]">V. Interview Mode</h3>
-              <p className="text-xs text-[#70685E]">Choose between written text, voice/video, or face-to-face AI</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-            {/* Text Interview */}
-            <div
-              onClick={() => setInterviewMode('text')}
-              className={`
-                p-4 rounded-md border cursor-pointer transition-all flex flex-col justify-between
-                ${interviewMode === 'text'
-                  ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
-                  : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                }
-              `}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-[#1A365D]" />
-                    <span className="text-sm font-serif font-bold text-[#1F1B16]">Written Text Mode</span>
-                  </div>
-                  {interviewMode === 'text' && <CheckCircle2 className="w-4 h-4 text-[#1A365D]" />}
-                </div>
-                <p className="text-xs text-[#70685E] leading-relaxed mt-2">
-                  Draft responses with real-time technical rubrics, reasoning feedback, and Coding Sandbox.
-                </p>
-              </div>
-              <div className="mt-3 pt-2 border-t border-[#E5E0D5]">
-                <Badge variant="navy" size="xs">KEYBOARD &amp; CODE</Badge>
-              </div>
-            </div>
-
-            {/* Standard Video Interview */}
-            <div
-              onClick={() => setInterviewMode('video')}
-              className={`
-                p-4 rounded-md border cursor-pointer transition-all flex flex-col justify-between
-                ${interviewMode === 'video'
-                  ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
-                  : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                }
-              `}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <Video className="w-4 h-4 text-[#8C6E54]" />
-                    <span className="text-sm font-serif font-bold text-[#1F1B16]">Video Interview</span>
-                  </div>
-                  {interviewMode === 'video' && <CheckCircle2 className="w-4 h-4 text-[#8C6E54]" />}
-                </div>
-                <p className="text-xs text-[#70685E] leading-relaxed mt-2">
-                  Uses webcam &amp; microphone. Analyzes speaking speed (WPM), clarity, and answer structure.
-                </p>
-              </div>
-              <div className="mt-3 pt-2 border-t border-[#E5E0D5]">
-                <Badge variant="bronze" size="xs">VIDEO &amp; AUDIO</Badge>
-              </div>
-            </div>
-
-            {/* Face-to-Face AI Chamber */}
-            <div
-              onClick={() => setInterviewMode('face_to_face')}
-              className={`
-                p-4 rounded-md border cursor-pointer transition-all flex flex-col justify-between relative overflow-hidden
-                ${interviewMode === 'face_to_face'
-                  ? 'bg-[#FFFDF9] border-[#1A365D] text-[#1F1B16] shadow-sm ring-2 ring-[#1A365D]'
-                  : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                }
-              `}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#235E3B]" />
-                    <span className="text-sm font-serif font-bold text-[#1F1B16]">Face-to-Face</span>
-                  </div>
-                  {interviewMode === 'face_to_face' && <CheckCircle2 className="w-4 h-4 text-[#235E3B]" />}
-                </div>
-                <p className="text-xs text-[#70685E] leading-relaxed mt-2">
-                  Live split-screen call with an interactive AI interviewer who speaks aloud and listens to verbal responses.
-                </p>
-              </div>
-              <div className="mt-3 pt-2 border-t border-[#E5E0D5] flex items-center justify-between">
-                <Badge variant="emerald" size="xs">INTERACTIVE AVATAR</Badge>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center gap-2 text-xs text-[#70685E]">
-            <Shield className="w-4 h-4 text-[#1A365D] shrink-0" />
-            <span>Data Privacy: Video and audio recordings stay local to your session. You can review or delete session records at any time.</span>
-          </div>
-        </GlassCard>
-
-        {/* Toggle Advanced Configuration Accordion */}
-        <div className="pt-2">
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* 4. ADVANCED OPTIONS ACCORDION                                 */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        <div className="pt-1">
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full py-3.5 px-4 rounded-md border border-[#D5CFBF] bg-[#FAF8F3] hover:bg-[#F2EFE9] text-xs font-semibold text-[#1A365D] flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+            className="w-full py-3 px-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-indigo-700 flex items-center justify-between transition-all cursor-pointer shadow-2xs"
           >
             <span className="flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-[#8C6E54]" />
+              <Briefcase className="w-4 h-4 text-slate-500" />
               <span>
                 {showAdvanced
                   ? 'Hide Advanced Customization Options'
-                  : 'Show Advanced Options (Target Employer Playbook, Custom Resume File, Question Count)'}
+                  : 'Show Advanced Options (Employer Playbook, Question Volume, Resume Document)'}
               </span>
             </span>
-            {showAdvanced ? <ChevronUp className="w-4 h-4 text-[#1A365D]" /> : <ChevronDown className="w-4 h-4 text-[#1A365D]" />}
+            {showAdvanced ? <ChevronUp className="w-4 h-4 text-indigo-600" /> : <ChevronDown className="w-4 h-4 text-indigo-600" />}
           </button>
         </div>
 
         {showAdvanced && (
-          <div className="space-y-6 pt-1 animate-in fade-in duration-200">
-            {/* 6. Company Playbook / Rubric Calibration */}
-            <GlassCard className="p-6 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-                <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
+          <div className="space-y-5 pt-1 animate-in fade-in duration-200">
+            {/* Company Playbook Dropdown */}
+            <GlassCard className="p-5 sm:p-6 space-y-4 bg-white shadow-xs">
+              <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <Briefcase className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">Target Employer Interview Playbook</h3>
-                  <p className="text-xs text-[#70685E]">Align the AI interviewer's questions and rubrics to specific company standards</p>
+                  <h3 className="text-base font-bold text-slate-900">Target Employer Interview Playbook</h3>
+                  <p className="text-xs text-slate-500">Align evaluation questions and rubric grading to specific corporate hiring bars</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-                {COMPANY_PLAYBOOKS.map((playbook) => (
-                  <div
-                    key={playbook.id}
-                    onClick={() => setCompanyPlaybook(playbook.id)}
-                    className={`
-                      p-4 rounded-md border cursor-pointer transition-all flex flex-col justify-between
-                      ${companyPlaybook === playbook.id
-                        ? 'bg-[#EAEFF5] border-[#1A365D] text-[#1F1B16] shadow-xs ring-1 ring-[#1A365D]'
-                        : 'bg-[#FFFDF9] border-[#E5E0D5] text-[#3B352E] hover:border-[#1A365D]'
-                      }
-                    `}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-serif font-bold text-[#1F1B16] truncate">{playbook.shortName}</span>
-                        <Badge variant={playbook.badgeVariant} size="sm">
-                          {playbook.badge}
-                        </Badge>
-                      </div>
-                      <p className="text-[11px] font-medium text-[#1A365D] mb-1">{playbook.tagline}</p>
-                      <p className="text-[11px] text-[#70685E] leading-relaxed line-clamp-2">{playbook.description}</p>
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-[#E5E0D5]/70 flex flex-wrap gap-1">
-                      {playbook.competencies.slice(0, 3).map((comp) => (
-                        <span key={comp.id} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#FAF8F3] border border-[#E5E0D5] text-[#70685E]">
-                          {comp.name}
-                        </span>
-                      ))}
-                      {playbook.competencies.length > 3 && (
-                        <span className="text-[9px] font-mono text-[#70685E] self-center">+{playbook.competencies.length - 3}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SelectDropdown
+                label="Employer Evaluation Framework"
+                value={companyPlaybook}
+                onChange={setCompanyPlaybook}
+                options={COMPANY_PLAYBOOKS.map(p => ({
+                  value: p.id,
+                  label: `${p.shortName} — ${p.tagline}`,
+                  badge: p.badge
+                }))}
+                icon={Briefcase}
+                helperText={COMPANY_PLAYBOOKS.find(p => p.id === companyPlaybook)?.description}
+              />
             </GlassCard>
 
-            {/* 7. Resume Document Upload */}
-            <GlassCard className="p-6 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[#E5E0D5] pb-3">
-                <div className="w-8 h-8 rounded-md bg-[#FAF8F3] border border-[#E5E0D5] flex items-center justify-center text-[#8C6E54]">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-serif font-bold text-[#1F1B16]">Resume Document Attachment</h3>
-                  <p className="text-xs text-[#70685E]">Upload your resume to tailor questions to your project history</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#70685E] mb-1.5">Resume File</label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
-                      handleResumeFile(e.dataTransfer.files[0]);
-                    }
-                  }}
-                  className={`border-2 border-dashed rounded-md p-4 text-center transition-all ${
-                    isDragging ? 'border-[#1A365D] bg-[#EAEFF5]' : 'border-[#E5E0D5] hover:border-[#1A365D] bg-[#FAF8F3]'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    id="resumeUpload"
-                    accept=".pdf,.doc,.docx,.txt"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <label htmlFor="resumeUpload" className="cursor-pointer block">
-                    <div className="w-9 h-9 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center mx-auto text-[#1A365D] mb-2">
-                      <Upload className="w-4 h-4" />
-                    </div>
-                    <p className="text-xs font-semibold text-[#1F1B16]">Select or drag resume document</p>
-                    <p className="text-[10px] text-[#70685E] mt-0.5">PDF or Word document up to 10MB</p>
-                  </label>
-                  {resumeError && (
-                    <div className="mt-2.5 p-2 rounded-md bg-[#FDF2E9] border border-[#F0D5C0] text-[11px] text-[#9A421A] text-left">
-                      {resumeError}
-                    </div>
-                  )}
-                  {resumeName && !resumeError && (
-                    <div className="mt-3 p-2 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] flex items-center justify-center gap-2 text-xs text-[#1A365D] font-mono">
-                      <FileCheck className="w-3.5 h-3.5 text-[#235E3B]" />
-                      <span className="truncate">{resumeName}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* 8. Session Length */}
-            <GlassCard className="p-6 space-y-4">
+            {/* Session Length / Question Volume (SegmentedControl) */}
+            <GlassCard className="p-5 sm:p-6 space-y-4 bg-white shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 font-sans">Session Length &amp; Question Volume</h3>
-                  <p className="text-xs text-slate-500 font-sans">Configure your target practice session question count</p>
+                  <h3 className="text-base font-bold text-slate-900">Session Length &amp; Question Volume</h3>
+                  <p className="text-xs text-slate-500">Target questions for this calibrated practice session</p>
                 </div>
               </div>
 
-              <div className="pt-1 max-w-sm">
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Question Volume</label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setTotalQuestions(5)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      totalQuestions === 5
-                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    Concise (5 Qs)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTotalQuestions(10)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      totalQuestions === 10
-                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    Exhaustive (10 Qs)
-                  </button>
+              <SegmentedControl
+                options={questionCountOptions}
+                value={totalQuestions}
+                onChange={setTotalQuestions}
+                ariaLabel="Session Question Volume"
+              />
+            </GlassCard>
+
+            {/* Resume File Upload Dropzone */}
+            <GlassCard className="p-5 sm:p-6 space-y-4 bg-white shadow-xs">
+              <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
+                  <FileText className="w-4 h-4" />
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1.5 font-sans">Target questions for this calibrated session</p>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Resume Document Attachment</h3>
+                  <p className="text-xs text-slate-500">Tailor oral questions to your verified past projects and work experience</p>
+                </div>
+              </div>
+
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+                    handleResumeFile(e.dataTransfer.files[0]);
+                  }
+                }}
+                className={`border-2 border-dashed rounded-xl p-4 text-center transition-all ${
+                  isDragging ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 hover:border-indigo-400 bg-slate-50/60'
+                }`}
+              >
+                <input
+                  type="file"
+                  id="resumeUpload"
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <label htmlFor="resumeUpload" className="cursor-pointer block">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-indigo-600 mb-2">
+                    <Upload className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-900">Select or drag resume document</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">PDF or Word document up to 10MB</p>
+                </label>
+                {resumeError && (
+                  <div className="mt-2.5 p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-700 text-left">
+                    {resumeError}
+                  </div>
+                )}
+                {resumeName && !resumeError && (
+                  <div className="mt-3 p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-center gap-2 text-xs text-indigo-700 font-mono">
+                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="truncate">{resumeName}</span>
+                  </div>
+                )}
               </div>
             </GlassCard>
           </div>
         )}
       </div>
 
-      {/* Footer Navigation */}
-      <div className="flex items-center justify-between pt-4 border-t border-[#E5E0D5]">
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* FOOTER NAVIGATION                                             */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
         <button
           type="button"
           onClick={() => navigate('/dashboard')}
-          className="text-xs font-semibold text-[#70685E] hover:text-[#1F1B16] transition-colors cursor-pointer"
+          className="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
         >
           Cancel &amp; Return to Dashboard
         </button>
@@ -954,11 +777,12 @@ export default function InterviewSetupPage() {
           size="lg"
           onClick={handleContinue}
           icon={ArrowRight}
-          className="px-8 text-sm cursor-pointer"
+          className="px-8 text-sm cursor-pointer shadow-md shadow-indigo-500/20"
         >
           Start Interview Practice →
         </GradientButton>
       </div>
+
     </div>
   );
 }

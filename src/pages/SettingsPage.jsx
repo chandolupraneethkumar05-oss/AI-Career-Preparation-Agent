@@ -21,6 +21,7 @@ import {
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
+import SegmentedControl from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
 import { useTheme } from '../context/ThemeContext';
@@ -320,48 +321,19 @@ export default function SettingsPage() {
             <Badge variant="navy" size="sm">4 Themes Available</Badge>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-            {availableThemes.map((thm) => {
-              const isSelected = activeTheme === thm.id;
-              return (
-                <div
-                  key={thm.id}
-                  onClick={() => changeTheme(thm.id)}
-                  className={`
-                    p-3.5 rounded-md border text-left cursor-pointer transition-all flex flex-col justify-between
-                    ${isSelected
-                      ? 'bg-[var(--theme-selected,#EAEFF5)] border-[var(--theme-primary,#1A365D)] ring-1 ring-[var(--theme-primary,#1A365D)] shadow-xs'
-                      : 'bg-[var(--theme-surface,#FFFDF9)] border-[var(--theme-border,#E5E0D5)] hover:border-[var(--theme-primary,#1A365D)]'
-                    }
-                  `}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-base">{thm.emoji}</span>
-                        <span className="text-sm font-bold font-serif text-[var(--theme-text,#1F1B16)]">{thm.name}</span>
-                      </div>
-                      {isSelected && (
-                        <CheckCircle2 className="w-4 h-4 text-[var(--theme-primary,#1A365D)]" />
-                      )}
-                    </div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--theme-bronze,#8C6E54)] block mb-1">
-                      {thm.badge}
-                    </span>
-                    <p className="text-[11px] text-[var(--theme-text-muted,#70685E)] leading-relaxed">
-                      {thm.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 pt-2 border-t border-[var(--theme-border,#E5E0D5)] flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.bg }} />
-                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.card }} />
-                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.primary }} />
-                    <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: thm.preview.secondary }} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="pt-1">
+            <SegmentedControl
+              options={availableThemes.map((thm) => ({
+                id: thm.id,
+                label: `${thm.emoji} ${thm.name}`,
+                badge: thm.badge,
+                description: thm.description
+              }))}
+              value={activeTheme}
+              onChange={changeTheme}
+              dynamicHint={(val, opt) => opt?.description}
+              ariaLabel="Visual appearance theme selector"
+            />
           </div>
         </GlassCard>
 

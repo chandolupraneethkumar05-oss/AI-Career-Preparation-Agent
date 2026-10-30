@@ -19,6 +19,7 @@ import {
 import PerformanceChart from '../components/PerformanceChart';
 import ProgressBar from '../components/ProgressBar';
 import Badge from '../components/Badge';
+import SegmentedControl from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { activityService } from '../utils/activityService';
 import { storageService } from '../utils/storage/storageService';
@@ -154,45 +155,18 @@ export default function ProgressPage() {
         </div>
 
         {/* 3-Tab Segmented Control */}
-        <div className="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => handleTabChange('readiness')}
-            className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'readiness'
-                ? 'bg-white text-slate-900 shadow-xs font-bold'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Readiness &amp; Trends</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange('weekly')}
-            className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'weekly'
-                ? 'bg-white text-slate-900 shadow-xs font-bold'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Weekly Deep-Dive</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange('milestones')}
-            className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'milestones'
-                ? 'bg-white text-slate-900 shadow-xs font-bold'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" />
-            <span>Milestones &amp; Badges</span>
-          </button>
+        <div className="self-start sm:self-auto">
+          <SegmentedControl
+            options={[
+              { id: 'readiness', label: 'Readiness & Trends', icon: TrendingUp },
+              { id: 'weekly', label: 'Weekly Deep-Dive', icon: Calendar },
+              { id: 'milestones', label: 'Milestones & Badges', icon: Award }
+            ]}
+            value={activeTab}
+            onChange={handleTabChange}
+            fullWidth={false}
+            ariaLabel="Progress hub tabs"
+          />
         </div>
       </div>
 
