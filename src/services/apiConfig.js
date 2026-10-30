@@ -87,3 +87,26 @@ export async function authenticatedFetch(url, options = {}) {
 
   return response;
 }
+
+
+/**
+ * Resolves the absolute WebSocket URL matching current origin or VITE_API_URL.
+ */
+export function getWebSocketUrl(path) {
+  const normPath = path.startsWith('/') ? path : `/${path}`;
+  if (typeof window === 'undefined') {
+    return `ws://127.0.0.1:8000/api${normPath}`;
+  }
+
+  // If API_BASE_URL is relative (e.g. '/api'), use current window location
+  if (API_BASE_URL.startsWith('/')) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}${API_BASE_URL}${normPath}`;
+  }
+
+  // If API_BASE_URL is absolute
+  const parsed = new URL(API_BASE_URL);
+  const protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+  const basePath = parsed.pathname.replace(/\/+$/, '');
+  return `${protocol}//${parsed.host}${basePath}${normPath}`;
+}

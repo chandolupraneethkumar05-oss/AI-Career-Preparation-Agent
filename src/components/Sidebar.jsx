@@ -10,7 +10,8 @@ import {
   ChevronLeft, 
   ChevronRight, 
   LogOut, 
-  X 
+  X,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,6 +26,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/interview-setup', label: 'Mock Interview', icon: Mic },
         { to: '/skill-arena', label: 'Skill Arena & Daily', icon: Code2 },
+        { to: '/peer-room', label: 'Peer Chamber', icon: Users },
       ]
     },
     {

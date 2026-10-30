@@ -44,6 +44,7 @@ import { useInterview } from '../context/InterviewContext';
 import { useAuth } from '../context/AuthContext';
 import { interviewApi } from '../services/interviewApi';
 import MarqueeBanner from '../components/MarqueeBanner';
+import ReverseInterviewWorkspace from '../components/ReverseInterviewWorkspace';
 
 export default function MockInterviewPage() {
   const navigate = useNavigate();
@@ -813,6 +814,18 @@ export default function MockInterviewPage() {
     // 4. Complete session and calculate final aggregates
     await completeInterview();
   };
+
+  // Reverse Mock Interview Mode (Candidate as Interviewer)
+  if (setup.interviewMode === 'reverse_mock') {
+    return (
+      <div className="max-w-7xl mx-auto py-6 px-3 sm:px-6">
+        <ReverseInterviewWorkspace
+          targetRole={setup.targetRole || 'Software Engineer'}
+          difficulty={setup.difficulty || 'Intermediate'}
+        />
+      </div>
+    );
+  }
 
   // Loading state
   if (session.isLoading || (session.active && session.questions.length === 0)) {

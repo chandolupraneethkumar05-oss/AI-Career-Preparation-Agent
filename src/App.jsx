@@ -22,6 +22,7 @@ const ATSScannerPage = lazy(() => import('./pages/ATSScannerPage'));
 const SkillArenaPage = lazy(() => import('./pages/SkillArenaPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const PeerInterviewRoomPage = lazy(() => import('./pages/PeerInterviewRoomPage'));
 
 export default function App() {
   return (
@@ -35,6 +36,24 @@ export default function App() {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
+
+                {/* Immersive Full-Screen Peer Collaborative Video Chamber */}
+                <Route
+                  path="/peer-room"
+                  element={
+                    <ProtectedRoute>
+                      <PeerInterviewRoomPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/peer-room/:roomId"
+                  element={
+                    <ProtectedRoute>
+                      <PeerInterviewRoomPage />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Authenticated Application Shell */}
                 <Route

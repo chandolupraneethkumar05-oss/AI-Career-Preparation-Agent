@@ -23,6 +23,7 @@ from .routes.weekly_reports import router as weekly_reports_router
 from .routes.goals import router as goals_router
 from .routes.feedback import router as feedback_router
 from .routes.execution import router as execution_router
+from .routes.peer_room import router as peer_room_router
 
 api_router = APIRouter(prefix="/api")
 
@@ -43,6 +44,7 @@ api_router.include_router(weekly_reports_router)
 api_router.include_router(goals_router)
 api_router.include_router(feedback_router)
 api_router.include_router(execution_router)
+api_router.include_router(peer_room_router)
 
 # Register existing proactive reminder & resume parsing endpoints
 api_router.include_router(reminders_router)

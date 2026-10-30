@@ -13,6 +13,7 @@ import {
   Briefcase,
   Sparkles,
   Users,
+  UserCheck,
   ChevronDown,
   ChevronUp,
   Zap,
@@ -30,6 +31,7 @@ import { COMPANY_PLAYBOOKS } from '../data/companyPlaybooks';
 import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
 import { profileApi } from '../services/profileApi';
+import { reverseInterviewApi } from '../services/reverseInterviewApi';
 
 const FAST_PRESETS = [
   {
@@ -216,6 +218,7 @@ export default function InterviewSetupPage() {
   const [resumeName, setResumeName] = useState(setup.resumeFileName || 'Candidate_Resume.pdf');
   const [jobDescription, setJobDescription] = useState(setup.jobDescription || '');
   const [totalQuestions, setTotalQuestions] = useState(setup.totalQuestions || 5);
+  const [joinRoomCode, setJoinRoomCode] = useState('');
 
   const detectedTech = useMemo(() => extractDetectedTech(jobDescription), [jobDescription]);
 
@@ -280,7 +283,7 @@ export default function InterviewSetupPage() {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const finalRole = targetRole === 'Custom' && customRole.trim() ? customRole : targetRole;
     updateUser({ targetRole: finalRole, role: finalRole });
     updateSetup({
@@ -299,7 +302,30 @@ export default function InterviewSetupPage() {
     if (user?.id) {
       profileApi.updateProfile({ target_role: finalRole, role: finalRole }, user.id).catch(() => {});
     }
+
+    if (interviewMode === 'peer_chamber') {
+      try {
+        const res = await reverseInterviewApi.createPeerRoom(finalRole, difficulty, interviewType);
+        navigate(`/peer-room/${res.room_id}?role=interviewer`);
+        return;
+      } catch (err) {
+        navigate('/peer-room');
+        return;
+      }
+    }
+
+    if (interviewMode === 'reverse_mock') {
+      navigate('/mock-interview');
+      return;
+    }
+
     navigate('/interview-ready');
+  };
+
+  const handleJoinExistingRoom = () => {
+    if (!joinRoomCode.trim()) return;
+    const clean = joinRoomCode.trim().toUpperCase();
+    navigate(`/peer-room/${clean}?role=candidate`);
   };
 
   // Predefined role dropdown options
@@ -335,7 +361,7 @@ export default function InterviewSetupPage() {
     },
     {
       id: 'video',
-      label: 'Video Interview',
+      label: 'Video AI',
       icon: Video,
       badge: 'Audio',
       description: 'Uses webcam & microphone. Evaluates speech pacing (WPM), articulation, and answer structure.'
@@ -346,6 +372,20 @@ export default function InterviewSetupPage() {
       icon: Users,
       badge: 'Avatar',
       description: 'Split-screen video call with an interactive AI interviewer who speaks aloud with synced speech.'
+    },
+    {
+      id: 'peer_chamber',
+      label: 'Peer Chamber',
+      icon: Users,
+      badge: '2-Person',
+      description: 'Live WebRTC video between two students. One interviews, one answers; AI proctors & evaluates both.'
+    },
+    {
+      id: 'reverse_mock',
+      label: 'Reverse (Interviewer)',
+      icon: UserCheck,
+      badge: 'Lead',
+      description: 'You act as the interviewer testing an AI candidate (Alex). Tests your question clarity and mentorship.'
     }
   ];
 
@@ -515,6 +555,64 @@ export default function InterviewSetupPage() {
                 onChange={setInterviewMode}
                 ariaLabel="Interview Delivery Mode"
               />
+
+              {interviewMode === 'peer_chamber' && (
+                <div className="mt-3 p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-indigo-600" />
+                      <span className="text-xs font-bold text-indigo-950">Peer-to-Peer Video Chamber</span>
+                    </div>
+                    <Badge variant="indigo" size="xs">100% FREE WEBRTC</Badge>
+                  </div>
+                  <p className="text-xs text-indigo-900 leading-relaxed">
+                    Practice with a classmate! The student interviewer receives a secret AI teleprompter with calibrated questions, expected criteria, and probing follow-ups. At session end, AI delivers a joint 360° scorecard.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleContinue}
+                      className="flex-1 py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Host New Room (As Interviewer)</span>
+                    </button>
+
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={joinRoomCode}
+                        onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
+                        placeholder="ROOM-XXXXXX"
+                        className="w-32 px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 uppercase"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleJoinExistingRoom}
+                        disabled={!joinRoomCode.trim()}
+                        className="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        Join Room
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {interviewMode === 'reverse_mock' && (
+                <div className="mt-3 p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-amber-700" />
+                      <span className="text-xs font-bold text-amber-950">Reverse Mock Interview (Be The Interviewer)</span>
+                    </div>
+                    <Badge variant="amber" size="xs">TECH LEAD MODE</Badge>
+                  </div>
+                  <p className="text-xs text-amber-900 leading-relaxed">
+                    You take the interviewer seat and evaluate AI applicant <strong>Alex Rivera</strong>. Challenge Alex on algorithmic complexity, spot naive solutions, and provide constructive guidance. Your interviewing and leadership skills will be graded at session end.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </GlassCard>
