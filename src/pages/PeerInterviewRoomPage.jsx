@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Brain,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
@@ -38,7 +39,8 @@ export default function PeerInterviewRoomPage() {
   const { user } = useAuth();
 
   const roleParam = searchParams.get('role') || 'candidate';
-  const [roomId, setRoomId] = useState(urlRoomId || 'ROOM-DEMO1');
+  const rawRoomId = (urlRoomId || 'ROOM-DEMO1').toUpperCase().trim();
+  const [roomId, setRoomId] = useState(rawRoomId);
   const [assignedRole, setAssignedRole] = useState(roleParam);
   const [roomInfo, setRoomInfo] = useState(null);
 
@@ -71,8 +73,10 @@ export default function PeerInterviewRoomPage() {
   // Timer & Modals
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isCopiedLink, setIsCopiedLink] = useState(false);
+  const [isCopiedCode, setIsCopiedCode] = useState(false);
   const [finalReport, setFinalReport] = useState(null);
   const [isConcluding, setIsConcluding] = useState(false);
+  const fallbackReportTimerRef = useRef(null);
 
   // Speech Recognition Ref
   const speechRecognitionRef = useRef(null);
@@ -139,14 +143,17 @@ export default function PeerInterviewRoomPage() {
 
   // Connect to WebRTC & Signaling Service
   useEffect(() => {
+    let active = true;
+
     const initRoom = async () => {
-      const currentRoomId = urlRoomId || roomId;
+      const currentRoomId = (urlRoomId || 'ROOM-DEMO1').toUpperCase().trim();
       setRoomId(currentRoomId);
 
       // Start local webcam & microphone
       const stream = await peerRoomService.startMedia(true, true);
-      if (localVideoRef.current && stream) {
+      if (active && localVideoRef.current && stream) {
         localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => {});
       }
 
       // Connect signaling WebSocket
@@ -157,15 +164,18 @@ export default function PeerInterviewRoomPage() {
         user?.id,
         {
           joined: (data) => {
+            if (!active) return;
             setAssignedRole(data.role);
             setRoomInfo(data.room);
           },
           peerJoined: (data) => {
+            if (!active) return;
             setPeerConnected(true);
             setPeerName(data.peerName || 'Remote Peer');
             setConnectionState('connected');
           },
           peerLeft: () => {
+            if (!active) return;
             setPeerConnected(false);
             setConnectionState('peer_disconnected');
             if (remoteVideoRef.current) {
@@ -173,48 +183,64 @@ export default function PeerInterviewRoomPage() {
             }
           },
           remoteStream: (stream) => {
+            if (!active) return;
             if (remoteVideoRef.current && stream) {
               remoteVideoRef.current.srcObject = stream;
+              remoteVideoRef.current.play().catch(() => {});
               setPeerConnected(true);
               setConnectionState('connected');
             }
           },
           localStream: (stream) => {
+            if (!active) return;
             if (localVideoRef.current && stream) {
               localVideoRef.current.srcObject = stream;
+              localVideoRef.current.play().catch(() => {});
             }
           },
           peerMediaState: (state) => {
+            if (!active) return;
             setPeerMediaState((prev) => ({ ...prev, ...state }));
           },
           aiQuestionSuggested: (question) => {
+            if (!active) return;
             setSuggestedQuestion(question);
             setIsGeneratingQuestion(false);
           },
           activeQuestion: (q) => {
+            if (!active) return;
             setActiveQuestion(q);
           },
           transcriptUpdate: (utterance) => {
+            if (!active) return;
             setTranscript((prev) => [
               ...prev,
               { speaker: utterance.speaker, text: utterance.text, time: new Date().toLocaleTimeString() }
             ]);
           },
           aiCopilotHint: (hint) => {
+            if (!active) return;
             setCopilotHint(hint);
           },
           codeSync: (code) => {
+            if (!active) return;
             setSharedCode(code);
           },
           noteSaved: () => {
+            if (!active) return;
             setNoteSavedFeedback(true);
             setTimeout(() => setNoteSavedFeedback(false), 2500);
           },
           sessionConcluded: (report) => {
+            if (!active) return;
+            if (fallbackReportTimerRef.current) {
+              clearTimeout(fallbackReportTimerRef.current);
+            }
             setFinalReport(report);
             setIsConcluding(false);
           },
           connectionState: (state) => {
+            if (!active) return;
             setConnectionState(state);
             if (state === 'connected') setPeerConnected(true);
           }
@@ -230,24 +256,32 @@ export default function PeerInterviewRoomPage() {
     });
 
     return () => {
+      active = false;
+      if (fallbackReportTimerRef.current) {
+        clearTimeout(fallbackReportTimerRef.current);
+      }
       if (speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.stop();
-        } catch {
-          // ignore
-        }
+        } catch (_) {}
       }
       peerRoomService.disconnect();
     };
   }, [urlRoomId, roleParam, user, setupSpeechRecognition]);
 
-  // Copy Room Link
+  // Copy Room Link & Code
   const handleCopyLink = () => {
     const oppositeRole = assignedRole === 'interviewer' ? 'candidate' : 'interviewer';
     const link = `${window.location.origin}/peer-room/${roomId}?role=${oppositeRole}`;
     navigator.clipboard.writeText(link);
     setIsCopiedLink(true);
     setTimeout(() => setIsCopiedLink(false), 2500);
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(roomId);
+    setIsCopiedCode(true);
+    setTimeout(() => setIsCopiedCode(false), 2500);
   };
 
   // Toggle Media
@@ -293,19 +327,45 @@ export default function PeerInterviewRoomPage() {
     peerRoomService.sendCodeSync(newCode);
   };
 
-  // Conclude Session
-  const handleConcludeSession = () => {
+  // Conclude Session with Guaranteed Non-Hanging Fallback
+  const handleConcludeSession = async () => {
+    if (isConcluding) return;
     setIsConcluding(true);
+
+    // 1. Send WebSocket event
     peerRoomService.concludeSession();
+
+    // 2. Guaranteed 4-second HTTP fallback so it NEVER hangs indefinitely
+    fallbackReportTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await reverseInterviewApi.getPeerReport(roomId);
+        if (res.report) {
+          setFinalReport(res.report);
+          setIsConcluding(false);
+        }
+      } catch (err) {
+        console.warn('Fallback report fetch fallback:', err);
+        setIsConcluding(false);
+      }
+    }, 4500);
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans select-none">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 1. TOP HEADER & HUD BAR                                       */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <header className="h-14 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md px-4 flex items-center justify-between shrink-0 z-30">
+      <header className="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 flex items-center justify-between shrink-0 z-30">
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/interview-setup')}
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+            title="Back to Setup"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
               <Users className="w-4 h-4" />
@@ -313,13 +373,16 @@ export default function PeerInterviewRoomPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm tracking-tight text-white">Peer Chamber</span>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
-                  {roomId}
-                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyCode}
+                  className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-300 flex items-center gap-1 cursor-pointer"
+                  title="Click to copy room code"
+                >
+                  <span>{roomId}</span>
+                  {isCopiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                </button>
               </div>
-              <p className="text-[10px] text-slate-400 hidden sm:block">
-                WebRTC Direct Encrypted Video • AI Proctor Active
-              </p>
             </div>
           </div>
 
@@ -327,11 +390,14 @@ export default function PeerInterviewRoomPage() {
             type="button"
             onClick={handleCopyLink}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-700/50 text-indigo-300 text-xs transition-colors cursor-pointer"
-            title="Copy invite link for peer"
+            title="Copy invite link for your peer"
           >
             {isCopiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span className="text-[11px] font-medium">
-              {isCopiedLink ? 'Invite Copied!' : 'Copy Peer Invite'}
+            <span className="text-[11px] font-medium hidden sm:inline">
+              {isCopiedLink ? 'Invite Copied!' : 'Copy Peer Invite Link'}
+            </span>
+            <span className="text-[11px] font-medium sm:hidden">
+              {isCopiedLink ? 'Copied' : 'Invite'}
             </span>
           </button>
         </div>
@@ -348,7 +414,7 @@ export default function PeerInterviewRoomPage() {
           </div>
         </div>
 
-        {/* Right: Connection State & Exit */}
+        {/* Right: Connection State & End Button */}
         <div className="flex items-center gap-2">
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
@@ -358,7 +424,7 @@ export default function PeerInterviewRoomPage() {
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${peerConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-            <span>{peerConnected ? 'Direct P2P 60fps' : 'Waiting for Peer...'}</span>
+            <span>{peerConnected ? 'Live P2P Connected' : 'Waiting for Peer...'}</span>
           </div>
 
           <button
@@ -378,7 +444,7 @@ export default function PeerInterviewRoomPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* LEFT / CENTER: Split-Screen Video Chamber */}
-        <div className="flex-1 p-3 flex flex-col gap-3 min-h-[380px] lg:min-h-0 bg-slate-950/50">
+        <div className="flex-1 p-3 flex flex-col gap-3 min-h-[380px] lg:min-h-0 bg-slate-950/70">
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 relative">
             {/* Remote Peer Video Container */}
             <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg group">
@@ -396,12 +462,12 @@ export default function PeerInterviewRoomPage() {
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-white">
-                      {peerConnected ? peerName : 'Waiting for Peer to Join...'}
+                      {peerConnected ? peerName : 'Waiting for Peer to Connect...'}
                     </h4>
                     <p className="text-xs text-slate-400 max-w-xs mt-1">
                       {peerConnected
-                        ? 'Peer has disabled camera or audio-only mode is active.'
-                        : 'Share the invite link at top to connect with your peer.'}
+                        ? 'Peer has muted video or camera is disabled.'
+                        : `Share the Room Code (${roomId}) or Invite Link with a classmate to connect.`}
                     </p>
                   </div>
                 </div>

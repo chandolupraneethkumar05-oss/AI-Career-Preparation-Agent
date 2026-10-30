@@ -2,7 +2,7 @@
  * Peer-to-Peer Collaborative Video Chamber Service
  * AI Career Preparation Agent
  *
- * Implements native browser WebRTC RTCPeerConnection streaming using free Google STUN,
+ * Implements native browser WebRTC RTCPeerConnection streaming using free Google & Twilio STUN,
  * resilient WebSocket signaling to the FastAPI gateway, local media track controls,
  * and live AI Proctor events. Zero paid API dependencies ($0.00 cost).
  */
@@ -13,7 +13,10 @@ const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
   ]
 };
 
@@ -28,27 +31,31 @@ export class PeerRoomService {
     this.role = null;
     this.userName = null;
     this.userId = null;
+    this.clientId = `client_${Math.random().toString(36).substring(2, 9)}`;
     this.callbacks = {};
     this.isInitiator = false;
     this.iceCandidateQueue = [];
+    this.hasRemoteDescription = false;
   }
 
   /**
    * Initializes the WebSocket signaling channel and binds event handlers.
    */
   async connect(roomId, role, userName, userId, callbacks = {}) {
-    this.roomId = roomId;
+    this.roomId = (roomId || '').toUpperCase().trim();
     this.role = role || 'candidate';
     this.userName = userName || (role === 'interviewer' ? 'Interviewer' : 'Candidate');
-    this.userId = userId || `usr_${Math.random().toString(36).substring(2, 9)}`;
+    this.userId = userId || this.clientId;
     this.callbacks = callbacks;
 
-    // Build WebSocket URL
-    // In local dev, getWebSocketUrl('/ws/peer-room/' + roomId) proxies through Vite to 127.0.0.1:8000
-    const wsUrl = getWebSocketUrl(`/ws/peer-room/${roomId}`);
+    const wsUrl = getWebSocketUrl(`/ws/peer-room/${this.roomId}`);
 
     return new Promise((resolve, reject) => {
       try {
+        if (this.ws) {
+          try { this.ws.close(); } catch (_) {}
+        }
+
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
@@ -57,7 +64,8 @@ export class PeerRoomService {
             type: 'join',
             role: this.role,
             userName: this.userName,
-            userId: this.userId
+            userId: this.userId,
+            clientId: this.clientId
           }));
           resolve(true);
         };
@@ -95,13 +103,27 @@ export class PeerRoomService {
         video: video ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } : false,
         audio: audio ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true } : false
       });
+
+      // If peer connection already instantiated, attach tracks immediately
+      if (this.peerConnection) {
+        this._attachLocalTracks(this.peerConnection);
+      }
+
       this._emit('localStream', this.localStream);
+
+      // Signal ready state to signaling hub
+      this._send({ type: 'peer_ready', clientId: this.clientId });
+
       return this.localStream;
     } catch (err) {
-      console.warn('[PeerRoomService] Media device capture error, falling back to audio-only or mute:', err);
+      console.warn('[PeerRoomService] Camera/Mic capture error, falling back to audio only or mute:', err);
       try {
         this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        if (this.peerConnection) {
+          this._attachLocalTracks(this.peerConnection);
+        }
         this._emit('localStream', this.localStream);
+        this._send({ type: 'peer_ready', clientId: this.clientId });
         return this.localStream;
       } catch (fallbackErr) {
         this._emit('error', { type: 'media_error', error: fallbackErr });
@@ -111,25 +133,44 @@ export class PeerRoomService {
   }
 
   /**
-   * Initializes or gets the WebRTC RTCPeerConnection instance.
+   * Attaches local audio and video tracks to the peer connection safely without duplicates.
+   */
+  _attachLocalTracks(pc) {
+    if (!this.localStream || !pc) return;
+    const senders = pc.getSenders();
+    this.localStream.getTracks().forEach((track) => {
+      const alreadyAdded = senders.some((s) => s.track && s.track.id === track.id);
+      if (!alreadyAdded) {
+        pc.addTrack(track, this.localStream);
+      }
+    });
+  }
+
+  /**
+   * Initializes or returns the WebRTC RTCPeerConnection instance.
    */
   _ensurePeerConnection() {
-    if (this.peerConnection) return this.peerConnection;
+    if (this.peerConnection) {
+      this._attachLocalTracks(this.peerConnection);
+      return this.peerConnection;
+    }
 
     const pc = new RTCPeerConnection(ICE_SERVERS);
     this.peerConnection = pc;
 
     // Attach local tracks
-    if (this.localStream) {
-      this.localStream.getTracks().forEach((track) => {
-        pc.addTrack(track, this.localStream);
-      });
-    }
+    this._attachLocalTracks(pc);
 
-    // Remote track arrived
+    // Remote stream arrives
     pc.ontrack = (event) => {
       if (event.streams && event.streams[0]) {
         this.remoteStream = event.streams[0];
+        this._emit('remoteStream', this.remoteStream);
+      } else if (event.track) {
+        if (!this.remoteStream) {
+          this.remoteStream = new MediaStream();
+        }
+        this.remoteStream.addTrack(event.track);
         this._emit('remoteStream', this.remoteStream);
       }
     };
@@ -137,22 +178,44 @@ export class PeerRoomService {
     // ICE Candidate discovered locally -> relay via WebSocket to peer
     pc.onicecandidate = (event) => {
       if (event.candidate && this.ws && this.ws.readyState === WebSocket.OPEN) {
+        const candidatePayload = event.candidate.toJSON ? event.candidate.toJSON() : event.candidate;
         this.ws.send(JSON.stringify({
           type: 'signal_ice',
-          candidate: event.candidate
+          candidate: candidatePayload
         }));
       }
     };
 
     pc.oniceconnectionstatechange = () => {
       this._emit('iceState', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        this._emit('connectionState', 'connected');
+      }
     };
 
     pc.onconnectionstatechange = () => {
       this._emit('connectionState', pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        // Attempt ICE restart
+        this._restartIce();
+      }
     };
 
     return pc;
+  }
+
+  /**
+   * Restarts ICE negotiation on connection drops.
+   */
+  async _restartIce() {
+    if (!this.peerConnection || !this.isInitiator) return;
+    try {
+      const offer = await this.peerConnection.createOffer({ iceRestart: true });
+      await this.peerConnection.setLocalDescription(offer);
+      this._send({ type: 'signal_offer', sdp: offer });
+    } catch (err) {
+      console.warn('[PeerRoomService] ICE restart notice:', err);
+    }
   }
 
   /**
@@ -161,6 +224,8 @@ export class PeerRoomService {
   async _createAndSendOffer() {
     try {
       const pc = this._ensurePeerConnection();
+      this._attachLocalTracks(pc);
+
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true
@@ -194,6 +259,12 @@ export class PeerRoomService {
         this._emit('peerJoined', data);
         break;
 
+      case 'peer_ready':
+        // Second peer is ready, initiate offer
+        this.isInitiator = true;
+        await this._createAndSendOffer();
+        break;
+
       case 'peer_left':
         this._emit('peerLeft', data);
         if (this.remoteStream) {
@@ -209,12 +280,18 @@ export class PeerRoomService {
 
       case 'signal_offer':
         try {
+          this._attachLocalTracks(pc);
           await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-          // Drain any queued ICE candidates
+          this.hasRemoteDescription = true;
+
+          // Drain queued candidates
           while (this.iceCandidateQueue.length > 0) {
             const cand = this.iceCandidateQueue.shift();
-            await pc.addIceCandidate(cand);
+            try {
+              await pc.addIceCandidate(cand);
+            } catch (_) {}
           }
+
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
 
@@ -232,9 +309,13 @@ export class PeerRoomService {
       case 'signal_answer':
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+          this.hasRemoteDescription = true;
+
           while (this.iceCandidateQueue.length > 0) {
             const cand = this.iceCandidateQueue.shift();
-            await pc.addIceCandidate(cand);
+            try {
+              await pc.addIceCandidate(cand);
+            } catch (_) {}
           }
         } catch (err) {
           console.error('[PeerRoomService] Error handling answer:', err);
@@ -243,16 +324,16 @@ export class PeerRoomService {
 
       case 'signal_ice':
         try {
-          if (data.candidate) {
+          if (data.candidate && data.candidate.candidate) {
             const candidate = new RTCIceCandidate(data.candidate);
-            if (pc.remoteDescription && pc.remoteDescription.type) {
+            if (this.hasRemoteDescription && pc.remoteDescription && pc.remoteDescription.type) {
               await pc.addIceCandidate(candidate);
             } else {
               this.iceCandidateQueue.push(candidate);
             }
           }
         } catch (err) {
-          console.error('[PeerRoomService] Error adding ICE candidate:', err);
+          console.warn('[PeerRoomService] ICE candidate parse notice:', err);
         }
         break;
 
@@ -411,11 +492,12 @@ export class PeerRoomService {
       this.peerConnection = null;
     }
     if (this.ws) {
-      this.ws.close();
+      try { this.ws.close(); } catch (_) {}
       this.ws = null;
     }
     this.remoteStream = null;
     this.iceCandidateQueue = [];
+    this.hasRemoteDescription = false;
   }
 }
 

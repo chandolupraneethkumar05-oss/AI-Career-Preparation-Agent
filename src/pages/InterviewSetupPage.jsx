@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Target,
+  TrendingUp,
   Layers,
   FileText,
   Upload,
@@ -24,7 +25,6 @@ import {
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
-import SegmentedControl from '../components/SegmentedControl';
 import SelectDropdown from '../components/SelectDropdown';
 import { MOCK_ROLES, INTERVIEW_TYPES, DIFFICULTY_LEVELS } from '../data/mockData';
 import { COMPANY_PLAYBOOKS } from '../data/companyPlaybooks';
@@ -334,65 +334,30 @@ export default function InterviewSetupPage() {
     { value: 'Custom', label: '+ Other / Custom Target Role...' }
   ];
 
-  // Difficulty options for SegmentedControl
-  const difficultyOptions = DIFFICULTY_LEVELS.map(d => ({
-    id: d.id,
-    label: d.label,
-    description: d.id === 'Beginner'
-      ? `${d.desc} — Direct logic, foundational concepts & encouraging rubric.`
-      : d.desc
-  }));
-
-  // Interview Focus Type options for SegmentedControl
-  const interviewTypeOptions = INTERVIEW_TYPES.map(t => ({
-    id: t.id,
-    label: t.label,
-    description: t.desc
-  }));
-
-  // Interview Mode options for SegmentedControl
-  const interviewModeOptions = [
-    {
-      id: 'text',
-      label: 'Written Text',
-      icon: MessageSquare,
-      badge: 'Code',
-      description: 'Draft responses with real-time technical rubrics, reasoning feedback, and Live Coding Sandbox.'
-    },
-    {
-      id: 'video',
-      label: 'Video AI',
-      icon: Video,
-      badge: 'Audio',
-      description: 'Uses webcam & microphone. Evaluates speech pacing (WPM), articulation, and answer structure.'
-    },
-    {
-      id: 'face_to_face',
-      label: 'Face-to-Face AI',
-      icon: Users,
-      badge: 'Avatar',
-      description: 'Split-screen video call with an interactive AI interviewer who speaks aloud with synced speech.'
-    },
-    {
-      id: 'peer_chamber',
-      label: 'Peer Chamber',
-      icon: Users,
-      badge: '2-Person',
-      description: 'Live WebRTC video between two students. One interviews, one answers; AI proctors & evaluates both.'
-    },
-    {
-      id: 'reverse_mock',
-      label: 'Reverse (Interviewer)',
-      icon: UserCheck,
-      badge: 'Lead',
-      description: 'You act as the interviewer testing an AI candidate (Alex). Tests your question clarity and mentorship.'
-    }
+  // Unified dropdown options replacing cluttered multiple-selection box lists
+  const difficultyDropdownOptions = [
+    { value: 'Beginner', label: 'Beginner (Campus / Junior 0-2 Yrs) — Direct logic, core syntax & foundational concepts' },
+    { value: 'Intermediate', label: 'Intermediate (Mid-Level 2-4 Yrs) — Component architecture, algorithmic trade-offs & optimization' },
+    { value: 'Advanced', label: 'Advanced (Senior 4+ Yrs) — Distributed scalability, high-concurrency locking & architectural trade-offs' }
   ];
 
-  // Question count options for SegmentedControl
-  const questionCountOptions = [
-    { id: 5, label: 'Concise (5 Questions)', badge: '~15 Mins', description: 'Quick calibrated session for daily practice & consistency.' },
-    { id: 10, label: 'Exhaustive (10 Questions)', badge: '~30 Mins', description: 'Comprehensive technical and architectural assessment across all competency axes.' }
+  const interviewTypeDropdownOptions = [
+    { value: 'Technical', label: 'Technical & Coding (Algorithms, Data Structures & Clean Code)' },
+    { value: 'System Design', label: 'System Design (Microservices, Caching, Databases & Distributed SLAs)' },
+    { value: 'Behavioral', label: 'STAR Behavioral & Leadership (Conflict Resolution, Cross-Functional Ownership)' }
+  ];
+
+  const deliveryModeDropdownOptions = [
+    { value: 'text', label: '📝 Written Text & Code Sandbox (Draft answers with live compiler & real-time rubrics)' },
+    { value: 'video', label: '📹 Video AI Mock (Webcam & AI speech pacing analysis)' },
+    { value: 'face_to_face', label: '👤 Face-to-Face AI (Split-screen video call with speaking avatar)' },
+    { value: 'peer_chamber', label: '👥 Peer Collaborative Chamber (2-Person live WebRTC video with AI proctor)' },
+    { value: 'reverse_mock', label: '🎓 Reverse Mock Interview (You interview AI applicant Alex Rivera)' }
+  ];
+
+  const questionVolumeDropdownOptions = [
+    { value: 5, label: 'Concise (5 Questions — ~15 Mins quick calibrated session)' },
+    { value: 10, label: 'Exhaustive (10 Questions — ~30 Mins comprehensive drill)' }
   ];
 
   return (
@@ -518,42 +483,35 @@ export default function InterviewSetupPage() {
               helperText="Our Gemini AI models calibrate question complexity, tech stacks, and grading rubrics according to this role."
             />
 
-            {/* Difficulty Calibration (Segmented Radio Group) */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                II. Seniority &amp; Difficulty Level
-              </label>
-              <SegmentedControl
-                options={difficultyOptions}
-                value={difficulty}
-                onChange={setDifficulty}
-                ariaLabel="Difficulty calibration"
-              />
-            </div>
+            {/* Seniority & Difficulty Level Dropdown */}
+            <SelectDropdown
+              label="II. Seniority & Difficulty Level"
+              value={difficulty}
+              onChange={setDifficulty}
+              options={difficultyDropdownOptions}
+              icon={TrendingUp}
+              helperText="Calibrates the interview bar-raiser expectations and evaluation rigor."
+            />
 
-            {/* Interview Focus Type (Segmented Radio Group) */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                III. Interview Focus Area
-              </label>
-              <SegmentedControl
-                options={interviewTypeOptions}
-                value={interviewType}
-                onChange={setInterviewType}
-                ariaLabel="Interview Focus Type"
-              />
-            </div>
+            {/* Interview Focus Area Dropdown */}
+            <SelectDropdown
+              label="III. Interview Focus Area"
+              value={interviewType}
+              onChange={setInterviewType}
+              options={interviewTypeDropdownOptions}
+              icon={Layers}
+              helperText="Dictates whether questions focus on algorithmic coding, distributed architecture, or behavioral leadership."
+            />
 
-            {/* Interview Delivery Mode (Segmented Radio Group) */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                IV. Delivery Mode
-              </label>
-              <SegmentedControl
-                options={interviewModeOptions}
+            {/* Interview Delivery Mode Dropdown */}
+            <div className="space-y-2">
+              <SelectDropdown
+                label="IV. Delivery Mode"
                 value={interviewMode}
                 onChange={setInterviewMode}
-                ariaLabel="Interview Delivery Mode"
+                options={deliveryModeDropdownOptions}
+                icon={Video}
+                helperText="Choose how you want to conduct the interview: solo against AI, live with a classmate, or as the lead interviewer."
               />
 
               {interviewMode === 'peer_chamber' && (
@@ -793,11 +751,13 @@ export default function InterviewSetupPage() {
                 </div>
               </div>
 
-              <SegmentedControl
-                options={questionCountOptions}
+              <SelectDropdown
+                label="Question Volume"
                 value={totalQuestions}
-                onChange={setTotalQuestions}
-                ariaLabel="Session Question Volume"
+                onChange={(val) => setTotalQuestions(Number(val))}
+                options={questionVolumeDropdownOptions}
+                icon={Clock}
+                helperText="Quick calibrated session or exhaustive technical drill."
               />
             </GlassCard>
 
