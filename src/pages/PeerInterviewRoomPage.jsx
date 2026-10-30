@@ -250,16 +250,24 @@ export default function PeerInterviewRoomPage() {
         if (e.error !== 'no-speech') {
           console.warn('[PeerRoom] Speech recognition event:', e.error);
         }
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          isSpeechListeningRef.current = false;
+          setIsSpeechListening(false);
+        }
       };
 
       recognition.onend = () => {
-        // Continuous auto-restart without getting killed on pauses
+        // Continuous auto-restart with safety timeout for mobile browsers
         if (isSpeechListeningRef.current) {
-          try {
-            recognition.start();
-          } catch {
-            // Already restarted
-          }
+          setTimeout(() => {
+            if (isSpeechListeningRef.current && speechRecognitionRef.current) {
+              try {
+                speechRecognitionRef.current.start();
+              } catch {
+                // Already started or busy
+              }
+            }
+          }, 300);
         }
       };
 
@@ -577,6 +585,23 @@ export default function PeerInterviewRoomPage() {
       remoteVideoRef.current.play().catch(() => {});
     }
   };
+
+  // Passive click/touch gesture listener to seamlessly unblock remote audio on any user touch/click
+  useEffect(() => {
+    const handleUserGesture = () => {
+      if (remoteAudioRef.current && remoteAudioRef.current.paused && remoteAudioRef.current.srcObject) {
+        remoteAudioRef.current.play().then(() => {
+          setAudioAutoplayBlocked(false);
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener('click', handleUserGesture, { passive: true });
+    window.addEventListener('touchstart', handleUserGesture, { passive: true });
+    return () => {
+      window.removeEventListener('click', handleUserGesture);
+      window.removeEventListener('touchstart', handleUserGesture);
+    };
+  }, []);
 
   // ─────────────────────────────────────────────────────────────────
   // Active Answer Voice Recording & Neural Whisper Transcription
@@ -1193,6 +1218,42 @@ export default function PeerInterviewRoomPage() {
               >
                 <Monitor className="w-4 h-4" />
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSpeechListening) {
+                    if (speechRecognitionRef.current) {
+                      try { speechRecognitionRef.current.abort(); } catch {}
+                    }
+                    isSpeechListeningRef.current = false;
+                    setIsSpeechListening(false);
+                  } else {
+                    setupSpeechRecognition();
+                  }
+                }}
+                className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isSpeechListening
+                    ? 'bg-indigo-950/80 text-indigo-300 border-indigo-700'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700'
+                }`}
+                title={isSpeechListening ? 'Live Subtitles & ASR: Active' : 'Enable Live Subtitles & ASR'}
+              >
+                <span className={`w-2 h-2 rounded-full ${isSpeechListening ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`} />
+                <span>{isSpeechListening ? 'Live Subtitles ON' : 'Subtitles OFF'}</span>
+              </button>
+
+              {audioAutoplayBlocked && (
+                <button
+                  type="button"
+                  onClick={handleUnblockAudio}
+                  className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer animate-pulse"
+                  title="Unmute incoming peer audio"
+                >
+                  <Volume2 className="w-4 h-4" />
+                  <span>Unmute Audio</span>
+                </button>
+              )}
             </div>
           </div>
 
