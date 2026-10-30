@@ -1,4 +1,4 @@
-﻿"""
+"""
 Weekly Goals & Streak Recovery API Routes
 AI Career Preparation Agent
 """

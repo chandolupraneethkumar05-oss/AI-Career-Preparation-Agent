@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pydantic Schemas for Weekly AI Career Report
 """
 

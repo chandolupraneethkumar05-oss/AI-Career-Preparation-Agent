@@ -1,4 +1,4 @@
-﻿"""
+"""
 User Product Feedback API Routes
 AI Career Preparation Agent
 """

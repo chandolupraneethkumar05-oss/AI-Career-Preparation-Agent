@@ -1,19 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Brain,
-  MessageSquare,
-  Sparkles,
   Send,
   Award,
   ChevronRight,
   UserCheck,
   Lightbulb,
-  CheckCircle2,
-  TrendingUp,
   AlertCircle,
-  HelpCircle,
-  RotateCcw,
   Mic,
   MicOff,
   Code2,

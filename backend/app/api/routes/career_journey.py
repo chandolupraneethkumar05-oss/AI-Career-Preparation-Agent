@@ -1,4 +1,4 @@
-﻿"""
+"""
 Career Journey and Career Readiness API Routes
 AI Career Preparation Agent
 """

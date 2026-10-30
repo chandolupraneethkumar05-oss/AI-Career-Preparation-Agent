@@ -1,4 +1,4 @@
-﻿"""
+"""
 Career Journey and Career Readiness Foundation Service
 AI Career Preparation Agent
 """

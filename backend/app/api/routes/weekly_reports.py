@@ -1,4 +1,4 @@
-﻿"""
+"""
 Weekly AI Career Report API Routes
 AI Career Preparation Agent
 """

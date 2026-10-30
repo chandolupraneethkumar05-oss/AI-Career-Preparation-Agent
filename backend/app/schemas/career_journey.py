@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pydantic Schemas for Career Journey and Career Readiness Foundation
 AI Career Preparation Agent
 """

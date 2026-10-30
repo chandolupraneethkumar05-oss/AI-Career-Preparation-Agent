@@ -11,20 +11,15 @@ import {
   Check,
   Sparkles,
   Users,
-  Shield,
   Lightbulb,
   FileText,
   Code2,
   Send,
   Award,
   ChevronRight,
-  TrendingUp,
   Brain,
-  MessageSquare,
-  AlertCircle,
   ArrowLeft
 } from 'lucide-react';
-import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
 import VoiceWaveformIndicator from '../components/VoiceWaveformIndicator';
@@ -42,7 +37,7 @@ export default function PeerInterviewRoomPage() {
   const rawRoomId = (urlRoomId || 'ROOM-DEMO1').toUpperCase().trim();
   const [roomId, setRoomId] = useState(rawRoomId);
   const [assignedRole, setAssignedRole] = useState(roleParam);
-  const [roomInfo, setRoomInfo] = useState(null);
+  const [_roomInfo, setRoomInfo] = useState(null);
 
   // Media & WebRTC State
   const [isMicOn, setIsMicOn] = useState(true);
@@ -51,7 +46,7 @@ export default function PeerInterviewRoomPage() {
   const [peerConnected, setPeerConnected] = useState(false);
   const [peerName, setPeerName] = useState('Remote Peer');
   const [peerMediaState, setPeerMediaState] = useState({ video: true, audio: true });
-  const [connectionState, setConnectionState] = useState('connecting');
+  const [_connectionState, setConnectionState] = useState('connecting');
 
   // Video Element Refs
   const localVideoRef = useRef(null);

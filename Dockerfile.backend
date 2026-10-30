@@ -53,9 +53,9 @@ USER appuser
 
 EXPOSE 8000
 
-# Container liveness & readiness healthcheck probe
+# Container liveness & readiness healthcheck probe (respecting dynamic PORT for cloud platforms like Render)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
+    CMD sh -c "curl -f http://localhost:${PORT:-8000}/api/health || exit 1"
 
-# Start production server with uvicorn (1 worker required for SQLite thread and lock safety)
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Start production server with uvicorn (1 worker required for SQLite thread and lock safety, dynamic PORT binding)
+CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

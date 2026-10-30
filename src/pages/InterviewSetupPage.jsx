@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   FileCheck,
   Video,
-  MessageSquare,
   Briefcase,
   Sparkles,
   Users,
@@ -26,7 +25,7 @@ import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
 import SelectDropdown from '../components/SelectDropdown';
-import { MOCK_ROLES, INTERVIEW_TYPES, DIFFICULTY_LEVELS } from '../data/mockData';
+import { MOCK_ROLES } from '../data/mockData';
 import { COMPANY_PLAYBOOKS } from '../data/companyPlaybooks';
 import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
@@ -195,7 +194,7 @@ function extractDetectedTech(text) {
   if (!text) return [];
   const lower = text.toLowerCase();
   return COMMON_TECH_KEYWORDS.filter(k => {
-    const escaped = k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const escaped = k.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
     return new RegExp(`\\b${escaped}\\b`, 'i').test(lower);
   });
 }

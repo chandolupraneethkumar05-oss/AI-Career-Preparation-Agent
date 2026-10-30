@@ -107,6 +107,14 @@ jobs:
           push: false
           tags: career-agent-frontend:ci
 
+      - name: Verify Unified Production Dockerfile Build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: career-agent-unified:ci
+
       - name: Validate Docker Compose Configuration
         run: |
           docker compose config

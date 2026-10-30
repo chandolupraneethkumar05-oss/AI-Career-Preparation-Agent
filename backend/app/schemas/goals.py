@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pydantic Schemas for Weekly Goals & Meaningful Gamification
 """
 
