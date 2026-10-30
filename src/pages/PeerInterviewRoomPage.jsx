@@ -82,7 +82,7 @@ export default function PeerInterviewRoomPage() {
   // Live Speech Recognition & Floating Closed-Captions
   const speechRecognitionRef = useRef(null);
   const isSpeechListeningRef = useRef(false);
-  const [_isSpeechListening, setIsSpeechListening] = useState(false);
+  const [isSpeechListening, setIsSpeechListening] = useState(false);
   const [interimCaption, setInterimCaption] = useState({ speaker: '', text: '' });
   const captionTimeoutRef = useRef(null);
   const [transcript, setTranscript] = useState([]);
