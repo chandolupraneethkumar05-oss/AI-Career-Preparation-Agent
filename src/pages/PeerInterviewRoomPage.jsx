@@ -22,13 +22,17 @@ import {
   RefreshCw,
   Download,
   MessageSquare,
-  Play
+  Play,
+  Square,
+  Volume2,
+  Loader2
 } from 'lucide-react';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
 import VoiceWaveformIndicator from '../components/VoiceWaveformIndicator';
 import { peerRoomService } from '../services/peerRoomService';
 import { reverseInterviewApi } from '../services/reverseInterviewApi';
+import { interviewApi } from '../services/interviewApi';
 import { useAuth } from '../context/AuthContext';
 
 export default function PeerInterviewRoomPage() {
@@ -53,15 +57,18 @@ export default function PeerInterviewRoomPage() {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [peerInRoom, setPeerInRoom] = useState(false);
   const [peerConnected, setPeerConnected] = useState(false);
   const [peerName, setPeerName] = useState('Remote Peer');
   const [peerRole, setPeerRole] = useState(roleParam === 'interviewer' ? 'candidate' : 'interviewer');
   const [peerMediaState, setPeerMediaState] = useState({ video: true, audio: true });
   const [_connectionState, setConnectionState] = useState('connecting');
+  const [audioAutoplayBlocked, setAudioAutoplayBlocked] = useState(false);
 
-  // Video Element Refs
+  // Video & Audio Element Refs
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const assignedRoleRef = useRef(assignedRole);
   const isSessionActiveRef = useRef(isSessionActive);
   const peerRoleRef = useRef(peerRole);
@@ -79,6 +86,14 @@ export default function PeerInterviewRoomPage() {
   const [interimCaption, setInterimCaption] = useState({ speaker: '', text: '' });
   const captionTimeoutRef = useRef(null);
   const [transcript, setTranscript] = useState([]);
+
+  // Active Answer Voice Recording & Whisper Neural Transcription
+  const answerAudioRecorderRef = useRef(null);
+  const answerAudioChunksRef = useRef([]);
+  const [isRecordingAnswer, setIsRecordingAnswer] = useState(false);
+  const [isTranscribingAnswer, setIsTranscribingAnswer] = useState(false);
+  const [candidateAnswer, setCandidateAnswer] = useState('');
+  const [transcriptionEngineNotice, setTranscriptionEngineNotice] = useState('');
 
   // Session Audio Recording (Native Web Audio Mixer)
   const audioContextRef = useRef(null);
@@ -103,6 +118,10 @@ export default function PeerInterviewRoomPage() {
   const [finalReport, setFinalReport] = useState(null);
   const [isConcluding, setIsConcluding] = useState(false);
   const fallbackReportTimerRef = useRef(null);
+
+  // Computed Clean Role Labels
+  const peerRoleLabel = assignedRole === 'interviewer' ? 'Candidate' : 'Lead Interviewer';
+  const myRoleLabel = assignedRole === 'interviewer' ? 'Lead Interviewer' : 'Candidate';
 
   // Format Elapsed Time (MM:SS)
   const formatTime = (secs) => {
@@ -287,29 +306,61 @@ export default function PeerInterviewRoomPage() {
             setIsSessionActive(true);
             setSessionStartTime(data.startedAt ? new Date(data.startedAt) : new Date());
             if (data.room) setRoomInfo(data.room);
-            // Kick off session audio recording if streams are ready
             startAudioMixerRecording(peerRoomService.localStream, peerRoomService.remoteStream);
           },
           peerJoined: (data) => {
             if (!active) return;
-            setPeerConnected(true);
+            setPeerInRoom(true);
             setPeerName(data.peerName || 'Remote Peer');
             setPeerRole(data.peerRole || (assignedRoleRef.current === 'interviewer' ? 'candidate' : 'interviewer'));
-            setConnectionState('connected');
           },
           peerLeft: () => {
             if (!active) return;
+            setPeerInRoom(false);
             setPeerConnected(false);
             setConnectionState('peer_disconnected');
             if (remoteVideoRef.current) {
               remoteVideoRef.current.srcObject = null;
             }
+            if (remoteAudioRef.current) {
+              remoteAudioRef.current.srcObject = null;
+            }
           },
           remoteStream: (stream) => {
             if (!active) return;
-            if (remoteVideoRef.current && stream) {
-              remoteVideoRef.current.srcObject = stream;
-              remoteVideoRef.current.play().catch(() => {});
+            if (stream) {
+              // 1. Bind remote video (muted so browser autoplay never blocks video rendering)
+              if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== stream) {
+                remoteVideoRef.current.srcObject = stream;
+              }
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.play().catch(() => {});
+              }
+
+              // 2. Bind remote audio to dedicated audio element
+              if (remoteAudioRef.current && remoteAudioRef.current.srcObject !== stream) {
+                remoteAudioRef.current.srcObject = stream;
+              }
+              if (remoteAudioRef.current) {
+                remoteAudioRef.current.play().then(() => {
+                  setAudioAutoplayBlocked(false);
+                }).catch(() => {
+                  setAudioAutoplayBlocked(true);
+                });
+              }
+
+              // Listen for tracks added later
+              stream.onaddtrack = () => {
+                if (remoteVideoRef.current) {
+                  remoteVideoRef.current.srcObject = stream;
+                  remoteVideoRef.current.play().catch(() => {});
+                }
+                if (remoteAudioRef.current) {
+                  remoteAudioRef.current.srcObject = stream;
+                  remoteAudioRef.current.play().catch(() => {});
+                }
+              };
+
               setPeerConnected(true);
               setConnectionState('connected');
               if (isSessionActiveRef.current) {
@@ -326,15 +377,20 @@ export default function PeerInterviewRoomPage() {
           },
           trackResumed: () => {
             if (!active) return;
-            if (remoteVideoRef.current && peerRoomService.remoteStream) {
-              remoteVideoRef.current.srcObject = peerRoomService.remoteStream;
-              remoteVideoRef.current.play().catch(() => {});
+            if (peerRoomService.remoteStream) {
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = peerRoomService.remoteStream;
+                remoteVideoRef.current.play().catch(() => {});
+              }
+              if (remoteAudioRef.current) {
+                remoteAudioRef.current.srcObject = peerRoomService.remoteStream;
+                remoteAudioRef.current.play().catch(() => {});
+              }
             }
           },
           peerMediaState: (state) => {
             if (!active) return;
             setPeerMediaState((prev) => ({ ...prev, ...state }));
-            // If peer re-enabled video, force remote video playback
             if (state.video && remoteVideoRef.current && peerRoomService.remoteStream) {
               remoteVideoRef.current.srcObject = peerRoomService.remoteStream;
               remoteVideoRef.current.play().catch(() => {});
@@ -408,6 +464,12 @@ export default function PeerInterviewRoomPage() {
             if (!active) return;
             setConnectionState(state);
             if (state === 'connected') setPeerConnected(true);
+          },
+          iceState: (state) => {
+            if (!active) return;
+            if (state === 'connected' || state === 'completed') {
+              setPeerConnected(true);
+            }
           }
         }
       );
@@ -435,6 +497,9 @@ export default function PeerInterviewRoomPage() {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         try { mediaRecorderRef.current.stop(); } catch {}
       }
+      if (answerAudioRecorderRef.current && answerAudioRecorderRef.current.state === 'recording') {
+        try { answerAudioRecorderRef.current.stop(); } catch {}
+      }
       if (audioContextRef.current) {
         try { audioContextRef.current.close(); } catch {}
       }
@@ -442,7 +507,7 @@ export default function PeerInterviewRoomPage() {
     };
   }, [urlRoomId, roleParam, user, setupSpeechRecognition, startAudioMixerRecording]);
 
-  // Video Re-render Watcher: Guarantees video footage resumes immediately when peer turns camera back on
+  // Video Re-render Watcher
   useEffect(() => {
     if (peerConnected && peerMediaState.video && remoteVideoRef.current && peerRoomService.remoteStream) {
       if (remoteVideoRef.current.srcObject !== peerRoomService.remoteStream) {
@@ -501,6 +566,116 @@ export default function PeerInterviewRoomPage() {
     setIsScreenSharing(sharing);
   };
 
+  // Unblock Audio Autoplay on User Gesture
+  const handleUnblockAudio = () => {
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.play().then(() => {
+        setAudioAutoplayBlocked(false);
+      }).catch(() => {});
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.play().catch(() => {});
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // Active Answer Voice Recording & Neural Whisper Transcription
+  // ─────────────────────────────────────────────────────────────────
+  const handleStartRecordingAnswer = async () => {
+    try {
+      let stream = peerRoomService.localStream;
+      if (!stream || stream.getAudioTracks().length === 0) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) audioTrack.enabled = true;
+
+      const audioOnlyStream = new MediaStream(stream.getAudioTracks());
+      const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+      const selectedMime = mimeTypes.find((m) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) || '';
+
+      const recorder = selectedMime
+        ? new MediaRecorder(audioOnlyStream, { mimeType: selectedMime })
+        : new MediaRecorder(audioOnlyStream);
+
+      answerAudioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          answerAudioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.start(500);
+      answerAudioRecorderRef.current = recorder;
+      setIsRecordingAnswer(true);
+      setTranscriptionEngineNotice('Recording voice... Speak clearly into your mic.');
+
+      // Also trigger speech recognition for live interim subtitles if supported
+      if (speechRecognitionRef.current) {
+        try { speechRecognitionRef.current.start(); } catch {}
+      }
+    } catch (err) {
+      console.warn('[PeerRoom] Could not start answer recording:', err);
+      setTranscriptionEngineNotice('Microphone access notice: Please ensure mic permissions are granted in browser.');
+    }
+  };
+
+  const handleStopRecordingAnswer = async () => {
+    if (!answerAudioRecorderRef.current) return;
+
+    setIsRecordingAnswer(false);
+    setIsTranscribingAnswer(true);
+    setTranscriptionEngineNotice('Transcribing audio via Whisper neural engine...');
+
+    const recorder = answerAudioRecorderRef.current;
+    if (recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+
+    // Wait a brief moment for final chunk
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    if (answerAudioChunksRef.current.length > 0) {
+      const mime = recorder.mimeType || 'audio/webm';
+      const audioBlob = new Blob(answerAudioChunksRef.current, { type: mime });
+
+      try {
+        const hint = interimCaption.text || '';
+        const res = await interviewApi.transcribeAudio(audioBlob, 'en', hint);
+        const transcriptText = res.transcript || hint || '';
+
+        if (transcriptText.trim()) {
+          setCandidateAnswer((prev) => (prev ? `${prev} ${transcriptText.trim()}` : transcriptText.trim()));
+          setTranscriptionEngineNotice(`Whisper ASR: ${res.word_count || transcriptText.split(' ').length} words transcribed (${res.source || 'neural'})`);
+
+          // Send to peer over WebSocket
+          peerRoomService.sendTranscriptUtterance(transcriptText.trim());
+
+          // Append to session transcript
+          setTranscript((prev) => [
+            ...prev,
+            { speaker: assignedRole, text: transcriptText.trim(), time: new Date().toLocaleTimeString() }
+          ]);
+        } else {
+          setTranscriptionEngineNotice('No speech detected in recording. Try speaking closer to the mic.');
+        }
+      } catch (err) {
+        console.warn('Transcription fallback notice:', err);
+        if (interimCaption.text.trim()) {
+          const fallbackText = interimCaption.text.trim();
+          setCandidateAnswer((prev) => (prev ? `${prev} ${fallbackText}` : fallbackText));
+          peerRoomService.sendTranscriptUtterance(fallbackText);
+        }
+        setTranscriptionEngineNotice('Transcribed verbal response to room.');
+      } finally {
+        setIsTranscribingAnswer(false);
+      }
+    } else {
+      setIsTranscribingAnswer(false);
+    }
+  };
+
   // Interviewer: Request Calibrated Question from AI
   const handleRequestAiQuestion = () => {
     setIsGeneratingQuestion(true);
@@ -535,6 +710,9 @@ export default function PeerInterviewRoomPage() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       try { mediaRecorderRef.current.stop(); } catch {}
     }
+    if (answerAudioRecorderRef.current && answerAudioRecorderRef.current.state === 'recording') {
+      try { answerAudioRecorderRef.current.stop(); } catch {}
+    }
 
     // 1. Send WebSocket event
     peerRoomService.concludeSession();
@@ -555,7 +733,12 @@ export default function PeerInterviewRoomPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none" onClick={audioAutoplayBlocked ? handleUnblockAudio : undefined}>
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* DEDICATED REMOTE AUDIO ELEMENT (Always unmuted)              */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
+
       {/* ───────────────────────────────────────────────────────────── */}
       {/* ROLE SWAP TOAST NOTIFICATION                                   */}
       {/* ───────────────────────────────────────────────────────────── */}
@@ -563,6 +746,16 @@ export default function PeerInterviewRoomPage() {
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-indigo-600 border border-indigo-400 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 animate-bounce">
           <RefreshCw className="w-4 h-4 animate-spin" />
           <span>{roleToast}</span>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* AUTOPLAY AUDIO UNBLOCK BANNER                                  */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {audioAutoplayBlocked && (
+        <div className="bg-amber-600 text-white text-xs font-bold py-2 px-4 text-center cursor-pointer flex items-center justify-center gap-2 z-40" onClick={handleUnblockAudio}>
+          <Volume2 className="w-4 h-4 animate-pulse" />
+          <span>Tap anywhere to enable remote audio &amp; video sound</span>
         </div>
       )}
 
@@ -648,11 +841,13 @@ export default function PeerInterviewRoomPage() {
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
               peerConnected
                 ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
+                : peerInRoom
+                ? 'bg-indigo-950/40 text-indigo-400 border-indigo-800/60'
                 : 'bg-amber-950/40 text-amber-400 border-amber-800/60 animate-pulse'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${peerConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-            <span>{peerConnected ? 'Live P2P Connected' : 'Waiting for Peer...'}</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${peerConnected ? 'bg-emerald-400' : peerInRoom ? 'bg-indigo-400' : 'bg-amber-400'}`} />
+            <span>{peerConnected ? 'Live P2P Stream Active' : peerInRoom ? 'Connecting P2P...' : 'Waiting for Peer...'}</span>
           </div>
 
           {isSessionActive && (
@@ -835,12 +1030,12 @@ export default function PeerInterviewRoomPage() {
               <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-400">Peer Lobby Status:</span>
-                  <span className={`font-semibold ${peerConnected ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {peerConnected ? `✅ ${peerName} Connected` : '⏳ Waiting for Peer to Join...'}
+                  <span className={`font-semibold ${peerInRoom ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {peerInRoom ? `✅ Peer Connected in Room (${peerRole})` : '⏳ Waiting for Peer to Join...'}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  {peerConnected
+                  {peerInRoom
                     ? 'Both participants are in the room! Click below to enter the chamber and start the synchronized timer.'
                     : 'Once the second participant enters with the code, both of you will enter simultaneously.'}
                 </p>
@@ -852,11 +1047,11 @@ export default function PeerInterviewRoomPage() {
                     setSessionStartTime(Date.now());
                     startAudioMixerRecording(peerRoomService.localStream, peerRoomService.remoteStream);
                   }}
-                  disabled={!peerConnected}
+                  disabled={!peerInRoom}
                   className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Play className="w-4 h-4 fill-current" />
-                  <span>{peerConnected ? 'Enter Chamber Together Now 🚀' : 'Waiting for Peer to Connect...'}</span>
+                  <span>{peerInRoom ? 'Enter Chamber Together Now 🚀' : 'Waiting for Peer to Connect...'}</span>
                 </button>
               </div>
             </div>
@@ -876,6 +1071,7 @@ export default function PeerInterviewRoomPage() {
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
+                  muted
                   className={`w-full h-full object-cover ${(!peerConnected || !peerMediaState.video) ? 'hidden' : ''}`}
                 />
 
@@ -886,11 +1082,13 @@ export default function PeerInterviewRoomPage() {
                     </div>
                     <div>
                       <h4 className="text-sm font-semibold text-white">
-                        {peerConnected ? peerName : 'Waiting for Peer to Connect...'}
+                        {peerConnected ? peerRoleLabel : peerInRoom ? 'Establishing P2P Video Link...' : 'Waiting for Peer to Connect...'}
                       </h4>
                       <p className="text-xs text-slate-400 max-w-xs mt-1">
                         {peerConnected
-                          ? 'Peer has muted camera. Live audio is active.'
+                          ? 'Peer has muted camera. Live audio is streaming.'
+                          : peerInRoom
+                          ? 'Connected to signaling hub. Initializing STUN/TURN media relay...'
                           : `Share Room Code (${roomId}) with your peer to connect.`}
                       </p>
                     </div>
@@ -899,9 +1097,9 @@ export default function PeerInterviewRoomPage() {
 
                 {/* Remote Peer Label */}
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200 z-10">
-                  <span>{peerName}</span>
-                  <span className="text-[10px] text-slate-400">
-                    ({assignedRole === 'interviewer' ? 'Candidate' : 'Lead Interviewer'})
+                  <span>{peerName && !['Remote Peer', 'Candidate', 'Interviewer', 'Lead Interviewer'].includes(peerName) ? peerName : peerRoleLabel}</span>
+                  <span className="text-[10px] text-indigo-400">
+                    ({peerRoleLabel})
                   </span>
                 </div>
               </div>
@@ -929,7 +1127,7 @@ export default function PeerInterviewRoomPage() {
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200 z-10">
                   <span>You</span>
                   <span className="text-[10px] text-indigo-400">
-                    ({assignedRole === 'interviewer' ? 'Lead Interviewer' : 'Candidate'})
+                    ({myRoleLabel})
                   </span>
                 </div>
 
@@ -947,7 +1145,7 @@ export default function PeerInterviewRoomPage() {
               <div className="absolute bottom-20 left-1/2 -translate-x-1/2 max-w-xl w-11/12 px-4 py-2.5 rounded-xl bg-slate-950/90 backdrop-blur-md border border-slate-700/80 shadow-2xl flex items-center gap-3 z-20">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
                 <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider shrink-0">
-                  {interimCaption.speaker === assignedRole ? 'You' : peerName}:
+                  {interimCaption.speaker === assignedRole ? 'You' : peerRoleLabel}:
                 </span>
                 <p className="text-xs text-slate-100 font-medium truncate sm:whitespace-normal">
                   "{interimCaption.text}"
@@ -1089,7 +1287,7 @@ export default function PeerInterviewRoomPage() {
                           <button
                             type="button"
                             onClick={handlePushQuestion}
-                            className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                           >
                             <Send className="w-3.5 h-3.5" />
                             <span>Push Question to Candidate Screen</span>
@@ -1115,6 +1313,19 @@ export default function PeerInterviewRoomPage() {
                               </div>
                             )}
                           </div>
+                        </div>
+                      )}
+
+                      {/* Candidate Spoken Response Box (Visible to Interviewer in Real-Time) */}
+                      {candidateAnswer && (
+                        <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                            <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                            Candidate Latest Spoken Answer:
+                          </span>
+                          <p className="text-xs text-slate-200 leading-relaxed bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                            "{candidateAnswer}"
+                          </p>
                         </div>
                       )}
 
@@ -1155,6 +1366,71 @@ export default function PeerInterviewRoomPage() {
                             <Brain className="w-8 h-8 text-slate-600 mx-auto" />
                             <p className="text-xs text-slate-400">
                               The lead interviewer is selecting the first scenario question...
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ───────────────────────────────────────────────────────────── */}
+                      {/* VERBAL ANSWER RECORDER & NEURAL WHISPER ASR BAR                */}
+                      {/* ───────────────────────────────────────────────────────────── */}
+                      <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <Mic className="w-4 h-4 text-emerald-400" />
+                            <span>Verbal Answer Recording &amp; Live AI Transcribe</span>
+                          </span>
+                          {isRecordingAnswer && (
+                            <span className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded animate-pulse">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                              <span>Recording Voice...</span>
+                            </span>
+                          )}
+                          {isTranscribingAnswer && (
+                            <span className="flex items-center gap-1.5 text-[11px] font-mono text-amber-400 bg-amber-950/60 border border-amber-800/80 px-2 py-0.5 rounded">
+                              <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                              <span>Transcribing...</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Status message */}
+                        {transcriptionEngineNotice && (
+                          <p className="text-xs text-slate-300 font-mono bg-slate-950 p-2 rounded-lg border border-slate-800/80">
+                            {transcriptionEngineNotice}
+                          </p>
+                        )}
+
+                        {/* Interactive Recording Buttons */}
+                        <div className="flex gap-2">
+                          {!isRecordingAnswer ? (
+                            <button
+                              type="button"
+                              onClick={handleStartRecordingAnswer}
+                              disabled={isTranscribingAnswer}
+                              className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-50"
+                            >
+                              <Mic className="w-4 h-4" />
+                              <span>Start Speaking Answer (Live Transcribe)</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleStopRecordingAnswer}
+                              className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md animate-pulse"
+                            >
+                              <Square className="w-4 h-4 fill-current" />
+                              <span>Finish &amp; Transcribe Answer</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Display Transcribed Response */}
+                        {candidateAnswer && (
+                          <div className="pt-2 border-t border-slate-800 space-y-1">
+                            <span className="text-[11px] font-semibold text-slate-400 block">Your Transcribed Response:</span>
+                            <p className="text-xs text-emerald-300 leading-relaxed bg-slate-950/80 p-3 rounded-lg border border-slate-800">
+                              "{candidateAnswer}"
                             </p>
                           </div>
                         )}
@@ -1249,7 +1525,7 @@ export default function PeerInterviewRoomPage() {
                     </span>
                     <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
                       {transcript.length === 0 ? (
-                        <p className="text-xs text-slate-500 italic">No utterances recorded yet. Speak into your mic...</p>
+                        <p className="text-xs text-slate-500 italic">No utterances recorded yet. Click 'Start Speaking Answer' to record and transcribe...</p>
                       ) : (
                         transcript.map((u, i) => (
                           <div key={i} className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs space-y-0.5">
