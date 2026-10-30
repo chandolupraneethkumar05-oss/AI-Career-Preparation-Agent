@@ -22,7 +22,8 @@ from ..deps import get_optional_current_user, get_current_user
 from ...services.peer_room_service import (
     default_peer_room_service,
     default_reverse_interview_service,
-    PeerRoom
+    PeerRoom,
+    utc_now_iso
 )
 
 logger = logging.getLogger("peer_room")
@@ -284,8 +285,59 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                     # Signal initiator to prepare offer
                     await other_ws.send_json({"type": "initiate_offer"})
 
+                # If both participants are in the room, signal synchronized session start to both!
+                if room.interviewer and room.candidate:
+                    room.status = "active"
+                    start_payload = {
+                        "type": "session_start",
+                        "startedAt": utc_now_iso(),
+                        "room": room.to_dict()
+                    }
+                    await websocket.send_json(start_payload)
+                    if other_ws:
+                        await other_ws.send_json(start_payload)
+
             # -------------------------------------------------------------
-            # 2. WebRTC Signaling (Offer, Answer, ICE Candidate)
+            # 2. Role Selection in Lobby & Dynamic Role Swapping
+            # -------------------------------------------------------------
+            elif msg_type == "set_role":
+                target_role = data.get("role")
+                if target_role in ("interviewer", "candidate"):
+                    await default_peer_room_service.set_participant_role(norm_room_id, websocket, target_role)
+                    assigned_role = target_role
+                    await websocket.send_json({
+                        "type": "role_updated",
+                        "assignedRole": assigned_role,
+                        "room": room.to_dict()
+                    })
+                    other_ws = _get_other_ws(room, assigned_role)
+                    if other_ws:
+                        await other_ws.send_json({
+                            "type": "peer_role_updated",
+                            "peerRole": assigned_role,
+                            "room": room.to_dict()
+                        })
+
+            elif msg_type == "role_swap":
+                res = await default_peer_room_service.swap_roles(norm_room_id)
+                if res["success"]:
+                    assigned_role = "candidate" if assigned_role == "interviewer" else "interviewer"
+                    await websocket.send_json({
+                        "type": "role_swapped",
+                        "assignedRole": assigned_role,
+                        "room": room.to_dict()
+                    })
+                    other_ws = _get_other_ws(room, assigned_role)
+                    if other_ws:
+                        other_role = "candidate" if assigned_role == "interviewer" else "interviewer"
+                        await other_ws.send_json({
+                            "type": "role_swapped",
+                            "assignedRole": other_role,
+                            "room": room.to_dict()
+                        })
+
+            # -------------------------------------------------------------
+            # 3. WebRTC Signaling (Offer, Answer, ICE Candidate)
             # -------------------------------------------------------------
             elif msg_type in ("signal_offer", "signal_answer", "signal_ice", "peer_ready"):
                 other_ws = _get_other_ws(room, assigned_role)
@@ -293,7 +345,7 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                     await other_ws.send_json(data)
 
             # -------------------------------------------------------------
-            # 3. Media Controls State Relay (e.g. Mute Audio, Camera Off)
+            # 4. Media Controls State Relay (e.g. Mute Audio, Camera Off)
             # -------------------------------------------------------------
             elif msg_type == "media_state":
                 other_ws = _get_other_ws(room, assigned_role)
@@ -301,7 +353,20 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                     await other_ws.send_json(data)
 
             # -------------------------------------------------------------
-            # 4. Collaborative Code Synchronization
+            # 5. Live Interim Subtitles & Speech Broadcast
+            # -------------------------------------------------------------
+            elif msg_type == "interim_speech":
+                text = data.get("text", "")
+                other_ws = _get_other_ws(room, assigned_role)
+                if other_ws and text:
+                    await other_ws.send_json({
+                        "type": "peer_interim_speech",
+                        "text": text,
+                        "speaker": assigned_role
+                    })
+
+            # -------------------------------------------------------------
+            # 6. Collaborative Code Synchronization
             # -------------------------------------------------------------
             elif msg_type == "code_sync":
                 room.shared_code = data.get("code", "")
@@ -390,7 +455,7 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                     utterance = {
                         "speaker": speaker,
                         "text": text,
-                        "timestamp": default_peer_room_service.generate_room_code()
+                        "timestamp": utc_now_iso()
                     }
                     room.transcript.append(utterance)
 

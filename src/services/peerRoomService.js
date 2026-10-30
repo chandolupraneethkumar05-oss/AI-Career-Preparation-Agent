@@ -53,7 +53,7 @@ export class PeerRoomService {
     return new Promise((resolve, reject) => {
       try {
         if (this.ws) {
-          try { this.ws.close(); } catch (_) {}
+          try { this.ws.close(); } catch {}
         }
 
         this.ws = new WebSocket(wsUrl);
@@ -163,14 +163,26 @@ export class PeerRoomService {
 
     // Remote stream arrives
     pc.ontrack = (event) => {
+      const bindTrackEvents = (track) => {
+        track.onunmute = () => {
+          this._emit('remoteStream', this.remoteStream);
+          this._emit('trackResumed', { kind: track.kind });
+        };
+        track.onmute = () => {
+          this._emit('trackMuted', { kind: track.kind });
+        };
+      };
+
       if (event.streams && event.streams[0]) {
         this.remoteStream = event.streams[0];
+        this.remoteStream.getTracks().forEach(bindTrackEvents);
         this._emit('remoteStream', this.remoteStream);
       } else if (event.track) {
         if (!this.remoteStream) {
           this.remoteStream = new MediaStream();
         }
         this.remoteStream.addTrack(event.track);
+        bindTrackEvents(event.track);
         this._emit('remoteStream', this.remoteStream);
       }
     };
@@ -289,7 +301,7 @@ export class PeerRoomService {
             const cand = this.iceCandidateQueue.shift();
             try {
               await pc.addIceCandidate(cand);
-            } catch (_) {}
+            } catch {}
           }
 
           const answer = await pc.createAnswer();
@@ -315,7 +327,7 @@ export class PeerRoomService {
             const cand = this.iceCandidateQueue.shift();
             try {
               await pc.addIceCandidate(cand);
-            } catch (_) {}
+            } catch {}
           }
         } catch (err) {
           console.error('[PeerRoomService] Error handling answer:', err);
@@ -361,6 +373,28 @@ export class PeerRoomService {
         this._emit('aiCopilotHint', data.hint);
         break;
 
+      case 'session_start':
+        this._emit('sessionStart', data);
+        break;
+
+      case 'role_swapped':
+        this.role = data.yourNewRole;
+        this._emit('roleSwapped', data);
+        break;
+
+      case 'role_updated':
+        this.role = data.role;
+        this._emit('roleUpdated', data);
+        break;
+
+      case 'peer_role_updated':
+        this._emit('peerRoleUpdated', data);
+        break;
+
+      case 'peer_interim_speech':
+        this._emit('peerInterimSpeech', data);
+        break;
+
       case 'note_saved':
         this._emit('noteSaved', data);
         break;
@@ -377,6 +411,20 @@ export class PeerRoomService {
   // =========================================================================
   // Client Action Triggers
   // =========================================================================
+
+  setRole(targetRole) {
+    if (!targetRole || this.role === targetRole) return;
+    this._send({ type: 'set_role', role: targetRole });
+  }
+
+  swapRoles() {
+    this._send({ type: 'role_swap' });
+  }
+
+  sendInterimSpeech(text) {
+    if (!text || !text.trim()) return;
+    this._send({ type: 'interim_speech', text: text.trim() });
+  }
 
   requestAiQuestion() {
     this._send({ type: 'request_ai_question' });
@@ -492,7 +540,7 @@ export class PeerRoomService {
       this.peerConnection = null;
     }
     if (this.ws) {
-      try { this.ws.close(); } catch (_) {}
+      try { this.ws.close(); } catch {}
       this.ws = null;
     }
     this.remoteStream = null;

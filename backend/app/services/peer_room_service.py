@@ -149,7 +149,7 @@ class PeerRoomService:
     def generate_room_code(self) -> str:
         """Generates a clean, human-readable 6-character room identifier."""
         raw = uuid.uuid4().hex[:6].upper()
-        return f"ROOM-{raw}"
+        return f"PEER-{raw}"
 
     async def create_room(self, role: str = "Software Engineer", difficulty: str = "Intermediate", topic: Optional[str] = None) -> PeerRoom:
         """Creates and registers a new peer interview chamber."""
@@ -162,7 +162,51 @@ class PeerRoomService:
     def get_room(self, room_id: str) -> Optional[PeerRoom]:
         if not room_id:
             return None
-        return self._rooms.get(room_id.upper().strip())
+        norm = room_id.upper().strip()
+        # Direct lookup
+        if norm in self._rooms:
+            return self._rooms[norm]
+        # Try prefixes
+        if f"PEER-{norm}" in self._rooms:
+            return self._rooms[f"PEER-{norm}"]
+        if f"ROOM-{norm}" in self._rooms:
+            return self._rooms[f"ROOM-{norm}"]
+        # If passed with prefix, try matching raw suffix
+        clean_raw = norm.replace("PEER-", "").replace("ROOM-", "")
+        for k in (f"PEER-{clean_raw}", f"ROOM-{clean_raw}", clean_raw):
+            if k in self._rooms:
+                return self._rooms[k]
+        return None
+
+    async def swap_roles(self, room_id: str) -> Dict[str, Any]:
+        """Swaps interviewer and candidate slots for the room."""
+        room = self.get_room(room_id)
+        if not room:
+            return {"success": False, "error": "Room not found"}
+
+        async with self._lock:
+            room.interviewer, room.candidate = room.candidate, room.interviewer
+            return {"success": True, "room": room.to_dict()}
+
+    async def set_participant_role(self, room_id: str, ws: WebSocket, target_role: str) -> Dict[str, Any]:
+        """Allows a user to explicitly pick or switch their role in the pre-meeting lobby."""
+        room = self.get_room(room_id)
+        if not room:
+            return {"success": False, "error": "Room not found"}
+
+        async with self._lock:
+            if target_role == "interviewer":
+                if room.candidate and room.candidate.get("ws") == ws:
+                    old_cand = room.candidate
+                    room.candidate = room.interviewer
+                    room.interviewer = old_cand
+            elif target_role == "candidate":
+                if room.interviewer and room.interviewer.get("ws") == ws:
+                    old_int = room.interviewer
+                    room.interviewer = room.candidate
+                    room.candidate = old_int
+
+            return {"success": True, "room": room.to_dict()}
 
     async def register_participant(
         self,

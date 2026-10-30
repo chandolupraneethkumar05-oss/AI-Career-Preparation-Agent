@@ -28,7 +28,7 @@ def test_peer_room_creation(client):
     assert res.status_code == 200, res.text
     data = res.json()
     assert data["success"] is True
-    assert data["room_id"].startswith("ROOM-")
+    assert data["room_id"].startswith(("ROOM-", "PEER-"))
     assert data["role"] == "Backend Engineer"
     assert "interviewer_url" in data
     assert "candidate_url" in data
@@ -170,6 +170,12 @@ def test_websocket_signaling_peer_exchange(client):
 
             initiate_evt = ws_interviewer.receive_json()
             assert initiate_evt["type"] == "initiate_offer"
+
+            # Both peers receive synchronized session_start when both are connected
+            cand_start = ws_candidate.receive_json()
+            assert cand_start["type"] == "session_start"
+            int_start = ws_interviewer.receive_json()
+            assert int_start["type"] == "session_start"
 
             # Test WebRTC Offer relay from Interviewer to Candidate
             ws_interviewer.send_json({

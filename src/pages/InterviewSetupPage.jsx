@@ -218,6 +218,8 @@ export default function InterviewSetupPage() {
   const [jobDescription, setJobDescription] = useState(setup.jobDescription || '');
   const [totalQuestions, setTotalQuestions] = useState(setup.totalQuestions || 5);
   const [joinRoomCode, setJoinRoomCode] = useState('');
+  const [peerHostRole, setPeerHostRole] = useState('interviewer');
+  const [peerJoinRole, setPeerJoinRole] = useState('candidate');
 
   const detectedTech = useMemo(() => extractDetectedTech(jobDescription), [jobDescription]);
 
@@ -305,10 +307,10 @@ export default function InterviewSetupPage() {
     if (interviewMode === 'peer_chamber') {
       try {
         const res = await reverseInterviewApi.createPeerRoom(finalRole, difficulty, interviewType);
-        navigate(`/peer-room/${res.room_id}?role=interviewer`);
+        navigate(`/peer-room/${res.room_id}?role=${peerHostRole}`);
         return;
-      } catch (err) {
-        navigate('/peer-room');
+      } catch (_err) {
+        navigate(`/peer-room?role=${peerHostRole}`);
         return;
       }
     }
@@ -323,8 +325,11 @@ export default function InterviewSetupPage() {
 
   const handleJoinExistingRoom = () => {
     if (!joinRoomCode.trim()) return;
-    const clean = joinRoomCode.trim().toUpperCase();
-    navigate(`/peer-room/${clean}?role=candidate`);
+    let clean = joinRoomCode.trim().toUpperCase();
+    if (!clean.startsWith('PEER-') && !clean.startsWith('ROOM-')) {
+      clean = `PEER-${clean}`;
+    }
+    navigate(`/peer-room/${clean}?role=${peerJoinRole}`);
   };
 
   // Predefined role dropdown options
@@ -514,43 +519,107 @@ export default function InterviewSetupPage() {
               />
 
               {interviewMode === 'peer_chamber' && (
-                <div className="mt-3 p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-3">
+                <div className="mt-3 p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-indigo-600" />
-                      <span className="text-xs font-bold text-indigo-950">Peer-to-Peer Video Chamber</span>
+                      <span className="text-xs font-bold text-indigo-950">Peer-to-Peer Collaborative Chamber</span>
                     </div>
                     <Badge variant="indigo" size="xs">100% FREE WEBRTC</Badge>
                   </div>
                   <p className="text-xs text-indigo-900 leading-relaxed">
-                    Practice with a classmate! The student interviewer receives a secret AI teleprompter with calibrated questions, expected criteria, and probing follow-ups. At session end, AI delivers a joint 360° scorecard.
+                    Practice with a classmate! You can host as the Interviewer (with AI teleprompter &amp; rubric) or as the Candidate (collaborative coding &amp; speaking). Both enter the chamber together with a synchronized timer.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleContinue}
-                      className="flex-1 py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Host New Room (As Interviewer)</span>
-                    </button>
 
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        value={joinRoomCode}
-                        onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
-                        placeholder="ROOM-XXXXXX"
-                        className="w-32 px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 uppercase"
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    {/* Option 1: Host a New Peer Room */}
+                    <div className="p-3 rounded-lg bg-white/80 border border-indigo-200/80 space-y-2">
+                      <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                        Option 1: Host New Room
+                      </span>
+                      <div className="text-[11px] text-slate-600 font-medium">Select your role as host:</div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPeerHostRole('interviewer')}
+                          className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                            peerHostRole === 'interviewer'
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          🎙️ Interviewer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPeerHostRole('candidate')}
+                          className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                            peerHostRole === 'candidate'
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          🎯 Candidate
+                        </button>
+                      </div>
                       <button
                         type="button"
-                        onClick={handleJoinExistingRoom}
-                        disabled={!joinRoomCode.trim()}
-                        className="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                        onClick={handleContinue}
+                        className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs mt-1"
                       >
-                        Join Room
+                        <span>Host Room ({peerHostRole === 'interviewer' ? 'As Interviewer' : 'As Candidate'})</span>
                       </button>
+                    </div>
+
+                    {/* Option 2: Join via Room Code */}
+                    <div className="p-3 rounded-lg bg-white/80 border border-indigo-200/80 space-y-2">
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-emerald-600" />
+                        Option 2: Join with Room Code
+                      </span>
+                      <div className="text-[11px] text-slate-600 font-medium">Select your joining role:</div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPeerJoinRole('candidate')}
+                          className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                            peerJoinRole === 'candidate'
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          🎯 Candidate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPeerJoinRole('interviewer')}
+                          className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold border transition-all cursor-pointer ${
+                            peerJoinRole === 'interviewer'
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          🎙️ Interviewer
+                        </button>
+                      </div>
+                      <div className="flex gap-1.5 mt-1">
+                        <input
+                          type="text"
+                          value={joinRoomCode}
+                          onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
+                          placeholder="e.g. PEER-XXXXXX or code"
+                          className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 uppercase"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleJoinExistingRoom}
+                          disabled={!joinRoomCode.trim()}
+                          className="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                        >
+                          Join
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

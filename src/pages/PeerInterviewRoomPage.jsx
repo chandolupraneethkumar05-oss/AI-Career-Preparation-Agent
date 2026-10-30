@@ -18,7 +18,11 @@ import {
   Award,
   ChevronRight,
   Brain,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw,
+  Download,
+  MessageSquare,
+  Play
 } from 'lucide-react';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
@@ -34,10 +38,16 @@ export default function PeerInterviewRoomPage() {
   const { user } = useAuth();
 
   const roleParam = searchParams.get('role') || 'candidate';
-  const rawRoomId = (urlRoomId || 'ROOM-DEMO1').toUpperCase().trim();
+  const rawRoomId = (urlRoomId || 'PEER-ROOM1').toUpperCase().trim();
   const [roomId, setRoomId] = useState(rawRoomId);
   const [assignedRole, setAssignedRole] = useState(roleParam);
   const [_roomInfo, setRoomInfo] = useState(null);
+
+  // Synchronized Lobby & Chamber Session State
+  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [roleToast, setRoleToast] = useState(null);
 
   // Media & WebRTC State
   const [isMicOn, setIsMicOn] = useState(true);
@@ -45,12 +55,36 @@ export default function PeerInterviewRoomPage() {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [peerConnected, setPeerConnected] = useState(false);
   const [peerName, setPeerName] = useState('Remote Peer');
+  const [peerRole, setPeerRole] = useState(roleParam === 'interviewer' ? 'candidate' : 'interviewer');
   const [peerMediaState, setPeerMediaState] = useState({ video: true, audio: true });
   const [_connectionState, setConnectionState] = useState('connecting');
 
   // Video Element Refs
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const assignedRoleRef = useRef(assignedRole);
+  const isSessionActiveRef = useRef(isSessionActive);
+  const peerRoleRef = useRef(peerRole);
+
+  useEffect(() => {
+    assignedRoleRef.current = assignedRole;
+    isSessionActiveRef.current = isSessionActive;
+    peerRoleRef.current = peerRole;
+  }, [assignedRole, isSessionActive, peerRole]);
+
+  // Live Speech Recognition & Floating Closed-Captions
+  const speechRecognitionRef = useRef(null);
+  const isSpeechListeningRef = useRef(false);
+  const [_isSpeechListening, setIsSpeechListening] = useState(false);
+  const [interimCaption, setInterimCaption] = useState({ speaker: '', text: '' });
+  const captionTimeoutRef = useRef(null);
+  const [transcript, setTranscript] = useState([]);
+
+  // Session Audio Recording (Native Web Audio Mixer)
+  const audioContextRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
 
   // Collaborative Room State
   const [activeTab, setActiveTab] = useState('question'); // 'question' | 'code' | 'notes'
@@ -61,20 +95,14 @@ export default function PeerInterviewRoomPage() {
   const [interviewerNote, setInterviewerNote] = useState('');
   const [interviewerRating, setInterviewerRating] = useState(4);
   const [noteSavedFeedback, setNoteSavedFeedback] = useState(false);
-  const [sharedCode, setSharedCode] = useState('# Collaborative Coding Chamber\ndef solution():\n    pass\n');
-  const [transcript, setTranscript] = useState([]);
-  const [isSpeechListening, setIsSpeechListening] = useState(false);
+  const [sharedCode, setSharedCode] = useState('# Collaborative Coding Sandbox\ndef solution():\n    pass\n');
 
-  // Timer & Modals
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  // Clipboard & Concluding State
   const [isCopiedLink, setIsCopiedLink] = useState(false);
   const [isCopiedCode, setIsCopiedCode] = useState(false);
   const [finalReport, setFinalReport] = useState(null);
   const [isConcluding, setIsConcluding] = useState(false);
   const fallbackReportTimerRef = useRef(null);
-
-  // Speech Recognition Ref
-  const speechRecognitionRef = useRef(null);
 
   // Format Elapsed Time (MM:SS)
   const formatTime = (secs) => {
@@ -83,75 +111,162 @@ export default function PeerInterviewRoomPage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Synchronized Elapsed Timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
+    if (!isSessionActive || !sessionStartTime) {
+      return;
+    }
+    const updateElapsed = () => {
+      const now = Date.now();
+      const start = typeof sessionStartTime === 'number'
+        ? sessionStartTime
+        : new Date(sessionStartTime).getTime();
+      const diff = Math.max(0, Math.floor((now - start) / 1000));
+      setElapsedSeconds(diff);
+    };
+
+    updateElapsed();
+    const timer = setInterval(updateElapsed, 1000);
     return () => clearInterval(timer);
+  }, [isSessionActive, sessionStartTime]);
+
+  // Session Audio Mixer (Mixed Local + Remote Streams)
+  const startAudioMixerRecording = useCallback((localStream, remoteStream) => {
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        return;
+      }
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      const ctx = new AudioCtx();
+      audioContextRef.current = ctx;
+      const destination = ctx.createMediaStreamDestination();
+
+      if (localStream && localStream.getAudioTracks().length > 0) {
+        const sourceLocal = ctx.createMediaStreamSource(localStream);
+        sourceLocal.connect(destination);
+      }
+      if (remoteStream && remoteStream.getAudioTracks().length > 0) {
+        const sourceRemote = ctx.createMediaStreamSource(remoteStream);
+        sourceRemote.connect(destination);
+      }
+
+      if (destination.stream.getAudioTracks().length > 0) {
+        const recorder = new MediaRecorder(destination.stream);
+        audioChunksRef.current = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+        recorder.onstop = () => {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setRecordedAudioUrl(url);
+        };
+        recorder.start(1000);
+        mediaRecorderRef.current = recorder;
+      }
+    } catch (err) {
+      console.warn('[PeerRoom] Audio mixer recording initialization notice:', err);
+    }
   }, []);
 
-  // Web Speech API Dual-Channel Transcription (Free browser-native)
+  // Web Speech API Dual-Channel Transcription & Closed-Captions
   const setupSpeechRecognition = useCallback(() => {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) return;
+    if (!SpeechRec) {
+      console.warn('[PeerRoom] Web Speech API not supported in this browser environment.');
+      return;
+    }
 
     try {
+      if (speechRecognitionRef.current) {
+        try { speechRecognitionRef.current.abort(); } catch {}
+      }
+
       const recognition = new SpeechRec();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
+      isSpeechListeningRef.current = true;
+      setIsSpeechListening(true);
+
       recognition.onresult = (event) => {
-        let finalUtterance = '';
+        let interimText = '';
+        let finalText = '';
+
         for (let i = event.resultIndex; i < event.results.length; i++) {
+          const trans = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalUtterance += event.results[i][0].transcript;
+            finalText += trans;
+          } else {
+            interimText += trans;
           }
         }
-        if (finalUtterance.trim()) {
-          peerRoomService.sendTranscriptUtterance(finalUtterance.trim());
+
+        if (interimText.trim()) {
+          setInterimCaption({ speaker: assignedRole, text: interimText.trim() });
+          peerRoomService.sendInterimSpeech(interimText.trim());
+        }
+
+        if (finalText.trim()) {
+          const finalUtterance = finalText.trim();
+          peerRoomService.sendTranscriptUtterance(finalUtterance);
           setTranscript((prev) => [
             ...prev,
-            { speaker: assignedRole, text: finalUtterance.trim(), time: new Date().toLocaleTimeString() }
+            { speaker: assignedRole, text: finalUtterance, time: new Date().toLocaleTimeString() }
           ]);
+          setInterimCaption({ speaker: assignedRole, text: finalUtterance });
+          if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
+          captionTimeoutRef.current = setTimeout(() => {
+            setInterimCaption((curr) => (curr.text === finalUtterance ? { speaker: '', text: '' } : curr));
+          }, 3500);
         }
       };
 
-      recognition.onerror = () => {};
+      recognition.onerror = (e) => {
+        if (e.error !== 'no-speech') {
+          console.warn('[PeerRoom] Speech recognition event:', e.error);
+        }
+      };
+
       recognition.onend = () => {
-        if (isSpeechListening) {
+        // Continuous auto-restart without getting killed on pauses
+        if (isSpeechListeningRef.current) {
           try {
             recognition.start();
           } catch {
-            // Ignore auto-restart error
+            // Already restarted
           }
         }
       };
 
       speechRecognitionRef.current = recognition;
       recognition.start();
-      setIsSpeechListening(true);
     } catch (err) {
-      console.warn('[PeerRoom] Web Speech API init notice:', err);
+      console.warn('[PeerRoom] Web Speech API setup notice:', err);
     }
-  }, [assignedRole, isSpeechListening]);
+  }, [assignedRole]);
 
   // Connect to WebRTC & Signaling Service
   useEffect(() => {
     let active = true;
 
     const initRoom = async () => {
-      const currentRoomId = (urlRoomId || 'ROOM-DEMO1').toUpperCase().trim();
+      const currentRoomId = (urlRoomId || 'PEER-ROOM1').toUpperCase().trim();
       setRoomId(currentRoomId);
 
-      // Start local webcam & microphone
+      // 1. Start local webcam & microphone
       const stream = await peerRoomService.startMedia(true, true);
       if (active && localVideoRef.current && stream) {
         localVideoRef.current.srcObject = stream;
         localVideoRef.current.play().catch(() => {});
       }
 
-      // Connect signaling WebSocket
+      // 2. Connect signaling WebSocket with full event handlers
       await peerRoomService.connect(
         currentRoomId,
         roleParam,
@@ -162,11 +277,24 @@ export default function PeerInterviewRoomPage() {
             if (!active) return;
             setAssignedRole(data.role);
             setRoomInfo(data.room);
+            if (data.room && data.room.status === 'active' && data.room.started_at) {
+              setIsSessionActive(true);
+              setSessionStartTime(new Date(data.room.started_at));
+            }
+          },
+          sessionStart: (data) => {
+            if (!active) return;
+            setIsSessionActive(true);
+            setSessionStartTime(data.startedAt ? new Date(data.startedAt) : new Date());
+            if (data.room) setRoomInfo(data.room);
+            // Kick off session audio recording if streams are ready
+            startAudioMixerRecording(peerRoomService.localStream, peerRoomService.remoteStream);
           },
           peerJoined: (data) => {
             if (!active) return;
             setPeerConnected(true);
             setPeerName(data.peerName || 'Remote Peer');
+            setPeerRole(data.peerRole || (assignedRoleRef.current === 'interviewer' ? 'candidate' : 'interviewer'));
             setConnectionState('connected');
           },
           peerLeft: () => {
@@ -184,6 +312,9 @@ export default function PeerInterviewRoomPage() {
               remoteVideoRef.current.play().catch(() => {});
               setPeerConnected(true);
               setConnectionState('connected');
+              if (isSessionActiveRef.current) {
+                startAudioMixerRecording(peerRoomService.localStream, stream);
+              }
             }
           },
           localStream: (stream) => {
@@ -193,9 +324,45 @@ export default function PeerInterviewRoomPage() {
               localVideoRef.current.play().catch(() => {});
             }
           },
+          trackResumed: () => {
+            if (!active) return;
+            if (remoteVideoRef.current && peerRoomService.remoteStream) {
+              remoteVideoRef.current.srcObject = peerRoomService.remoteStream;
+              remoteVideoRef.current.play().catch(() => {});
+            }
+          },
           peerMediaState: (state) => {
             if (!active) return;
             setPeerMediaState((prev) => ({ ...prev, ...state }));
+            // If peer re-enabled video, force remote video playback
+            if (state.video && remoteVideoRef.current && peerRoomService.remoteStream) {
+              remoteVideoRef.current.srcObject = peerRoomService.remoteStream;
+              remoteVideoRef.current.play().catch(() => {});
+            }
+          },
+          roleSwapped: (data) => {
+            if (!active) return;
+            setAssignedRole(data.yourNewRole);
+            setPeerRole(data.yourNewRole === 'interviewer' ? 'candidate' : 'interviewer');
+            setRoleToast(`Roles swapped! You are now the ${data.yourNewRole === 'interviewer' ? '🎙️ Lead Interviewer' : '🎯 Candidate'}.`);
+            setTimeout(() => setRoleToast(null), 3500);
+          },
+          roleUpdated: (data) => {
+            if (!active) return;
+            setAssignedRole(data.role);
+          },
+          peerRoleUpdated: (data) => {
+            if (!active) return;
+            setPeerRole(data.peerRole);
+            setPeerName(data.peerRole === 'interviewer' ? 'Lead Interviewer' : 'Candidate');
+          },
+          peerInterimSpeech: (data) => {
+            if (!active) return;
+            setInterimCaption({ speaker: data.speaker || peerRoleRef.current, text: data.text });
+            if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
+            captionTimeoutRef.current = setTimeout(() => {
+              setInterimCaption({ speaker: '', text: '' });
+            }, 3500);
           },
           aiQuestionSuggested: (question) => {
             if (!active) return;
@@ -231,6 +398,9 @@ export default function PeerInterviewRoomPage() {
             if (fallbackReportTimerRef.current) {
               clearTimeout(fallbackReportTimerRef.current);
             }
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+              try { mediaRecorderRef.current.stop(); } catch {}
+            }
             setFinalReport(report);
             setIsConcluding(false);
           },
@@ -252,17 +422,35 @@ export default function PeerInterviewRoomPage() {
 
     return () => {
       active = false;
+      isSpeechListeningRef.current = false;
       if (fallbackReportTimerRef.current) {
         clearTimeout(fallbackReportTimerRef.current);
       }
+      if (captionTimeoutRef.current) {
+        clearTimeout(captionTimeoutRef.current);
+      }
       if (speechRecognitionRef.current) {
-        try {
-          speechRecognitionRef.current.stop();
-        } catch (_) {}
+        try { speechRecognitionRef.current.stop(); } catch {}
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        try { mediaRecorderRef.current.stop(); } catch {}
+      }
+      if (audioContextRef.current) {
+        try { audioContextRef.current.close(); } catch {}
       }
       peerRoomService.disconnect();
     };
-  }, [urlRoomId, roleParam, user, setupSpeechRecognition]);
+  }, [urlRoomId, roleParam, user, setupSpeechRecognition, startAudioMixerRecording]);
+
+  // Video Re-render Watcher: Guarantees video footage resumes immediately when peer turns camera back on
+  useEffect(() => {
+    if (peerConnected && peerMediaState.video && remoteVideoRef.current && peerRoomService.remoteStream) {
+      if (remoteVideoRef.current.srcObject !== peerRoomService.remoteStream) {
+        remoteVideoRef.current.srcObject = peerRoomService.remoteStream;
+      }
+      remoteVideoRef.current.play().catch(() => {});
+    }
+  }, [peerConnected, peerMediaState.video]);
 
   // Copy Room Link & Code
   const handleCopyLink = () => {
@@ -279,7 +467,19 @@ export default function PeerInterviewRoomPage() {
     setTimeout(() => setIsCopiedCode(false), 2500);
   };
 
-  // Toggle Media
+  // User-Controlled Role Switching in Lobby
+  const handleSelectRole = (newRole) => {
+    if (newRole === assignedRole) return;
+    setAssignedRole(newRole);
+    peerRoomService.setRole(newRole);
+  };
+
+  // In-Chamber Dynamic Role Swapping
+  const handleSwapRoles = () => {
+    peerRoomService.swapRoles();
+  };
+
+  // Media Controls
   const handleToggleMic = () => {
     const next = !isMicOn;
     setIsMicOn(next);
@@ -290,6 +490,10 @@ export default function PeerInterviewRoomPage() {
     const next = !isVideoOn;
     setIsVideoOn(next);
     peerRoomService.toggleVideo(next);
+    if (next && localVideoRef.current && peerRoomService.localStream) {
+      localVideoRef.current.srcObject = peerRoomService.localStream;
+      localVideoRef.current.play().catch(() => {});
+    }
   };
 
   const handleToggleScreenShare = async () => {
@@ -327,10 +531,15 @@ export default function PeerInterviewRoomPage() {
     if (isConcluding) return;
     setIsConcluding(true);
 
+    // Stop audio recorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try { mediaRecorderRef.current.stop(); } catch {}
+    }
+
     // 1. Send WebSocket event
     peerRoomService.concludeSession();
 
-    // 2. Guaranteed 4-second HTTP fallback so it NEVER hangs indefinitely
+    // 2. Guaranteed 4.5-second HTTP fallback so it NEVER hangs indefinitely
     fallbackReportTimerRef.current = setTimeout(async () => {
       try {
         const res = await reverseInterviewApi.getPeerReport(roomId);
@@ -347,6 +556,16 @@ export default function PeerInterviewRoomPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* ROLE SWAP TOAST NOTIFICATION                                   */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {roleToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-indigo-600 border border-indigo-400 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 animate-bounce">
+          <RefreshCw className="w-4 h-4 animate-spin" />
+          <span>{roleToast}</span>
+        </div>
+      )}
+
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 1. TOP HEADER & HUD BAR                                       */}
       {/* ───────────────────────────────────────────────────────────── */}
@@ -397,15 +616,29 @@ export default function PeerInterviewRoomPage() {
           </button>
         </div>
 
-        {/* Center: Role Indicator & Elapsed Timer */}
+        {/* Center: Role Indicator, Dynamic Role Swap & Synchronized Timer */}
         <div className="flex items-center gap-2">
           <Badge variant={assignedRole === 'interviewer' ? 'indigo' : 'emerald'} size="sm">
             {assignedRole === 'interviewer' ? '🎙️ Lead Interviewer' : '🎯 Candidate'}
           </Badge>
 
+          {/* Dynamic Role Swap Button */}
+          {isSessionActive && (
+            <button
+              type="button"
+              onClick={handleSwapRoles}
+              className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-indigo-600/80 border border-slate-700 hover:border-indigo-500 text-[11px] font-medium text-slate-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              title="Reverse roles: Interviewer becomes Candidate, Candidate becomes Interviewer"
+            >
+              <RefreshCw className="w-3 h-3 text-indigo-400" />
+              <span className="hidden md:inline">Swap Roles</span>
+            </button>
+          )}
+
+          {/* Synchronized Timer (Counts together once chamber entered) */}
           <div className="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-xs font-mono text-emerald-400 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>{formatTime(elapsedSeconds)}</span>
+            <span className={`w-2 h-2 rounded-full ${isSessionActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+            <span>{isSessionActive ? formatTime(elapsedSeconds) : '00:00 (Lobby)'}</span>
           </div>
         </div>
 
@@ -422,417 +655,620 @@ export default function PeerInterviewRoomPage() {
             <span>{peerConnected ? 'Live P2P Connected' : 'Waiting for Peer...'}</span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleConcludeSession}
-            disabled={isConcluding}
-            className="px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
-          >
-            <PhoneOff className="w-3.5 h-3.5" />
-            <span>{isConcluding ? 'Analyzing...' : 'End & Grade (360°)'}</span>
-          </button>
+          {isSessionActive && (
+            <button
+              type="button"
+              onClick={handleConcludeSession}
+              disabled={isConcluding}
+              className="px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+            >
+              <PhoneOff className="w-3.5 h-3.5" />
+              <span>{isConcluding ? 'Analyzing...' : 'End & Grade (360°)'}</span>
+            </button>
+          )}
         </div>
       </header>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* 2. DUAL-PANE WORKSPACE: VIDEO FEEDS + AI CO-PILOT HUD          */}
+      {/* 2. LOBBY OR DUAL-PANE CHAMBER VIEW                            */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* LEFT / CENTER: Split-Screen Video Chamber */}
-        <div className="flex-1 p-3 flex flex-col gap-3 min-h-[380px] lg:min-h-0 bg-slate-950/70">
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 relative">
-            {/* Remote Peer Video Container */}
-            <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg group">
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-              />
-
-              {(!peerConnected || !peerMediaState.video) && (
-                <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center gap-3 p-4 text-center">
-                  <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
-                    <Users className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-white">
-                      {peerConnected ? peerName : 'Waiting for Peer to Connect...'}
-                    </h4>
-                    <p className="text-xs text-slate-400 max-w-xs mt-1">
-                      {peerConnected
-                        ? 'Peer has muted video or camera is disabled.'
-                        : `Share the Room Code (${roomId}) or Invite Link with a classmate to connect.`}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Remote Peer Label */}
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200">
-                <span>{peerName}</span>
-                <span className="text-[10px] text-slate-400">
-                  ({assignedRole === 'interviewer' ? 'Candidate' : 'Lead Interviewer'})
-                </span>
-              </div>
-            </div>
-
-            {/* Local Video Container */}
-            <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg">
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
-              />
-
-              {!isVideoOn && (
-                <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-2">
-                  <div className="w-16 h-16 rounded-full bg-indigo-900/40 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                    <Users className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-slate-300 font-medium">You (Camera Muted)</span>
-                </div>
-              )}
-
-              {/* Local Self Label */}
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200">
-                <span>You</span>
-                <span className="text-[10px] text-indigo-400">
-                  ({assignedRole === 'interviewer' ? 'Lead Interviewer' : 'Candidate'})
-                </span>
-              </div>
-
-              {/* Local Mic Waveform Indicator */}
-              {isMicOn && (
-                <div className="absolute bottom-3 left-3">
-                  <VoiceWaveformIndicator isSpeaking={true} />
-                </div>
-              )}
-            </div>
+      {!isSessionActive ? (
+        /* ============================================================= */
+        /* PRE-MEETING LOBBY (Self Check, Role Decision & Synchronized Entry) */
+        /* ============================================================= */
+        <div className="flex-1 flex flex-col p-4 md:p-8 max-w-5xl mx-auto w-full justify-center space-y-6">
+          <div className="text-center space-y-1">
+            <Badge variant="indigo" size="sm">PRE-MEETING LOBBY</Badge>
+            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+              Collaborative Chamber Setup
+            </h2>
+            <p className="text-xs md:text-sm text-slate-400 max-w-lg mx-auto">
+              Verify your camera, microphone, and chosen role. The interview and timer will start synchronously once both of you enter the chamber.
+            </p>
           </div>
 
-          {/* Bottom Floating Media Control Bar */}
-          <div className="h-14 rounded-xl bg-slate-900/90 border border-slate-800 px-4 flex items-center justify-center gap-3 backdrop-blur-md shrink-0">
-            <button
-              type="button"
-              onClick={handleToggleMic}
-              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                isMicOn
-                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                  : 'bg-rose-950/60 text-rose-400 border-rose-800'
-              }`}
-              title={isMicOn ? 'Mute Microphone' : 'Unmute Microphone'}
-            >
-              {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+            {/* Left Column: Self Video Preview & Device Check */}
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Video className="w-4 h-4 text-indigo-400" />
+                  Your Video &amp; Mic Preview
+                </span>
+                <span className="text-[11px] font-mono text-emerald-400">Ready</span>
+              </div>
 
-            <button
-              type="button"
-              onClick={handleToggleVideo}
-              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                isVideoOn
-                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                  : 'bg-rose-950/60 text-rose-400 border-rose-800'
-              }`}
-              title={isVideoOn ? 'Turn Camera Off' : 'Turn Camera On'}
-            >
-              {isVideoOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
-            </button>
+              {/* Local Mirror Box */}
+              <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
+                />
+                {!isVideoOn && (
+                  <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <VideoOff className="w-10 h-10 text-slate-600" />
+                    <span className="text-xs">Camera is Off</span>
+                  </div>
+                )}
+                {isMicOn && (
+                  <div className="absolute bottom-3 left-3 z-10">
+                    <VoiceWaveformIndicator isSpeaking={true} />
+                  </div>
+                )}
+              </div>
 
-            <button
-              type="button"
-              onClick={handleToggleScreenShare}
-              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                isScreenSharing
-                  ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-              }`}
-              title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
-            >
-              <Monitor className="w-4 h-4" />
-            </button>
+              {/* Device Toggle Buttons */}
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleToggleMic}
+                  className={`py-2 px-4 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    isMicOn
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                      : 'bg-rose-950/60 text-rose-400 border-rose-800'
+                  }`}
+                >
+                  {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                  <span>{isMicOn ? 'Mic Active' : 'Mic Muted'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleVideo}
+                  className={`py-2 px-4 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    isVideoOn
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                      : 'bg-rose-950/60 text-rose-400 border-rose-800'
+                  }`}
+                >
+                  {isVideoOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+                  <span>{isVideoOn ? 'Camera On' : 'Camera Off'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column: Prominent Room Code & User Role Decision */}
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between space-y-4 shadow-xl">
+              {/* Prominent Room ID Display */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400">Chamber Room Code:</span>
+                  <Badge variant="indigo" size="xs">P2P CODE</Badge>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-2xl font-mono font-extrabold text-indigo-300 tracking-wider">
+                    {roomId}
+                  </span>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleCopyCode}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      title="Copy 6-character room code"
+                    >
+                      {isCopiedCode ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{isCopiedCode ? 'Copied' : 'Copy Code'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+                      title="Copy full invite link"
+                    >
+                      {isCopiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  Share this code with your peer. They can join directly from the Setup Page without opening full URLs.
+                </p>
+              </div>
+
+              {/* User Decides Their Role */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Select Your Role for This Session:
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectRole('interviewer')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      assignedRole === 'interviewer'
+                        ? 'bg-indigo-950/60 border-indigo-500 text-white ring-1 ring-indigo-500/50'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-indigo-400">🎙️ Lead Interviewer</span>
+                      {assignedRole === 'interviewer' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-snug">
+                      Access AI teleprompter, scenario questions, rubric criteria &amp; hints.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectRole('candidate')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      assignedRole === 'candidate'
+                        ? 'bg-emerald-950/60 border-emerald-500 text-white ring-1 ring-emerald-500/50'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-emerald-400">🎯 Candidate</span>
+                      {assignedRole === 'candidate' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-snug">
+                      Answer questions verbally, code in shared sandbox &amp; receive feedback.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Peer Lobby Status & Action */}
+              <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">Peer Lobby Status:</span>
+                  <span className={`font-semibold ${peerConnected ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {peerConnected ? `✅ ${peerName} Connected` : '⏳ Waiting for Peer to Join...'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {peerConnected
+                    ? 'Both participants are in the room! Click below to enter the chamber and start the synchronized timer.'
+                    : 'Once the second participant enters with the code, both of you will enter simultaneously.'}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSessionActive(true);
+                    setSessionStartTime(Date.now());
+                    startAudioMixerRecording(peerRoomService.localStream, peerRoomService.remoteStream);
+                  }}
+                  disabled={!peerConnected}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>{peerConnected ? 'Enter Chamber Together Now 🚀' : 'Waiting for Peer to Connect...'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+      ) : (
+        /* ============================================================= */
+        /* ACTIVE IN-CHAMBER COLLABORATIVE WORKSPACE                     */
+        /* ============================================================= */
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+          {/* LEFT / CENTER: Split-Screen Video Chamber */}
+          <div className="flex-1 p-3 flex flex-col gap-3 min-h-[380px] lg:min-h-0 bg-slate-950/70 relative">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 relative">
+              {/* Remote Peer Video Container */}
+              <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg group">
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className={`w-full h-full object-cover ${(!peerConnected || !peerMediaState.video) ? 'hidden' : ''}`}
+                />
 
-        {/* RIGHT: AI Proctor & Contextual Workstation */}
-        <div className="w-full lg:w-[460px] border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-950 flex flex-col shrink-0">
-          {/* Workspace Tabs */}
-          <div className="h-11 border-b border-slate-800 px-3 flex items-center gap-2 bg-slate-900/60 shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveTab('question')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'question'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Brain className="w-3.5 h-3.5" />
-              <span>{assignedRole === 'interviewer' ? 'AI Teleprompter' : 'Live Question'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('code')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'code'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Code2 className="w-3.5 h-3.5" />
-              <span>Shared Sandbox</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('notes')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'notes'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>{assignedRole === 'interviewer' ? 'Private Notes' : 'Transcript'}</span>
-            </button>
-          </div>
-
-          {/* Workspace Tab Contents */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* ───────────────────────────────────────────────────────── */}
-            {/* TAB 1: QUESTION / AI PROCTOR TELEPROMPTER                */}
-            {/* ───────────────────────────────────────────────────────── */}
-            {activeTab === 'question' && (
-              <div className="space-y-4">
-                {/* INTERVIEWER PERSPECTIVE */}
-                {assignedRole === 'interviewer' ? (
-                  <>
-                    <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-800/60 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold tracking-wider text-indigo-400 uppercase flex items-center gap-1.5">
-                          <Brain className="w-3.5 h-3.5" />
-                          <span>AI Bar-Raiser Teleprompter</span>
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">Private to You</span>
-                      </div>
-                      <p className="text-xs text-slate-300 leading-relaxed">
-                        Generate calibrated scenario questions tailored to the candidate's target seniority.
-                        Review expected concepts, then push the question to their screen.
-                      </p>
-
-                      <div className="pt-1 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={handleRequestAiQuestion}
-                          disabled={isGeneratingQuestion}
-                          className="flex-1 py-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                          <span>{isGeneratingQuestion ? 'Synthesizing...' : 'Generate Calibrated Question'}</span>
-                        </button>
-                      </div>
+                {(!peerConnected || !peerMediaState.video) && (
+                  <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center gap-3 p-4 text-center">
+                    <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
+                      <Users className="w-8 h-8" />
                     </div>
-
-                    {suggestedQuestion && (
-                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-amber-400">{suggestedQuestion.topic}</span>
-                          <Badge variant="indigo" size="xs">{suggestedQuestion.difficulty}</Badge>
-                        </div>
-
-                        <p className="text-sm font-medium text-white leading-relaxed">
-                          "{suggestedQuestion.question}"
-                        </p>
-
-                        {/* Push to Candidate Action */}
-                        <button
-                          type="button"
-                          onClick={handlePushQuestion}
-                          className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Push Question to Candidate Screen</span>
-                        </button>
-
-                        {/* Secret Rubric Checklist */}
-                        <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
-                          <span className="font-semibold text-slate-300 block">Concepts to Listen For:</span>
-                          <ul className="space-y-1 text-slate-400 list-disc list-inside">
-                            {suggestedQuestion.what_to_look_for?.map((pt, i) => (
-                              <li key={i}>{pt}</li>
-                            ))}
-                          </ul>
-
-                          {suggestedQuestion.probing_follow_ups?.length > 0 && (
-                            <div className="pt-2 border-t border-slate-800">
-                              <span className="font-semibold text-indigo-400 block">Recommended Probing Follow-ups:</span>
-                              <ul className="space-y-1 text-slate-400 list-disc list-inside mt-1">
-                                {suggestedQuestion.probing_follow_ups.map((f, i) => (
-                                  <li key={i}>"{f}"</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Live AI Co-Pilot Advice Hint */}
-                    {copilotHint && (
-                      <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/50 space-y-2">
-                        <div className="flex items-center gap-1.5 text-amber-400 text-xs font-semibold">
-                          <Lightbulb className="w-3.5 h-3.5" />
-                          <span>Live AI Co-Pilot Proctor Hint:</span>
-                        </div>
-                        <p className="text-xs text-slate-200">
-                          {copilotHint.suggested_probe}
-                        </p>
-                        <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between pt-1">
-                          <span>Coverage: {copilotHint.coverage_status}</span>
-                          <span>Confidence: {copilotHint.confidence_score}%</span>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  /* CANDIDATE PERSPECTIVE */
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-emerald-400">
-                          {activeQuestion ? activeQuestion.topic : 'Awaiting Question'}
-                        </span>
-                        {activeQuestion && <Badge variant="emerald" size="xs">{activeQuestion.difficulty}</Badge>}
-                      </div>
-
-                      {activeQuestion ? (
-                        <p className="text-base font-semibold text-white leading-relaxed">
-                          "{activeQuestion.question}"
-                        </p>
-                      ) : (
-                        <div className="py-6 text-center space-y-2">
-                          <Brain className="w-8 h-8 text-slate-600 mx-auto" />
-                          <p className="text-xs text-slate-400">
-                            The lead interviewer is selecting the first scenario question...
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-xs text-slate-300 space-y-1.5">
-                      <span className="font-semibold text-emerald-400 block">Candidate Pacing Tips:</span>
-                      <p>
-                        • Begin by clarifying ambiguous constraints with the interviewer.<br />
-                        • Propose a high-level solution before writing code or details.<br />
-                        • Talk through time and space trade-offs out loud.
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">
+                        {peerConnected ? peerName : 'Waiting for Peer to Connect...'}
+                      </h4>
+                      <p className="text-xs text-slate-400 max-w-xs mt-1">
+                        {peerConnected
+                          ? 'Peer has muted camera. Live audio is active.'
+                          : `Share Room Code (${roomId}) with your peer to connect.`}
                       </p>
                     </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* ───────────────────────────────────────────────────────── */}
-            {/* TAB 2: SHARED CODE SANDBOX                                */}
-            {/* ───────────────────────────────────────────────────────── */}
-            {activeTab === 'code' && (
-              <div className="space-y-2 flex flex-col h-full">
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>Collaborative Sandbox (Real-time P2P Sync)</span>
-                  <span className="font-mono text-[10px] text-indigo-400">Python / JavaScript</span>
+                {/* Remote Peer Label */}
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200 z-10">
+                  <span>{peerName}</span>
+                  <span className="text-[10px] text-slate-400">
+                    ({assignedRole === 'interviewer' ? 'Candidate' : 'Lead Interviewer'})
+                  </span>
                 </div>
-                <textarea
-                  value={sharedCode}
-                  onChange={handleCodeChange}
-                  rows={16}
-                  className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
+              </div>
+
+              {/* Local Video Container */}
+              <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
                 />
+
+                {!isVideoOn && (
+                  <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-2">
+                    <div className="w-16 h-16 rounded-full bg-indigo-900/40 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                      <Users className="w-8 h-8" />
+                    </div>
+                    <span className="text-xs text-slate-300 font-medium">You (Camera Muted)</span>
+                  </div>
+                )}
+
+                {/* Local Self Label */}
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200 z-10">
+                  <span>You</span>
+                  <span className="text-[10px] text-indigo-400">
+                    ({assignedRole === 'interviewer' ? 'Lead Interviewer' : 'Candidate'})
+                  </span>
+                </div>
+
+                {/* Local Mic Waveform Indicator */}
+                {isMicOn && (
+                  <div className="absolute bottom-3 left-3 z-10">
+                    <VoiceWaveformIndicator isSpeaking={true} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* FLOATING CLOSED-CAPTIONS / LIVE TRANSLATION HUD OVERLAY */}
+            {interimCaption.text && (
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 max-w-xl w-11/12 px-4 py-2.5 rounded-xl bg-slate-950/90 backdrop-blur-md border border-slate-700/80 shadow-2xl flex items-center gap-3 z-20">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider shrink-0">
+                  {interimCaption.speaker === assignedRole ? 'You' : peerName}:
+                </span>
+                <p className="text-xs text-slate-100 font-medium truncate sm:whitespace-normal">
+                  "{interimCaption.text}"
+                </p>
               </div>
             )}
 
-            {/* ───────────────────────────────────────────────────────── */}
-            {/* TAB 3: PRIVATE NOTES OR TRANSCRIPT                        */}
-            {/* ───────────────────────────────────────────────────────── */}
-            {activeTab === 'notes' && (
-              <div className="space-y-4">
-                {assignedRole === 'interviewer' ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-300">Interviewer Notes &amp; Rating:</span>
-                      {noteSavedFeedback && (
-                        <span className="text-xs font-medium text-emerald-400 flex items-center gap-1">
-                          <Check className="w-3 h-3" /> Saved to 360° Rubric
-                        </span>
-                      )}
-                    </div>
+            {/* Bottom Floating Media Control Bar */}
+            <div className="h-14 rounded-xl bg-slate-900/90 border border-slate-800 px-4 flex items-center justify-center gap-3 backdrop-blur-md shrink-0">
+              <button
+                type="button"
+                onClick={handleToggleMic}
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                  isMicOn
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-rose-950/60 text-rose-400 border-rose-800'
+                }`}
+                title={isMicOn ? 'Mute Microphone' : 'Unmute Microphone'}
+              >
+                {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              </button>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-slate-400">Score for Current Question:</label>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                type="button"
+                onClick={handleToggleVideo}
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                  isVideoOn
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-rose-950/60 text-rose-400 border-rose-800'
+                }`}
+                title={isVideoOn ? 'Turn Camera Off' : 'Turn Camera On'}
+              >
+                {isVideoOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleScreenShare}
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                  isScreenSharing
+                    ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                }`}
+                title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
+              >
+                <Monitor className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT: AI Proctor & Contextual Workstation */}
+          <div className="w-full lg:w-[460px] border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-950 flex flex-col shrink-0">
+            {/* Workspace Tabs */}
+            <div className="h-11 border-b border-slate-800 px-3 flex items-center gap-2 bg-slate-900/60 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab('question')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'question'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Brain className="w-3.5 h-3.5" />
+                <span>{assignedRole === 'interviewer' ? 'AI Teleprompter' : 'Live Question'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('code')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'code'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>Shared Sandbox</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('notes')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'notes'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>{assignedRole === 'interviewer' ? 'Private Notes' : 'Transcript'}</span>
+              </button>
+            </div>
+
+            {/* Workspace Tab Contents */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* TAB 1: QUESTION / AI PROCTOR TELEPROMPTER */}
+              {activeTab === 'question' && (
+                <div className="space-y-4">
+                  {assignedRole === 'interviewer' ? (
+                    <>
+                      <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-800/60 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold tracking-wider text-indigo-400 uppercase flex items-center gap-1.5">
+                            <Brain className="w-3.5 h-3.5" />
+                            <span>AI Bar-Raiser Teleprompter</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">Private to You</span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed">
+                          Generate calibrated scenario questions tailored to the candidate's target seniority.
+                          Review expected concepts, then push the question to their screen.
+                        </p>
+
+                        <div className="pt-1 flex gap-2">
                           <button
-                            key={star}
                             type="button"
-                            onClick={() => setInterviewerRating(star)}
-                            className={`flex-1 py-1 rounded-md text-xs font-mono border transition-all cursor-pointer ${
-                              interviewerRating >= star
-                                ? 'bg-amber-950/60 border-amber-600 text-amber-400'
-                                : 'bg-slate-900 border-slate-800 text-slate-500'
-                            }`}
+                            onClick={handleRequestAiQuestion}
+                            disabled={isGeneratingQuestion}
+                            className="flex-1 py-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                           >
-                            ★ {star}
+                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                            <span>{isGeneratingQuestion ? 'Synthesizing...' : 'Generate Calibrated Question'}</span>
                           </button>
-                        ))}
+                        </div>
+                      </div>
+
+                      {suggestedQuestion && (
+                        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-amber-400">{suggestedQuestion.topic}</span>
+                            <Badge variant="indigo" size="xs">{suggestedQuestion.difficulty}</Badge>
+                          </div>
+
+                          <p className="text-sm font-medium text-white leading-relaxed">
+                            "{suggestedQuestion.question}"
+                          </p>
+
+                          <button
+                            type="button"
+                            onClick={handlePushQuestion}
+                            className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Push Question to Candidate Screen</span>
+                          </button>
+
+                          {/* Secret Rubric Checklist */}
+                          <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
+                            <span className="font-semibold text-slate-300 block">Concepts to Listen For:</span>
+                            <ul className="space-y-1 text-slate-400 list-disc list-inside">
+                              {suggestedQuestion.what_to_look_for?.map((pt, i) => (
+                                <li key={i}>{pt}</li>
+                              ))}
+                            </ul>
+
+                            {suggestedQuestion.probing_follow_ups?.length > 0 && (
+                              <div className="pt-2 border-t border-slate-800">
+                                <span className="font-semibold text-indigo-400 block">Recommended Probing Follow-ups:</span>
+                                <ul className="space-y-1 text-slate-400 list-disc list-inside mt-1">
+                                  {suggestedQuestion.probing_follow_ups.map((f, i) => (
+                                    <li key={i}>"{f}"</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Live AI Co-Pilot Advice Hint */}
+                      {copilotHint && (
+                        <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/50 space-y-2">
+                          <div className="flex items-center gap-1.5 text-amber-400 text-xs font-semibold">
+                            <Lightbulb className="w-3.5 h-3.5" />
+                            <span>Live AI Co-Pilot Proctor Hint:</span>
+                          </div>
+                          <p className="text-xs text-slate-200">
+                            {copilotHint.suggested_probe}
+                          </p>
+                          <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between pt-1">
+                            <span>Coverage: {copilotHint.coverage_status}</span>
+                            <span>Confidence: {copilotHint.confidence_score}%</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* CANDIDATE PERSPECTIVE */
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-400">
+                            {activeQuestion ? activeQuestion.topic : 'Awaiting Question'}
+                          </span>
+                          {activeQuestion && <Badge variant="emerald" size="xs">{activeQuestion.difficulty}</Badge>}
+                        </div>
+
+                        {activeQuestion ? (
+                          <p className="text-base font-semibold text-white leading-relaxed">
+                            "{activeQuestion.question}"
+                          </p>
+                        ) : (
+                          <div className="py-6 text-center space-y-2">
+                            <Brain className="w-8 h-8 text-slate-600 mx-auto" />
+                            <p className="text-xs text-slate-400">
+                              The lead interviewer is selecting the first scenario question...
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-xs text-slate-300 space-y-1.5">
+                        <span className="font-semibold text-emerald-400 block">Candidate Pacing Tips:</span>
+                        <p>
+                          • Begin by clarifying ambiguous constraints with the interviewer.<br />
+                          • Propose a high-level solution before writing code or details.<br />
+                          • Talk through time and space trade-offs out loud.
+                        </p>
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
 
-                    <textarea
-                      value={interviewerNote}
-                      onChange={(e) => setInterviewerNote(e.target.value)}
-                      placeholder="Record observations, strengths, missed edge cases, or communication clarity..."
-                      rows={5}
-                      className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={handleSaveNote}
-                      className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors cursor-pointer"
-                    >
-                      Save Evaluation Note
-                    </button>
+              {/* TAB 2: SHARED CODE SANDBOX */}
+              {activeTab === 'code' && (
+                <div className="space-y-2 flex flex-col h-full">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>Collaborative Sandbox (Real-time P2P Sync)</span>
+                    <span className="font-mono text-[10px] text-indigo-400">Python / JavaScript</span>
                   </div>
-                ) : null}
+                  <textarea
+                    value={sharedCode}
+                    onChange={handleCodeChange}
+                    rows={16}
+                    className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
+                  />
+                </div>
+              )}
 
-                {/* Live Speech Transcript List */}
-                <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-400 block">
-                    Live Dual-Channel Speech Transcript:
-                  </span>
-                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                    {transcript.length === 0 ? (
-                      <p className="text-xs text-slate-500 italic">No utterances recorded yet. Speak into your mic...</p>
-                    ) : (
-                      transcript.map((u, i) => (
-                        <div key={i} className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs space-y-0.5">
-                          <div className="flex items-center justify-between text-[10px] text-slate-400">
-                            <span className="font-semibold text-indigo-400 uppercase">{u.speaker}</span>
-                            <span className="font-mono">{u.time}</span>
-                          </div>
-                          <p className="text-slate-200">{u.text}</p>
+              {/* TAB 3: PRIVATE NOTES OR TRANSCRIPT */}
+              {activeTab === 'notes' && (
+                <div className="space-y-4">
+                  {assignedRole === 'interviewer' ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-300">Interviewer Notes &amp; Rating:</span>
+                        {noteSavedFeedback && (
+                          <span className="text-xs font-medium text-emerald-400 flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Saved to 360° Rubric
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] text-slate-400">Score for Current Question:</label>
+                        <div className="flex gap-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setInterviewerRating(star)}
+                              className={`flex-1 py-1 rounded-md text-xs font-mono border transition-all cursor-pointer ${
+                                interviewerRating >= star
+                                  ? 'bg-amber-950/60 border-amber-600 text-amber-400'
+                                  : 'bg-slate-900 border-slate-800 text-slate-500'
+                              }`}
+                            >
+                              ★ {star}
+                            </button>
+                          ))}
                         </div>
-                      ))
-                    )}
+                      </div>
+
+                      <textarea
+                        value={interviewerNote}
+                        onChange={(e) => setInterviewerNote(e.target.value)}
+                        placeholder="Record observations, strengths, missed edge cases, or communication clarity..."
+                        rows={5}
+                        className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleSaveNote}
+                        className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Save Evaluation Note
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {/* Live Speech Transcript List */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-slate-400 block flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                      Live Dual-Channel Speech Transcript:
+                    </span>
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                      {transcript.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic">No utterances recorded yet. Speak into your mic...</p>
+                      ) : (
+                        transcript.map((u, i) => (
+                          <div key={i} className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs space-y-0.5">
+                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                              <span className="font-semibold text-indigo-400 uppercase">{u.speaker}</span>
+                              <span className="font-mono">{u.time}</span>
+                            </div>
+                            <p className="text-slate-200">{u.text}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 3. JOINT 360° EVALUATION MODAL                                */}
@@ -907,6 +1343,23 @@ export default function PeerInterviewRoomPage() {
                 </div>
               </div>
             </div>
+
+            {/* Audio Download Link if Captured */}
+            {recordedAudioUrl && (
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <Download className="w-4 h-4 text-emerald-400" />
+                  <span>Session Audio Recording (Live WebRTC Dialogue)</span>
+                </div>
+                <a
+                  href={recordedAudioUrl}
+                  download={`peer_interview_${roomId}.webm`}
+                  className="py-1 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Download Audio (.webm)
+                </a>
+              </div>
+            )}
 
             {/* Exit Action */}
             <div className="pt-3 border-t border-slate-800 flex justify-end gap-3">
