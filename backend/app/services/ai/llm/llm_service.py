@@ -2132,6 +2132,95 @@ class OpenAICompatibleLLMService(BaseLLMService):
 
 
 
+
+class CascadingLLMService(BaseLLMService):
+    """
+    High-availability cascading proxy that coordinates multiple cloud LLM providers.
+    If the primary provider fails, rate limits (429), or errors out, it automatically
+    and transparently invokes the next cloud provider in the fallback chain.
+    """
+
+    def __init__(self, primary: BaseLLMService, fallbacks: Optional[List[BaseLLMService]] = None):
+        self.primary = primary
+        self.fallbacks = [fb for fb in (fallbacks or []) if fb is not None]
+
+    def _all_services(self) -> List[BaseLLMService]:
+        chain = [self.primary]
+        for fb in self.fallbacks:
+            if fb and fb not in chain:
+                chain.append(fb)
+        return chain
+
+    def generate(self, prompt: str, system_instruction: str, temperature: float = 0.3) -> str:
+        for s in self._all_services():
+            try:
+                res = s.generate(prompt, system_instruction, temperature)
+                if res and len(res.strip()) > 15 and not res.startswith("Local Grounded Engine"):
+                    return res
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} generate failed: {e}")
+        return self._all_services()[-1].generate(prompt, system_instruction, temperature)
+
+    def generate_interview_question(self, *args, **kwargs) -> Dict[str, Any]:
+        for s in self._all_services():
+            try:
+                res = s.generate_interview_question(*args, **kwargs)
+                if res and isinstance(res, dict) and res.get("question"):
+                    return res
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} generate_interview_question failed: {e}")
+        return self._all_services()[-1].generate_interview_question(*args, **kwargs)
+
+    def evaluate_interview_answer(self, *args, **kwargs) -> Dict[str, Any]:
+        for s in self._all_services():
+            try:
+                res = s.evaluate_interview_answer(*args, **kwargs)
+                if res and isinstance(res, dict) and res.get("evaluator") != "calibrated_skip_handler":
+                    fb = res.get("feedback", "")
+                    if len(fb.strip()) > 20:
+                        return res
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} evaluate_interview_answer failed: {e}")
+        return self._all_services()[-1].evaluate_interview_answer(*args, **kwargs)
+
+    def generate_final_interview_feedback(self, *args, **kwargs) -> Dict[str, Any]:
+        for s in self._all_services():
+            try:
+                res = s.generate_final_interview_feedback(*args, **kwargs)
+                if res and isinstance(res, dict) and res.get("feedback_summary"):
+                    return res
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} generate_final_interview_feedback failed: {e}")
+        return self._all_services()[-1].generate_final_interview_feedback(*args, **kwargs)
+
+    def generate_quick_answer(self, *args, **kwargs) -> Dict[str, Any]:
+        for s in self._all_services():
+            try:
+                res = s.generate_quick_answer(*args, **kwargs)
+                if res and isinstance(res, dict) and res.get("answer"):
+                    return res
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} generate_quick_answer failed: {e}")
+        return self._all_services()[-1].generate_quick_answer(*args, **kwargs)
+
+    def analyze_resume(self, *args, **kwargs) -> Optional[Dict[str, Any]]:
+        for s in self._all_services():
+            try:
+                if hasattr(s, "analyze_resume"):
+                    res = s.analyze_resume(*args, **kwargs)
+                    if res and isinstance(res, dict) and res.get("ats_score"):
+                        return res
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} analyze_resume failed: {e}")
+        return None
+
+
 def get_question_generator_llm_service() -> BaseLLMService:
     """
     Dedicated Question Generation Service:
@@ -2162,97 +2251,119 @@ def get_question_generator_llm_service() -> BaseLLMService:
 
 def get_evaluator_llm_service() -> BaseLLMService:
     """
-    Dedicated Answer Evaluation & Hiring Committee Report Service:
-    Primary: NVIDIA NIM (calibrated 5-axis scoring, staff bar raiser feedback, Llama-3.3-70b-instruct)
-    Fallback: Groq -> Gemini -> OpenAI -> Local Grounded
+    Dedicated Answer Evaluation & Hiring Committee Report Service with Automatic Multi-Provider Cascading:
+    Evaluates via OpenAI (gpt-4o-mini / gpt-4o), NVIDIA NIM (Llama-3.3-70b), Gemini, or Groq.
+    If one provider fails or hits a rate-limit, it immediately and transparently cascades.
     """
-    provider = os.getenv("EVAL_LLM_PROVIDER", "").lower()
-    if provider == "nvidia" or not provider:
-        if os.getenv("NVIDIA_API_KEY"):
-            try:
-                from .nvidia_service import NvidiaLLMService
-                return NvidiaLLMService()
-            except Exception:
-                pass
-    if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
+    evaluators: List[BaseLLMService] = []
+    
+    # 1. OpenAI (exceptional for nuanced, multi-paragraph, constructive feedback)
+    if os.getenv("OPENAI_API_KEY"):
         try:
-            from .groq_service import GroqLLMService
-            return GroqLLMService()
+            evaluators.append(OpenAICompatibleLLMService())
         except Exception:
             pass
+
+    # 2. NVIDIA NIM (Llama-3.3-70b-instruct calibrated hiring committee)
+    if os.getenv("NVIDIA_API_KEY"):
+        try:
+            from .nvidia_service import NvidiaLLMService
+            evaluators.append(NvidiaLLMService())
+        except Exception:
+            pass
+
+    # 3. Google Gemini (fast, multi-axis rubric scoring)
     if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
         try:
             from .gemini_service import GeminiLLMService
-            return GeminiLLMService()
+            evaluators.append(GeminiLLMService())
         except Exception:
             pass
-    if os.getenv("OPENAI_API_KEY"):
+
+    # 4. Groq Cloud (ultra-fast LPU evaluation)
+    if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
         try:
-            return OpenAICompatibleLLMService()
+            from .groq_service import GroqLLMService
+            evaluators.append(GroqLLMService())
         except Exception:
             pass
-    return LocalGroundedLLMService()
+
+    evaluators.append(LocalGroundedLLMService())
+
+    if len(evaluators) > 1:
+        return CascadingLLMService(evaluators[0], evaluators[1:])
+    return evaluators[0]
 
 
 def create_service_for_key(api_key: Optional[str], default_factory=None) -> BaseLLMService:
     """
-    Dynamically instantiates an LLM service using a dedicated API key.
+    Dynamically instantiates an LLM service using a dedicated API key wrapped in CascadingLLMService.
     Automatically detects provider by key prefix:
       - 'gsk_' -> Groq Cloud LPU
-      - 'nvapi-' -> NVIDIA NIM
-      - 'sk-' -> OpenAI
+      - 'xai-' -> xAI Grok (grok-2-latest)
+      - 'hf_' -> Hugging Face (Llama-3.3-70B-Instruct)
+      - 'nvapi-' -> NVIDIA NIM (Llama-3.3-70b-instruct)
+      - 'sk-' -> OpenAI (gpt-4o-mini / gpt-4o)
       - 'AQ.' or 'AIzaSy' or other -> Google Gemini (default)
-    Falls back to default_factory or get_llm_service if key is empty or provider fails.
+    Falls back seamlessly across cloud providers if the primary key fails or rate-limits.
     """
     clean_key = (api_key or "").strip()
     if not clean_key:
         return default_factory() if default_factory else get_llm_service()
 
+    primary = None
     if clean_key.startswith("gsk_"):
         try:
             from .groq_service import GroqLLMService
-            return GroqLLMService(api_key=clean_key)
+            primary = GroqLLMService(api_key=clean_key)
         except Exception:
             pass
-
-    if clean_key.startswith("xai-"):
+    elif clean_key.startswith("xai-"):
         try:
-            return OpenAICompatibleLLMService(api_key=clean_key, base_url="https://api.x.ai/v1", model="grok-2-latest")
+            primary = OpenAICompatibleLLMService(api_key=clean_key, base_url="https://api.x.ai/v1", model="grok-2-latest")
         except Exception:
             pass
-
-    if clean_key.startswith("hf_"):
+    elif clean_key.startswith("hf_"):
         try:
-            return OpenAICompatibleLLMService(api_key=clean_key, base_url="https://api-inference.huggingface.co/v1", model="meta-llama/Llama-3.3-70B-Instruct")
+            primary = OpenAICompatibleLLMService(api_key=clean_key, base_url="https://api-inference.huggingface.co/v1", model="meta-llama/Llama-3.3-70B-Instruct")
         except Exception:
             pass
-
-    if clean_key.startswith("nvapi-"):
+    elif clean_key.startswith("nvapi-"):
         try:
             from .nvidia_service import NvidiaLLMService
-            return NvidiaLLMService(api_key=clean_key)
+            primary = NvidiaLLMService(api_key=clean_key)
         except Exception:
             pass
-
-    if clean_key.startswith("sk-") and not clean_key.startswith("sk-proj-"):
+    elif clean_key.startswith("sk-"):
         try:
-            return OpenAICompatibleLLMService(api_key=clean_key)
+            primary = OpenAICompatibleLLMService(api_key=clean_key)
         except Exception:
             pass
 
-    # Default to Gemini (handles standard Google AI Studio and Vertex API keys)
+    if not primary:
+        try:
+            from .gemini_service import GeminiLLMService
+            primary = GeminiLLMService(api_key=clean_key)
+        except Exception:
+            pass
+
+    if not primary:
+        primary = LocalGroundedLLMService()
+
+    # Wrap in CascadingLLMService with available fallbacks
+    fallbacks = []
+    if default_factory:
+        try:
+            fallbacks.append(default_factory())
+        except Exception:
+            pass
     try:
-        from .gemini_service import GeminiLLMService
-        return GeminiLLMService(api_key=clean_key)
+        fallbacks.append(get_evaluator_llm_service())
     except Exception:
         pass
+    fallbacks.append(LocalGroundedLLMService())
 
-    try:
-        return OpenAICompatibleLLMService(api_key=clean_key)
-    except Exception:
-        pass
-
-    return LocalGroundedLLMService()
+    return CascadingLLMService(primary=primary, fallbacks=fallbacks)
 
 
 def get_interview_mode_llm_service(mode: Optional[str] = "text", purpose: str = "generator") -> BaseLLMService:
@@ -2295,36 +2406,48 @@ def get_skill_gap_llm_service() -> BaseLLMService:
 
 def get_resume_llm_service() -> BaseLLMService:
     """
-    Dedicated Resume Analysis & ATS Matching Service:
+    Dedicated Resume Analysis & ATS Matching Service with Automatic Multi-Provider Cascading:
     Configured via RESUME_ATS_API_KEY (or ATS_SCORE_API_KEY).
-    Primary fallback: OpenAI (deep contextual ATS grading, gpt-4o-mini / gpt-4o)
-    Secondary fallback: Gemini -> Groq -> Local Grounded
+    Cascades seamlessly: Dedicated Key -> OpenAI -> Gemini -> NVIDIA NIM -> Groq -> Local Grounded.
     """
+    analyzers: List[BaseLLMService] = []
+    
     dedicated_key = os.getenv("RESUME_ATS_API_KEY") or os.getenv("ATS_SCORE_API_KEY")
     if dedicated_key and dedicated_key.strip():
-        return create_service_for_key(dedicated_key)
+        analyzers.append(create_service_for_key(dedicated_key))
 
-    provider = os.getenv("RESUME_LLM_PROVIDER", "").lower()
-    if provider == "openai" or not provider:
-        if os.getenv("OPENAI_API_KEY"):
-            try:
-                return OpenAICompatibleLLMService()
-            except Exception:
-                pass
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            analyzers.append(OpenAICompatibleLLMService())
+        except Exception:
+            pass
+
     if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
         try:
             from .gemini_service import GeminiLLMService
-            return GeminiLLMService()
+            analyzers.append(GeminiLLMService())
         except Exception:
             pass
+
+    if os.getenv("NVIDIA_API_KEY"):
+        try:
+            from .nvidia_service import NvidiaLLMService
+            analyzers.append(NvidiaLLMService())
+        except Exception:
+            pass
+
     if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
         try:
             from .groq_service import GroqLLMService
-            return GroqLLMService()
+            analyzers.append(GroqLLMService())
         except Exception:
             pass
-    return LocalGroundedLLMService()
 
+    analyzers.append(LocalGroundedLLMService())
+
+    if len(analyzers) > 1:
+        return CascadingLLMService(analyzers[0], analyzers[1:])
+    return analyzers[0]
 
 def get_general_llm_service() -> BaseLLMService:
     """

@@ -14,13 +14,31 @@ services:
         value: 8000
       - key: DATABASE_URL
         value: sqlite:////app/data/career_agent.db
-      - key: NVIDIA_API_KEY
-        sync: false
-      - key: GROQ_API_KEY
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PASSWORD_RESET_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
       - key: RESEND_API_KEY
+        sync: false
+      - key: INTERVIEW_TEXT_API_KEY
+        sync: false
+      - key: INTERVIEW_VIDEO_API_KEY
+        sync: false
+      - key: INTERVIEW_FACE_TO_FACE_API_KEY
+        sync: false
+      - key: INTERVIEW_PEER_CHAMBER_API_KEY
+        sync: false
+      - key: INTERVIEW_REVERSE_MOCK_API_KEY
+        sync: false
+      - key: SKILL_GAP_API_KEY
+        sync: false
+      - key: RESUME_ATS_API_KEY
         sync: false

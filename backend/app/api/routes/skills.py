@@ -1,3 +1,4 @@
+import json
 """
 Skills & Competency Gap Routes
 AI Career Preparation Agent
@@ -64,17 +65,17 @@ def generate_ai_skill_gap_analysis(
     powered by the dedicated SKILL_GAP_API_KEY LLM service.
     """
     profile = get_user_skill_profile(db, user_id=user_id)
-    gaps_summary = [
-        {
-            "skill": g.skill_name,
-            "demonstrated_score": g.demonstrated_score,
-            "target_score": g.target_score,
-            "gap": g.gap,
-            "priority": g.priority,
-            "role_importance": g.role_importance,
-        }
-        for g in profile.gaps[:6]
-    ]
+    raw_gaps = getattr(profile, "top_skill_gaps", None) or getattr(profile, "skill_gaps", []) or []
+    gaps_summary = []
+    for g in raw_gaps[:6]:
+        gaps_summary.append({
+            "skill": getattr(g, "skill_name", "Skill"),
+            "demonstrated_score": getattr(g, "demonstrated_score", getattr(g, "current_score", 60)),
+            "target_score": getattr(g, "target_score", 80),
+            "gap": getattr(g, "gap", max(0, getattr(g, "target_score", 80) - getattr(g, "current_score", 60))),
+            "priority": getattr(g, "priority", "medium"),
+            "role_importance": getattr(g, "role_importance", getattr(g, "category", "Core")),
+        })
 
     llm = get_skill_gap_llm_service()
     prompt = f"""You are a Silicon Valley engineering talent partner analyzing a candidate's skill gaps.
