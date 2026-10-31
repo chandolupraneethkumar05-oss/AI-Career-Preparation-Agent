@@ -274,23 +274,71 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">TECHNICAL ACCURACY</span>
-                  <span className="text-base font-mono font-bold text-slate-900 block mt-1">9.2 / 10</span>
-                  <p className="text-[10px] text-slate-500 mt-0.5 font-sans">Accurate time complexity analysis.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 shadow-2xs hover:border-emerald-200 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      TECHNICAL MASTERY
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded font-mono">
+                      Top 2%
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-2xl font-mono font-extrabold text-emerald-700">98%</span>
+                    <span className="text-xs text-emerald-600 font-medium">Accuracy</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-emerald-200/60 rounded-full mt-2.5 overflow-hidden">
+                    <div className="h-full bg-emerald-600 rounded-full w-[98%]" />
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-2 font-sans leading-tight">
+                    Optimal algorithm runtime, space trade-offs, and boundary defense.
+                  </p>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">STAR STRUCTURE</span>
-                  <span className="text-base font-mono font-bold text-slate-900 block mt-1">9.5 / 10</span>
-                  <p className="text-[10px] text-slate-500 mt-0.5 font-sans">Measurable situation & action.</p>
+                <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-100 shadow-2xs hover:border-indigo-200 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-800 flex items-center gap-1">
+                      <Target className="w-3 h-3 text-indigo-600" />
+                      COMMUNICATION QUALITY
+                    </span>
+                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100/70 px-1.5 py-0.5 rounded font-mono">
+                      STAR
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-2xl font-mono font-extrabold text-indigo-700">95%</span>
+                    <span className="text-xs text-indigo-600 font-medium">Clarity</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-indigo-200/60 rounded-full mt-2.5 overflow-hidden">
+                    <div className="h-full bg-indigo-600 rounded-full w-[95%]" />
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-2 font-sans leading-tight">
+                    Structured STAR responses with quantified impact and verbal poise.
+                  </p>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">REMEDIATION STATUS</span>
-                  <span className="text-base font-mono font-bold text-emerald-600 block mt-1">Zero Gaps</span>
-                  <p className="text-[10px] text-slate-500 mt-0.5 font-sans">1 skipped topic drilled in Arena.</p>
+                <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-100 shadow-2xs hover:border-purple-200 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-800 flex items-center gap-1">
+                      <Zap className="w-3 h-3 text-purple-600" />
+                      SKILL REMEDIATION
+                    </span>
+                    <span className="text-[10px] font-bold text-purple-700 bg-purple-100/70 px-1.5 py-0.5 rounded font-mono">
+                      Mastered
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-2xl font-mono font-extrabold text-purple-700">100%</span>
+                    <span className="text-xs text-purple-600 font-medium">Coverage</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-purple-200/60 rounded-full mt-2.5 overflow-hidden">
+                    <div className="h-full bg-purple-600 rounded-full w-full" />
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-2 font-sans leading-tight">
+                    Targeted practice drills immediately converted gaps into strengths.
+                  </p>
                 </div>
               </div>
             </div>

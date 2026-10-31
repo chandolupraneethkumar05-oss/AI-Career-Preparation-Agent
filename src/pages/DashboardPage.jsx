@@ -28,6 +28,7 @@ import {
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
+import SelectDropdown from '../components/SelectDropdown';
 import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
 import { storageService, STORAGE_KEYS } from '../utils/storage/storageService';
@@ -867,38 +868,32 @@ export default function DashboardPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Target Technical Role
-                </label>
-                <select
-                  value={profileRole}
-                  onChange={(e) => setProfileRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-900 bg-white"
-                >
-                  <option value="Full Stack Software Engineer">Full Stack Software Engineer</option>
-                  <option value="Frontend Developer">Frontend Developer</option>
-                  <option value="Backend Developer">Backend Developer</option>
-                  <option value="Machine Learning Engineer">Machine Learning Engineer</option>
-                  <option value="Data Analyst">Data Analyst</option>
-                  <option value="Cloud / DevOps Engineer">Cloud / DevOps Engineer</option>
-                </select>
-              </div>
+              <SelectDropdown
+                label="Target Technical Role"
+                value={profileRole}
+                onChange={setProfileRole}
+                options={[
+                  'Full Stack Software Engineer',
+                  'Frontend Developer',
+                  'Backend Developer',
+                  'Machine Learning Engineer',
+                  'Data Analyst',
+                  'Cloud / DevOps Engineer'
+                ]}
+                icon={Target}
+              />
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Calibration Level / Experience
-                </label>
-                <select
-                  value={profileDifficulty}
-                  onChange={(e) => setProfileDifficulty(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-900 bg-white"
-                >
-                  <option value="Beginner / Campus Ready">Beginner / Campus Ready (0-1 YOE)</option>
-                  <option value="Intermediate / 1-3 YOE">Intermediate (1-3 YOE)</option>
-                  <option value="Senior / Staff">Senior / Staff (4+ YOE)</option>
-                </select>
-              </div>
+              <SelectDropdown
+                label="Calibration Level / Experience"
+                value={profileDifficulty}
+                onChange={setProfileDifficulty}
+                options={[
+                  { value: 'Beginner / Campus Ready', label: 'Beginner / Campus Ready (0-1 YOE)', badge: 'Easy' },
+                  { value: 'Intermediate / 1-3 YOE', label: 'Intermediate (1-3 YOE)', badge: 'Medium' },
+                  { value: 'Senior / Staff', label: 'Senior / Staff (4+ YOE)', badge: 'Hard' }
+                ]}
+                icon={TrendingUp}
+              />
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">

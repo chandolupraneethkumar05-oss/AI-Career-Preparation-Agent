@@ -45,6 +45,8 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
+  const [resetApiKey, setResetApiKey] = useState('');
+  const [showResetApiKey, setShowResetApiKey] = useState(false);
 
   // Check for reset_token query parameter in URL on mount
   useEffect(() => {
@@ -118,7 +120,7 @@ export default function LoginPage() {
     setIsSendingReset(true);
     setResetError('');
     try {
-      const res = await authApi.forgotPassword(resetEmail);
+      const res = await authApi.forgotPassword(resetEmail, resetApiKey);
       setResetSent(true);
       if (res.reset_token) {
         setResetToken(res.reset_token);
@@ -140,7 +142,7 @@ export default function LoginPage() {
     setIsResettingPassword(true);
     setResetError('');
     try {
-      await authApi.resetPassword(resetToken, newPassword);
+      await authApi.resetPassword(resetToken, newPassword, resetApiKey);
       setPasswordResetSuccess(true);
       setPassword(newPassword);
       if (resetEmail) setEmail(resetEmail);
@@ -578,6 +580,32 @@ export default function LoginPage() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                      <span>Password Reset API Key</span>
+                      <span className="text-[10px] text-indigo-600 font-mono">From .env</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <KeyRound className="w-4 h-4 text-indigo-500" />
+                      </div>
+                      <input
+                        type={showResetApiKey ? 'text' : 'password'}
+                        value={resetApiKey}
+                        onChange={(e) => setResetApiKey(e.target.value)}
+                        placeholder="Enter API key from environment"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetApiKey(!showResetApiKey)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showResetApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
                     disabled={isResettingPassword || !newPassword}
@@ -621,6 +649,35 @@ export default function LoginPage() {
                     placeholder="candidate@example.com"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>Password Reset API Key</span>
+                    <span className="text-[10px] text-indigo-600 font-mono">From .env</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <KeyRound className="w-4 h-4 text-indigo-500" />
+                    </div>
+                    <input
+                      type={showResetApiKey ? 'text' : 'password'}
+                      value={resetApiKey}
+                      onChange={(e) => setResetApiKey(e.target.value)}
+                      placeholder="Enter PASSWORD_RESET_API_KEY from environment"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetApiKey(!showResetApiKey)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showResetApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Security key specified in your environment file (<code className="text-indigo-600 font-mono">PASSWORD_RESET_API_KEY</code>).
+                  </p>
                 </div>
 
                 <div className="space-y-2">

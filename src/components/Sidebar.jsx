@@ -60,16 +60,16 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
         />
       )}
 
-      {/* Sidebar Element */}
+      {/* Static Sidebar Element */}
       <aside
         className={`
           bg-white 
           border-r border-slate-200 
           flex flex-col justify-between 
-          transition-all duration-200 z-50 
-          h-screen
+          transition-all duration-200 z-40 
+          h-screen shrink-0
           fixed inset-y-0 left-0
-          md:sticky md:top-0
+          md:static md:inset-auto md:h-screen
           ${mobileOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0 w-64 md:w-auto'}
           ${collapsed ? 'md:w-16' : 'md:w-60'}
         `}
@@ -164,6 +164,11 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
         <div className="p-2.5 border-t border-slate-200 bg-white">
           {(!collapsed || mobileOpen) ? (
             <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-50 border border-slate-200">
+              <img
+                src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'}
+                alt={user?.name || 'Candidate'}
+                className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
+              />
               <div className="truncate flex-1 min-w-0">
                 <p className="text-xs font-semibold text-slate-900 truncate">
                   {user?.name || 'Candidate'}

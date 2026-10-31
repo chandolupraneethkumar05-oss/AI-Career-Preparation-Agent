@@ -340,9 +340,9 @@ export default function InterviewSetupPage() {
 
   // Unified dropdown options replacing cluttered multiple-selection box lists
   const difficultyDropdownOptions = [
-    { value: 'Beginner', label: 'Beginner (Campus / Junior 0-2 Yrs) — Direct logic, core syntax & foundational concepts' },
-    { value: 'Intermediate', label: 'Intermediate (Mid-Level 2-4 Yrs) — Component architecture, algorithmic trade-offs & optimization' },
-    { value: 'Advanced', label: 'Advanced (Senior 4+ Yrs) — Distributed scalability, high-concurrency locking & architectural trade-offs' }
+    { value: 'Beginner', label: 'Beginner (Campus / Junior 0-2 Yrs) — Direct logic, core syntax & foundational concepts', badge: 'Easy' },
+    { value: 'Intermediate', label: 'Intermediate (Mid-Level 2-4 Yrs) — Component architecture, algorithmic trade-offs & optimization', badge: 'Medium' },
+    { value: 'Advanced', label: 'Advanced (Senior 4+ Yrs) — Distributed scalability, high-concurrency locking & architectural trade-offs', badge: 'Hard' }
   ];
 
   const interviewTypeDropdownOptions = [

@@ -21,6 +21,7 @@ import {
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
+import SelectDropdown from '../components/SelectDropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
@@ -244,61 +245,40 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#70685E] mb-1.5">
-                Default Target Role
-              </label>
-              <select
-                value={isCustomRole ? 'OTHER_CUSTOM' : role}
-                onChange={(e) => {
-                  if (e.target.value === 'OTHER_CUSTOM') {
-                    setIsCustomRole(true);
-                    if (!customRoleInput) setCustomRoleInput('Software Engineer');
-                  } else {
-                    setIsCustomRole(false);
-                    setRole(e.target.value);
-                  }
-                }}
-                className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-[#1F1B16] text-sm focus:outline-none focus:border-[#1A365D]"
-              >
-                {MOCK_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-                <option value="OTHER_CUSTOM">+ Other (Custom Target Role)...</option>
-              </select>
+            <SelectDropdown
+              label="Default Target Role"
+              value={isCustomRole ? 'OTHER_CUSTOM' : role}
+              onChange={(val) => {
+                if (val === 'OTHER_CUSTOM') {
+                  setIsCustomRole(true);
+                  if (!customRoleInput) setCustomRoleInput('Software Engineer');
+                } else {
+                  setIsCustomRole(false);
+                  setRole(val);
+                }
+              }}
+              options={[
+                ...MOCK_ROLES.map(r => ({ value: r, label: r })),
+                { value: 'OTHER_CUSTOM', label: '+ Other (Custom Target Role)...' }
+              ]}
+              icon={Target}
+              isCustom={isCustomRole}
+              customValue={customRoleInput}
+              onCustomChange={setCustomRoleInput}
+              customPlaceholder="e.g., Senior iOS Engineer, Security Architect, Product Lead..."
+            />
 
-              {isCustomRole && (
-                <div className="mt-2.5 space-y-1">
-                  <label className="block text-[11px] font-semibold text-[#8C6E54]">
-                    Custom Target Role Title:
-                  </label>
-                  <input
-                    type="text"
-                    value={customRoleInput}
-                    onChange={(e) => setCustomRoleInput(e.target.value)}
-                    placeholder="e.g., Senior iOS Engineer, Security Architect, Product Lead..."
-                    className="w-full p-2 rounded-md bg-[#FFFDF9] border border-[#1A365D] text-[#1F1B16] text-sm focus:outline-none"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#70685E] mb-1.5">
-                Practice Difficulty Level
-              </label>
-              <select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
-                className="w-full p-2.5 rounded-md bg-[#FFFDF9] border border-[#E5E0D5] text-[#1F1B16] text-sm focus:outline-none focus:border-[#1A365D]"
-              >
-                <option value="Beginner">Beginner (Foundational Level)</option>
-                <option value="Intermediate">Intermediate (Mid-Level Professional)</option>
-                <option value="Advanced">Advanced (Senior Level)</option>
-              </select>
-            </div>
+            <SelectDropdown
+              label="Practice Difficulty Level"
+              value={difficulty}
+              onChange={setDifficulty}
+              options={[
+                { value: 'Beginner', label: 'Beginner (Foundational Level)', badge: 'Easy' },
+                { value: 'Intermediate', label: 'Intermediate (Mid-Level Professional)', badge: 'Medium' },
+                { value: 'Advanced', label: 'Advanced (Senior Level)', badge: 'Hard' }
+              ]}
+              icon={Target}
+            />
           </div>
         </GlassCard>
 

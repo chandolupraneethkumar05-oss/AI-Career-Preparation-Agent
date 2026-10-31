@@ -65,6 +65,16 @@ export default function PeerInterviewRoomPage() {
   const [_connectionState, setConnectionState] = useState('connecting');
   const [audioAutoplayBlocked, setAudioAutoplayBlocked] = useState(false);
 
+  const DEFAULT_INTERVIEWER_AVATAR = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300';
+  const DEFAULT_CANDIDATE_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300';
+
+  const [myAvatar, setMyAvatar] = useState(
+    user?.avatar || (roleParam === 'interviewer' ? DEFAULT_INTERVIEWER_AVATAR : DEFAULT_CANDIDATE_AVATAR)
+  );
+  const [peerAvatar, setPeerAvatar] = useState(
+    roleParam === 'interviewer' ? DEFAULT_CANDIDATE_AVATAR : DEFAULT_INTERVIEWER_AVATAR
+  );
+
   // Video & Audio Element Refs
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -304,6 +314,18 @@ export default function PeerInterviewRoomPage() {
             if (!active) return;
             setAssignedRole(data.role);
             setRoomInfo(data.room);
+            if (data.userAvatar) setMyAvatar(data.userAvatar);
+            if (data.room) {
+              const otherAvatar = data.role === 'interviewer' ? data.room.candidate_avatar : data.room.interviewer_avatar;
+              if (otherAvatar) setPeerAvatar(otherAvatar);
+              if (data.room.has_candidate && data.role === 'interviewer') {
+                setPeerInRoom(true);
+                if (data.room.candidate_name) setPeerName(data.room.candidate_name);
+              } else if (data.room.has_interviewer && data.role === 'candidate') {
+                setPeerInRoom(true);
+                if (data.room.interviewer_name) setPeerName(data.room.interviewer_name);
+              }
+            }
             if (data.room && data.room.status === 'active' && data.room.started_at) {
               setIsSessionActive(true);
               setSessionStartTime(new Date(data.room.started_at));
@@ -313,7 +335,11 @@ export default function PeerInterviewRoomPage() {
             if (!active) return;
             setIsSessionActive(true);
             setSessionStartTime(data.startedAt ? new Date(data.startedAt) : new Date());
-            if (data.room) setRoomInfo(data.room);
+            if (data.room) {
+              setRoomInfo(data.room);
+              const otherAvatar = assignedRoleRef.current === 'interviewer' ? data.room.candidate_avatar : data.room.interviewer_avatar;
+              if (otherAvatar) setPeerAvatar(otherAvatar);
+            }
             startAudioMixerRecording(peerRoomService.localStream, peerRoomService.remoteStream);
           },
           peerJoined: (data) => {
@@ -321,6 +347,12 @@ export default function PeerInterviewRoomPage() {
             setPeerInRoom(true);
             setPeerName(data.peerName || 'Remote Peer');
             setPeerRole(data.peerRole || (assignedRoleRef.current === 'interviewer' ? 'candidate' : 'interviewer'));
+            if (data.peerAvatar) {
+              setPeerAvatar(data.peerAvatar);
+            } else if (data.room) {
+              const otherAvatar = assignedRoleRef.current === 'interviewer' ? data.room.candidate_avatar : data.room.interviewer_avatar;
+              if (otherAvatar) setPeerAvatar(otherAvatar);
+            }
           },
           peerLeft: () => {
             if (!active) return;
@@ -479,7 +511,8 @@ export default function PeerInterviewRoomPage() {
               setPeerConnected(true);
             }
           }
-        }
+        },
+        user?.avatar || (roleParam === 'interviewer' ? DEFAULT_INTERVIEWER_AVATAR : DEFAULT_CANDIDATE_AVATAR)
       );
 
       // Start dual-channel speech recognition
@@ -862,6 +895,26 @@ export default function PeerInterviewRoomPage() {
 
         {/* Right: Connection State & End Button */}
         <div className="flex items-center gap-2">
+          {/* Active Participants Photo Badge */}
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">
+            <div className="flex items-center -space-x-2">
+              <img
+                src={myAvatar}
+                alt="You"
+                className="w-6 h-6 rounded-full object-cover border-2 border-emerald-500"
+                title={`You (${myRoleLabel})`}
+              />
+              <img
+                src={peerAvatar}
+                alt={peerName}
+                className={`w-6 h-6 rounded-full object-cover border-2 ${peerConnected ? 'border-indigo-500' : 'border-slate-600 opacity-70'}`}
+                title={`${peerName} (${peerRoleLabel})`}
+              />
+            </div>
+            <span className="text-[11px] font-medium text-slate-300">
+              {peerConnected ? '2 In Chamber' : '1 Connected'}
+            </span>
+          </div>
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
               peerConnected
@@ -928,9 +981,19 @@ export default function PeerInterviewRoomPage() {
                   className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
                 />
                 {!isVideoOn && (
-                  <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
-                    <VideoOff className="w-10 h-10 text-slate-600" />
-                    <span className="text-xs">Camera is Off</span>
+                  <div className="flex flex-col items-center justify-center gap-2.5 text-slate-300">
+                    <div className="relative">
+                      <img
+                        src={myAvatar}
+                        alt="You"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500 shadow-xl"
+                      />
+                      <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-slate-950" />
+                    </div>
+                    <div className="text-center">
+                      <span className="text-xs font-semibold block text-white">You ({myRoleLabel})</span>
+                      <span className="text-[10px] text-slate-400">Camera preview is off</span>
+                    </div>
                   </div>
                 )}
                 {isMicOn && (
@@ -1052,12 +1115,29 @@ export default function PeerInterviewRoomPage() {
               </div>
 
               {/* Peer Lobby Status & Action */}
-              <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Peer Lobby Status:</span>
-                  <span className={`font-semibold ${peerInRoom ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {peerInRoom ? `✅ Peer Connected in Room (${peerRole})` : '⏳ Waiting for Peer to Join...'}
-                  </span>
+              <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2.5">
+                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="relative shrink-0">
+                    <img
+                      src={peerAvatar}
+                      alt={peerName}
+                      className="w-11 h-11 rounded-full object-cover border-2 border-indigo-500/60 shadow-md"
+                    />
+                    <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-900 ${peerInRoom ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white truncate">
+                        {peerInRoom ? peerName : 'Peer Seat Reserved'}
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${peerInRoom ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800' : 'bg-amber-950/40 text-amber-400 border border-amber-800/40'}`}>
+                        {peerInRoom ? 'In Lobby' : 'Awaiting'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 block truncate">
+                      {peerInRoom ? `Assigned as ${peerRoleLabel}` : `Invite peer to code: ${roomId}`}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-[11px] text-slate-400">
                   {peerInRoom
@@ -1101,13 +1181,18 @@ export default function PeerInterviewRoomPage() {
                 />
 
                 {(!peerConnected || !peerMediaState.video) && (
-                  <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center gap-3 p-4 text-center">
-                    <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
-                      <Users className="w-8 h-8" />
+                  <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center gap-3.5 p-4 text-center">
+                    <div className="relative">
+                      <img
+                        src={peerAvatar}
+                        alt={peerName}
+                        className="w-24 h-24 rounded-full object-cover border-4 border-indigo-500/60 shadow-2xl shadow-indigo-500/25 ring-4 ring-indigo-500/20"
+                      />
+                      <span className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-slate-900 ${peerConnected ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-white">
-                        {peerConnected ? peerRoleLabel : peerInRoom ? 'Establishing P2P Video Link...' : 'Waiting for Peer to Connect...'}
+                      <h4 className="text-sm font-semibold text-white flex items-center justify-center gap-1.5">
+                        <span>{peerName && !['Remote Peer', 'Candidate', 'Interviewer', 'Lead Interviewer'].includes(peerName) ? peerName : peerRoleLabel}</span>
                       </h4>
                       <p className="text-xs text-slate-400 max-w-xs mt-1">
                         {peerConnected
@@ -1120,12 +1205,23 @@ export default function PeerInterviewRoomPage() {
                   </div>
                 )}
 
-                {/* Remote Peer Label */}
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200 z-10">
-                  <span>{peerName && !['Remote Peer', 'Candidate', 'Interviewer', 'Lead Interviewer'].includes(peerName) ? peerName : peerRoleLabel}</span>
+                {/* Remote Peer Label with Photo */}
+                <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200 z-10 shadow-md">
+                  <img
+                    src={peerAvatar}
+                    alt={peerName}
+                    className="w-5 h-5 rounded-full object-cover border border-indigo-400 shrink-0"
+                  />
+                  <span className="font-semibold">{peerName && !['Remote Peer', 'Candidate', 'Interviewer', 'Lead Interviewer'].includes(peerName) ? peerName : peerRoleLabel}</span>
                   <span className="text-[10px] text-indigo-400">
                     ({peerRoleLabel})
                   </span>
+                </div>
+
+                {/* Remote Verified Profile Badge */}
+                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-950/75 backdrop-blur-xs border border-slate-800 text-[10px] text-slate-400 z-10">
+                  <span className={`w-1.5 h-1.5 rounded-full ${peerConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <span>{peerConnected ? 'Live Connection' : 'Connecting'}</span>
                 </div>
               </div>
 
@@ -1140,18 +1236,29 @@ export default function PeerInterviewRoomPage() {
                 />
 
                 {!isVideoOn && (
-                  <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-2">
-                    <div className="w-16 h-16 rounded-full bg-indigo-900/40 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                      <Users className="w-8 h-8" />
+                  <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center gap-2.5">
+                    <div className="relative">
+                      <img
+                        src={myAvatar}
+                        alt="You"
+                        className="w-24 h-24 rounded-full object-cover border-4 border-emerald-500/60 shadow-2xl shadow-emerald-500/25 ring-4 ring-emerald-500/20"
+                      />
+                      <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900" />
                     </div>
-                    <span className="text-xs text-slate-300 font-medium">You (Camera Muted)</span>
+                    <span className="text-xs text-slate-200 font-semibold">You (Camera Muted)</span>
+                    <span className="text-[10px] text-slate-400">Microphone remains active</span>
                   </div>
                 )}
 
-                {/* Local Self Label */}
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200 z-10">
-                  <span>You</span>
-                  <span className="text-[10px] text-indigo-400">
+                {/* Local Self Label with Photo */}
+                <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-800 text-[11px] font-medium text-slate-200 z-10 shadow-md">
+                  <img
+                    src={myAvatar}
+                    alt="You"
+                    className="w-5 h-5 rounded-full object-cover border border-emerald-400 shrink-0"
+                  />
+                  <span className="font-semibold">You</span>
+                  <span className="text-[10px] text-emerald-400">
                     ({myRoleLabel})
                   </span>
                 </div>

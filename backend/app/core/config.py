@@ -59,5 +59,21 @@ class Settings(BaseModel):
     # CORS settings - scoped specifically to frontend Vite and preview hosts
     CORS_ORIGINS: list[str] = _parse_cors_origins()
 
+    # Security API Key for Password Reset Authorization
+    PASSWORD_RESET_API_KEY: str = os.getenv("PASSWORD_RESET_API_KEY", os.getenv("RESET_PASSWORD_API_KEY", "")).strip()
+
+    # Dedicated Per-Interview-Mode AI API Keys
+    INTERVIEW_TEXT_API_KEY: str = os.getenv("INTERVIEW_TEXT_API_KEY", "").strip()
+    INTERVIEW_VIDEO_API_KEY: str = os.getenv("INTERVIEW_VIDEO_API_KEY", "").strip()
+    INTERVIEW_FACE_TO_FACE_API_KEY: str = os.getenv("INTERVIEW_FACE_TO_FACE_API_KEY", "").strip()
+    INTERVIEW_PEER_CHAMBER_API_KEY: str = os.getenv("INTERVIEW_PEER_CHAMBER_API_KEY", "").strip()
+    INTERVIEW_REVERSE_MOCK_API_KEY: str = os.getenv("INTERVIEW_REVERSE_MOCK_API_KEY", "").strip()
+
+    # Dedicated Skill Gap Assessment AI API Key
+    SKILL_GAP_API_KEY: str = os.getenv("SKILL_GAP_API_KEY", "").strip()
+
+    # Dedicated Resume ATS Score AI API Key
+    RESUME_ATS_API_KEY: str = os.getenv("RESUME_ATS_API_KEY", os.getenv("ATS_SCORE_API_KEY", "")).strip()
+
 
 settings = Settings()

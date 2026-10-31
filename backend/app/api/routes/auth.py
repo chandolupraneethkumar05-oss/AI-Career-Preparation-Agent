@@ -30,9 +30,22 @@ from ...core.security import (
     decode_password_reset_token
 )
 from ...services.email_service import get_email_service
+from ...core.config import settings
 from ..deps import get_current_user, get_token_from_header
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Identity"])
+
+
+def _verify_reset_api_key(provided_key: Optional[str], header_key: Optional[str] = None):
+    required_key = (settings.PASSWORD_RESET_API_KEY or "").strip()
+    if not required_key:
+        return
+    token = (provided_key or header_key or "").strip()
+    if not token or token != required_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing Password Reset API Key. Please provide the authorized API key configured in the environment."
+        )
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -196,8 +209,10 @@ def login_as_demo(
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 def forgot_password(
     request: ForgotPasswordRequest,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
+    _verify_reset_api_key(request.api_key, x_api_key)
     """
     Initiates candidate password recovery.
     Validates candidate presence, creates signed 30-minute JWT token,
@@ -253,8 +268,10 @@ def forgot_password(
 @router.post("/reset-password", response_model=ResetPasswordResponse)
 def reset_password(
     request: ResetPasswordRequest,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
+    _verify_reset_api_key(request.api_key, x_api_key)
     """
     Completes password recovery by validating signed token and updating password hash.
     """

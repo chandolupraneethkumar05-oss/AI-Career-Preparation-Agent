@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from fastapi import WebSocket
 
-from .ai.llm.llm_service import default_llm_service
+from .ai.llm.llm_service import default_llm_service, get_interview_mode_llm_service
 
 
 def utc_now_iso() -> str:
@@ -131,6 +131,8 @@ class PeerRoom:
             "has_candidate": self.candidate is not None,
             "interviewer_name": self.interviewer.get("user_name") if self.interviewer else None,
             "candidate_name": self.candidate.get("user_name") if self.candidate else None,
+            "interviewer_avatar": self.interviewer.get("user_avatar") if self.interviewer else None,
+            "candidate_avatar": self.candidate.get("user_avatar") if self.candidate else None,
             "current_question": self.current_question,
             "questions_count": len(self.questions),
             "transcript_count": len(self.transcript),
@@ -215,7 +217,8 @@ class PeerRoomService:
         user_id: str,
         user_name: str,
         ws: WebSocket,
-        client_id: Optional[str] = None
+        client_id: Optional[str] = None,
+        user_avatar: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Registers a participant into either the 'interviewer' or 'candidate' slot.
@@ -247,10 +250,16 @@ class PeerRoomService:
             else:
                 assigned_role = "candidate"
 
+        default_avatar = (
+            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300"
+            if assigned_role == "interviewer"
+            else "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300"
+        )
         participant_info = {
             "user_id": user_id,
             "client_id": cid,
             "user_name": user_name or ("Interviewer" if assigned_role == "interviewer" else "Candidate"),
+            "user_avatar": (user_avatar or default_avatar).strip(),
             "ws": ws,
             "joined_at": utc_now_iso()
         }
@@ -326,7 +335,7 @@ Do NOT wrap in markdown fences other than raw JSON.
         system_instruction = "You are a Silicon Valley engineering hiring bar-raiser providing private interview teleprompter guidance."
         
         try:
-            raw_text = default_llm_service.generate(prompt=prompt, system_instruction=system_instruction, temperature=0.4)
+            raw_text = get_interview_mode_llm_service('peer_chamber').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.4)
             if raw_text and ("{" in raw_text and "}" in raw_text):
                 cleaned = raw_text.strip()
                 if cleaned.startswith("```json"):
@@ -381,7 +390,7 @@ Return a compact JSON object:
 """
         system_instruction = "You are a real-time AI interview co-pilot feeding private coaching hints to the interviewer."
         try:
-            raw_text = default_llm_service.generate(prompt=prompt, system_instruction=system_instruction, temperature=0.2)
+            raw_text = get_interview_mode_llm_service('peer_chamber').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.2)
             if raw_text and ("{" in raw_text and "}" in raw_text):
                 cleaned = raw_text.strip()
                 if cleaned.startswith("```json"):
@@ -545,7 +554,7 @@ Return ONLY JSON without conversational preamble.
         system_instruction = "You are a Senior Engineering Director performing double-sided calibration on both an interviewer and candidate."
 
         try:
-            raw_text = default_llm_service.generate(prompt=prompt, system_instruction=system_instruction, temperature=0.3)
+            raw_text = get_interview_mode_llm_service('peer_chamber').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.3)
             if raw_text and ("{" in raw_text and "}" in raw_text):
                 cleaned = raw_text.strip()
                 if cleaned.startswith("```json"):
@@ -677,7 +686,7 @@ Return JSON:
 """
         system_instruction = "You are an AI actor simulating a realistic job applicant in a reverse interview simulation."
         try:
-            raw = default_llm_service.generate(prompt=prompt, system_instruction=system_instruction, temperature=0.5)
+            raw = get_interview_mode_llm_service('reverse_mock').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.5)
             if raw and ("{" in raw and "}" in raw):
                 cleaned = raw.strip()
                 if cleaned.startswith("```json"):
@@ -770,7 +779,7 @@ Return valid JSON:
 """
         system_instruction = "You are a VP of Engineering assessing a technical lead's interview capability."
         try:
-            raw = default_llm_service.generate(prompt=prompt, system_instruction=system_instruction, temperature=0.3)
+            raw = get_interview_mode_llm_service('reverse_mock').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.3)
             if raw and ("{" in raw and "}" in raw):
                 cleaned = raw.strip()
                 if cleaned.startswith("```json"):

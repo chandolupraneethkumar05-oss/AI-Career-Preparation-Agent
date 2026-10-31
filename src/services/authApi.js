@@ -7,14 +7,23 @@ import { API_BASE_URL } from './apiConfig';
 
 export const authApi = {
   /**
-   * Request password recovery token & email dispatch
+   * Request password recovery token & email dispatch with optional API Key verification
    */
-  async forgotPassword(email) {
+  async forgotPassword(email, apiKey = '') {
     const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanApiKey = (apiKey || '').trim();
+    const headers = { 'Content-Type': 'application/json' };
+    if (cleanApiKey) {
+      headers['X-API-Key'] = cleanApiKey;
+    }
+
     const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail })
+      headers,
+      body: JSON.stringify({
+        email: cleanEmail,
+        api_key: cleanApiKey || undefined
+      })
     });
 
     if (!res.ok) {
@@ -26,13 +35,23 @@ export const authApi = {
   },
 
   /**
-   * Complete password reset with one-time token
+   * Complete password reset with one-time token and optional API Key verification
    */
-  async resetPassword(token, newPassword) {
+  async resetPassword(token, newPassword, apiKey = '') {
+    const cleanApiKey = (apiKey || '').trim();
+    const headers = { 'Content-Type': 'application/json' };
+    if (cleanApiKey) {
+      headers['X-API-Key'] = cleanApiKey;
+    }
+
     const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token.trim(), new_password: newPassword })
+      headers,
+      body: JSON.stringify({
+        token: token.trim(),
+        new_password: newPassword,
+        api_key: cleanApiKey || undefined
+      })
     });
 
     if (!res.ok) {

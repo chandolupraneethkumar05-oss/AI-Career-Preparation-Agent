@@ -254,6 +254,7 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                 client_id = data.get("clientId") or f"client_{id(websocket)}"
                 user_id = data.get("userId") or f"user_{id(websocket)}"
                 user_name = data.get("userName") or ("Interviewer" if client_role == "interviewer" else "Candidate")
+                user_avatar = data.get("userAvatar") or data.get("avatar")
 
                 res = await default_peer_room_service.register_participant(
                     room_id=norm_room_id,
@@ -261,15 +262,23 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                     user_id=user_id,
                     user_name=user_name,
                     ws=websocket,
-                    client_id=client_id
+                    client_id=client_id,
+                    user_avatar=user_avatar
                 )
 
                 assigned_role = res["assigned_role"]
+                actual_avatar = (
+                    room.interviewer.get("user_avatar")
+                    if assigned_role == "interviewer" and room.interviewer
+                    else (room.candidate.get("user_avatar") if room.candidate else user_avatar)
+                )
+
                 # Send confirmation to joining peer
                 await websocket.send_json({
                     "type": "joined",
                     "role": assigned_role,
                     "userName": user_name,
+                    "userAvatar": actual_avatar,
                     "room": room.to_dict()
                 })
 
@@ -280,6 +289,7 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                         "type": "peer_joined",
                         "peerRole": assigned_role,
                         "peerName": user_name,
+                        "peerAvatar": actual_avatar,
                         "room": room.to_dict()
                     })
                     # Signal initiator to prepare offer

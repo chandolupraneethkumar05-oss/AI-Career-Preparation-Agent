@@ -48,6 +48,7 @@ from .ai.llm.llm_service import (
     get_question_generator_llm_service,
     get_evaluator_llm_service,
     get_general_llm_service,
+    get_interview_mode_llm_service,
 )
 
 
@@ -194,8 +195,11 @@ class InterviewEngine:
             "job_description": getattr(request, "job_description", "") or ""
         }
 
-        # Generate question #1 using dedicated Question Generator LLM (Groq Cloud LPU)
-        q1_data = get_question_generator_llm_service().generate_interview_question(
+        interview_mode = getattr(request, "interview_mode", None) or "text"
+        session_ctx["interview_mode"] = interview_mode
+
+        # Generate question #1 using dedicated Interview Mode LLM
+        q1_data = get_interview_mode_llm_service(mode=interview_mode, purpose="generator").generate_interview_question(
             session_context=session_ctx,
             question_index=0,
             total_questions=total_questions,
@@ -212,6 +216,7 @@ class InterviewEngine:
             role=target_role,
             interview_type=category,
             difficulty=difficulty,
+            interview_mode=interview_mode,
             questions_count=total_questions,
             current_question_index=0,
             status="in_progress",
@@ -423,8 +428,9 @@ class InterviewEngine:
                 "evaluator": "calibrated_skip_handler"
             }
         else:
-            # 5-Axis Evaluation using dedicated Evaluator LLM (NVIDIA NIM / Llama-3.3-70b-instruct)
-            eval_dict = get_evaluator_llm_service().evaluate_interview_answer(
+            # 5-Axis Evaluation using dedicated Interview Mode Evaluator LLM
+            current_mode = getattr(interview, "interview_mode", "text") or "text"
+            eval_dict = get_interview_mode_llm_service(mode=current_mode, purpose="evaluator").evaluate_interview_answer(
                 question=q_dict,
                 answer_text=effective_answer_text,
                 career_context=career_context,
@@ -677,8 +683,10 @@ class InterviewEngine:
                 "resume_text": ""
             }
 
-            # Synthesize next question via dedicated Question Generator (Groq Cloud LPU)
-            next_q_data = get_question_generator_llm_service().generate_interview_question(
+            # Synthesize next question via dedicated Interview Mode LLM
+            current_mode = getattr(interview, "interview_mode", "text") or "text"
+            session_ctx["interview_mode"] = current_mode
+            next_q_data = get_interview_mode_llm_service(mode=current_mode, purpose="generator").generate_interview_question(
                 session_context=session_ctx,
                 question_index=next_index,
                 total_questions=total_allowed,
@@ -856,8 +864,9 @@ class InterviewEngine:
 
         career_context = build_user_career_context(user_id, db)
 
-        # Synthesize final hiring committee report via dedicated Evaluator LLM (NVIDIA NIM)
-        final_data = get_evaluator_llm_service().generate_final_interview_feedback(
+        # Synthesize final hiring committee report via dedicated Evaluator LLM
+        current_mode = getattr(interview, "interview_mode", "text") or "text"
+        final_data = get_interview_mode_llm_service(mode=current_mode, purpose="evaluator").generate_final_interview_feedback(
             session=interview.as_dict(),
             questions=q_dicts,
             answers=a_dicts,

@@ -1628,10 +1628,10 @@ class OpenAICompatibleLLMService(BaseLLMService):
     Falls back gracefully to LocalGroundedLLMService if unconfigured or encountering errors.
     """
 
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self._fallback = LocalGroundedLLMService()
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     def generate(self, prompt: str, system_instruction: str, temperature: float = 0.3) -> str:
         if not self.api_key:
@@ -2176,12 +2176,104 @@ def get_evaluator_llm_service() -> BaseLLMService:
     return LocalGroundedLLMService()
 
 
+def create_service_for_key(api_key: Optional[str], default_factory=None) -> BaseLLMService:
+    """
+    Dynamically instantiates an LLM service using a dedicated API key.
+    Automatically detects provider by key prefix:
+      - 'gsk_' -> Groq Cloud LPU
+      - 'nvapi-' -> NVIDIA NIM
+      - 'sk-' -> OpenAI
+      - 'AQ.' or 'AIzaSy' or other -> Google Gemini (default)
+    Falls back to default_factory or get_llm_service if key is empty or provider fails.
+    """
+    clean_key = (api_key or "").strip()
+    if not clean_key:
+        return default_factory() if default_factory else get_llm_service()
+
+    if clean_key.startswith("gsk_"):
+        try:
+            from .groq_service import GroqLLMService
+            return GroqLLMService(api_key=clean_key)
+        except Exception:
+            pass
+
+    if clean_key.startswith("nvapi-"):
+        try:
+            from .nvidia_service import NvidiaLLMService
+            return NvidiaLLMService(api_key=clean_key)
+        except Exception:
+            pass
+
+    if clean_key.startswith("sk-") and not clean_key.startswith("sk-proj-"):
+        try:
+            return OpenAICompatibleLLMService(api_key=clean_key)
+        except Exception:
+            pass
+
+    # Default to Gemini (handles standard Google AI Studio and Vertex API keys)
+    try:
+        from .gemini_service import GeminiLLMService
+        return GeminiLLMService(api_key=clean_key)
+    except Exception:
+        pass
+
+    try:
+        return OpenAICompatibleLLMService(api_key=clean_key)
+    except Exception:
+        pass
+
+    return LocalGroundedLLMService()
+
+
+def get_interview_mode_llm_service(mode: Optional[str] = "text", purpose: str = "generator") -> BaseLLMService:
+    """
+    Retrieves the dedicated LLM service for a specific interview mode:
+    - 'text' (Written Text & Sandbox): INTERVIEW_TEXT_API_KEY
+    - 'video' (Video AI Mock): INTERVIEW_VIDEO_API_KEY
+    - 'face_to_face' (Face-to-Face AI): INTERVIEW_FACE_TO_FACE_API_KEY
+    - 'peer_chamber' (Peer Collaborative Chamber): INTERVIEW_PEER_CHAMBER_API_KEY
+    - 'reverse_mock' (Reverse Mock Interview): INTERVIEW_REVERSE_MOCK_API_KEY
+    Falls back to INTERVIEW_API_KEY, get_evaluator_llm_service (if purpose=='evaluator'),
+    or get_question_generator_llm_service.
+    """
+    norm_mode = (mode or "text").lower().strip()
+    mode_keys = {
+        "text": os.getenv("INTERVIEW_TEXT_API_KEY"),
+        "video": os.getenv("INTERVIEW_VIDEO_API_KEY"),
+        "face_to_face": os.getenv("INTERVIEW_FACE_TO_FACE_API_KEY"),
+        "peer_chamber": os.getenv("INTERVIEW_PEER_CHAMBER_API_KEY"),
+        "reverse_mock": os.getenv("INTERVIEW_REVERSE_MOCK_API_KEY"),
+    }
+    key = mode_keys.get(norm_mode) or os.getenv("INTERVIEW_API_KEY")
+    fallback_factory = get_evaluator_llm_service if purpose == "evaluator" else get_question_generator_llm_service
+    if key and key.strip():
+        return create_service_for_key(key, default_factory=fallback_factory)
+    return fallback_factory()
+
+
+def get_skill_gap_llm_service() -> BaseLLMService:
+    """
+    Retrieves the dedicated LLM service for Skill Gap Assessment & Remediation:
+    - SKILL_GAP_API_KEY
+    Falls back gracefully to get_general_llm_service().
+    """
+    key = os.getenv("SKILL_GAP_API_KEY")
+    if key and key.strip():
+        return create_service_for_key(key, default_factory=get_general_llm_service)
+    return get_general_llm_service()
+
+
 def get_resume_llm_service() -> BaseLLMService:
     """
     Dedicated Resume Analysis & ATS Matching Service:
-    Primary: OpenAI (deep contextual ATS grading, gpt-4o-mini / gpt-4o)
-    Fallback: Gemini -> Groq -> Local Grounded
+    Configured via RESUME_ATS_API_KEY (or ATS_SCORE_API_KEY).
+    Primary fallback: OpenAI (deep contextual ATS grading, gpt-4o-mini / gpt-4o)
+    Secondary fallback: Gemini -> Groq -> Local Grounded
     """
+    dedicated_key = os.getenv("RESUME_ATS_API_KEY") or os.getenv("ATS_SCORE_API_KEY")
+    if dedicated_key and dedicated_key.strip():
+        return create_service_for_key(dedicated_key)
+
     provider = os.getenv("RESUME_LLM_PROVIDER", "").lower()
     if provider == "openai" or not provider:
         if os.getenv("OPENAI_API_KEY"):

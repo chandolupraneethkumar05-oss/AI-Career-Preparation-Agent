@@ -58,11 +58,12 @@ export class PeerRoomService {
   /**
    * Initializes the WebSocket signaling channel and binds event handlers.
    */
-  async connect(roomId, role, userName, userId, callbacks = {}) {
+  async connect(roomId, role, userName, userId, callbacks = {}, userAvatar = null) {
     this.roomId = (roomId || '').toUpperCase().trim();
     this.role = role || 'candidate';
     this.userName = userName || (role === 'interviewer' ? 'Interviewer' : 'Candidate');
     this.userId = userId || this.clientId;
+    this.userAvatar = userAvatar;
     this.callbacks = callbacks;
 
     const wsUrl = getWebSocketUrl(`/ws/peer-room/${this.roomId}`);
@@ -82,6 +83,7 @@ export class PeerRoomService {
             role: this.role,
             userName: this.userName,
             userId: this.userId,
+            userAvatar: this.userAvatar,
             clientId: this.clientId
           }));
           resolve(true);

@@ -7,7 +7,8 @@ import {
   FileCode,
   Sparkles,
   Maximize2,
-  Minimize2
+  Minimize2,
+  ChevronDown
 } from 'lucide-react';
 import Badge from './Badge';
 
@@ -35,6 +36,18 @@ export default function CodeEditor({
   const gutterRef = useRef(null);
   const [copied, setCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const langDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (langDropdownRef.current && !langDropdownRef.current.contains(e.target)) {
+        setLangDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
 
   // Synchronize scroll between textarea and line number gutter
   const handleScroll = () => {
@@ -146,18 +159,46 @@ export default function CodeEditor({
           </div>
 
           {onLanguageChange && (
-            <select
-              value={language}
-              onChange={(e) => onLanguageChange(e.target.value)}
-              disabled={readOnly}
-              className="px-2 py-0.5 text-[11px] rounded border border-[#D5CFBF] bg-[#FFFDF9] text-[#1F1B16] font-mono focus:outline-none focus:border-[#1A365D]"
-            >
-              {supportedLanguages.map((lang) => (
-                <option key={lang.id} value={lang.id}>
-                  {lang.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={langDropdownRef}>
+              <button
+                type="button"
+                disabled={readOnly}
+                onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+                className="px-2.5 py-1 text-[11px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-mono font-medium flex items-center gap-1.5 hover:border-slate-400 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+              >
+                <span>{supportedLanguages.find(l => l.id === language)?.name || language}</span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${langDropdownOpen ? 'rotate-180 text-indigo-600' : ''}`} />
+              </button>
+
+              {langDropdownOpen && (
+                <div className="absolute left-0 top-full mt-1 z-50 min-w-[150px] rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
+                    Language
+                  </div>
+                  {supportedLanguages.map((lang) => {
+                    const isSelected = lang.id === language;
+                    return (
+                      <button
+                        key={lang.id}
+                        type="button"
+                        onClick={() => {
+                          onLanguageChange(lang.id);
+                          setLangDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-1.5 text-left text-xs font-mono flex items-center justify-between transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-indigo-50 text-indigo-700 font-bold dark:bg-indigo-950/60 dark:text-indigo-300'
+                            : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <span>{lang.name}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded bg-[#EAE6DC] text-[#5C554B]">

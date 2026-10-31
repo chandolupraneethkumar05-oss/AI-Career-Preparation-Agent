@@ -34,8 +34,8 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--theme-bg,#F8FAFC)] text-[var(--theme-text,#0F172A)] flex flex-row antialiased overflow-x-hidden font-sans transition-colors duration-150">
-      {/* Sidebar */}
+    <div className="h-screen w-full flex flex-row overflow-hidden bg-[var(--theme-bg,#F8FAFC)] text-[var(--theme-text,#0F172A)] antialiased font-sans transition-colors duration-150">
+      {/* Static Fixed Sidebar */}
       <Sidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
@@ -43,10 +43,10 @@ export default function AppLayout() {
         setMobileOpen={setMobileOpen}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content Area - Dedicated Scrollable Viewport */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Top Masthead Header Bar */}
-        <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between transition-colors shadow-xs">
+        <header className="sticky top-0 z-30 shrink-0 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between transition-colors shadow-xs">
           <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Mobile Hamburger Menu Toggle */}
             <button
