@@ -1628,17 +1628,35 @@ class OpenAICompatibleLLMService(BaseLLMService):
     Falls back gracefully to LocalGroundedLLMService if unconfigured or encountering errors.
     """
 
-    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None, base_url: Optional[str] = None):
         self._fallback = LocalGroundedLLMService()
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.base_url = base_url
+        if self.api_key:
+            if self.api_key.startswith("xai-"):
+                self.base_url = self.base_url or "https://api.x.ai/v1"
+                self.model = model or "grok-2-latest"
+            elif self.api_key.startswith("hf_"):
+                self.base_url = self.base_url or "https://api-inference.huggingface.co/v1"
+                self.model = model or "meta-llama/Llama-3.3-70B-Instruct"
+            else:
+                self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        else:
+            self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+    def _get_client(self):
+        from openai import OpenAI
+        kwargs = {"api_key": self.api_key}
+        if self.base_url:
+            kwargs["base_url"] = self.base_url
+        return OpenAI(**kwargs)
 
     def generate(self, prompt: str, system_instruction: str, temperature: float = 0.3) -> str:
         if not self.api_key:
             return self._fallback.generate(prompt, system_instruction, temperature)
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
+            client = self._get_client()
             resp = client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -1676,7 +1694,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
             )
             
             from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
+            client = self._get_client()
             start_time = time.time()
             resp = client.chat.completions.create(
                 model=self.model,
@@ -1763,7 +1781,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
             )
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
+            client = self._get_client()
             prompt = (
                 f"You are a technical interviewer hiring for {session_config.get('role', 'Software Engineer')} ({session_config.get('difficulty', 'Intermediate')}).\n"
                 f"Candidate career context: {json.dumps(career_context)}\n"
@@ -1842,7 +1860,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
             )
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
+            client = self._get_client()
             prompt = (
                 f"Question: {question.get('question_text') or question.get('question')}\n"
                 f"Topic: {question.get('topic') or question.get('skill')}, Skill: {question.get('skill')}\n"
@@ -1923,7 +1941,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
             )
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
+            client = self._get_client()
             prompt = (
                 f"Session: {json.dumps(session)}\n"
                 f"Questions: {json.dumps(questions)}\n"
@@ -1969,7 +1987,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
             )
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
+            client = self._get_client()
 
             context_str = json.dumps({
                 "target_role": target_role,
@@ -2048,7 +2066,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
 
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
+            client = self._get_client()
 
             system_prompt = (
                 "You are a Senior Principal Technical Recruiter and ATS Auditor. "
@@ -2194,6 +2212,18 @@ def create_service_for_key(api_key: Optional[str], default_factory=None) -> Base
         try:
             from .groq_service import GroqLLMService
             return GroqLLMService(api_key=clean_key)
+        except Exception:
+            pass
+
+    if clean_key.startswith("xai-"):
+        try:
+            return OpenAICompatibleLLMService(api_key=clean_key, base_url="https://api.x.ai/v1", model="grok-2-latest")
+        except Exception:
+            pass
+
+    if clean_key.startswith("hf_"):
+        try:
+            return OpenAICompatibleLLMService(api_key=clean_key, base_url="https://api-inference.huggingface.co/v1", model="meta-llama/Llama-3.3-70B-Instruct")
         except Exception:
             pass
 
