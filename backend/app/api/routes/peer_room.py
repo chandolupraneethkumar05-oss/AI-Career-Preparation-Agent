@@ -534,10 +534,10 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                 try:
                     report = await asyncio.wait_for(
                         loop.run_in_executor(None, default_peer_room_service.generate_360_evaluation, room),
-                        timeout=5.0
+                        timeout=25.0
                     )
                 except Exception as exc:
-                    logger.warning(f"Error during async 360 evaluation: {exc}")
+                    logger.warning(f"Error or timeout during async 360 evaluation: {exc}")
                     report = default_peer_room_service.generate_fallback_360_evaluation(room)
 
                 payload = {

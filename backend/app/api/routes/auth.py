@@ -36,16 +36,12 @@ from ..deps import get_current_user, get_token_from_header
 router = APIRouter(prefix="/auth", tags=["Authentication & Identity"])
 
 
-def _verify_reset_api_key(provided_key: Optional[str], header_key: Optional[str] = None):
-    required_key = (settings.PASSWORD_RESET_API_KEY or "").strip()
-    if not required_key:
-        return
-    token = (provided_key or header_key or "").strip()
-    if not token or token != required_key:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing Password Reset API Key. Please provide the authorized API key configured in the environment."
-        )
+def _verify_reset_api_key(provided_key: Optional[str] = None, header_key: Optional[str] = None):
+    """
+    Self-service password recovery is cryptographically authenticated via single-use,
+    time-limited signed JWT tokens. No client API key prompt is required.
+    """
+    return
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)

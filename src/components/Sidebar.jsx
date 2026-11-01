@@ -79,7 +79,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
           <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-200 bg-white">
             {(!collapsed || mobileOpen) ? (
               <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-sm shadow-indigo-600/30">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-sm shadow-emerald-600/30">
                   <span className="font-sans font-bold text-xs tracking-wider">TP</span>
                 </div>
                 <div className="truncate">
@@ -92,7 +92,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
                 </div>
               </div>
             ) : (
-              <div className="mx-auto w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-600/30">
+              <div className="mx-auto w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-600/30">
                 <span className="font-sans font-bold text-xs">TP</span>
               </div>
             )}
@@ -141,7 +141,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
                       className={({ isActive }) => `
                         flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-colors duration-150
                         ${isActive
-                          ? 'bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100 shadow-xs'
+                          ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100 shadow-xs'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
                         }
                         ${collapsed && !mobileOpen ? 'justify-center px-1.5 py-2' : ''}

@@ -142,7 +142,7 @@ export default function ProgressPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full">
               UNIFIED CAREER ANALYTICS
             </span>
           </div>
@@ -213,7 +213,7 @@ export default function ProgressPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-indigo-600" />
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
                   <span>Interview Score Progression</span>
                 </h3>
                 <p className="text-xs text-slate-500">
@@ -240,7 +240,7 @@ export default function ProgressPage() {
               </>
             ) : (
               <div className="py-12 px-6 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-3">
-                <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-indigo-600">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto text-emerald-600">
                   <TrendingUp className="w-5 h-5" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900">No score history logged yet</h4>
@@ -249,7 +249,7 @@ export default function ProgressPage() {
                 </p>
                 <button
                   onClick={() => navigate('/interview-setup')}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
                 >
                   Start First Interview →
                 </button>
@@ -269,7 +269,7 @@ export default function ProgressPage() {
                     <span className="text-slate-600">Technical Depth</span>
                     <span className="font-mono text-slate-900">{techSkill}%</span>
                   </div>
-                  <ProgressBar progress={techSkill} colorClass="bg-indigo-600" />
+                  <ProgressBar progress={techSkill} colorClass="bg-emerald-600" />
                 </div>
 
                 <div className="space-y-1.5">
@@ -310,7 +310,7 @@ export default function ProgressPage() {
 
             <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Hours Practiced</span>
-              <p className="text-3xl font-mono font-bold text-indigo-600">
+              <p className="text-3xl font-mono font-bold text-emerald-600">
                 {weeklyReport?.summary?.total_practice_hours_this_week || '2.5'}h
               </p>
               <span className="text-[11px] text-slate-500">Target: 5.0h / week</span>
@@ -345,7 +345,7 @@ export default function ProgressPage() {
                   <h4 className="text-xs font-bold text-slate-900">3 Targeted Coding Drills</h4>
                   <p className="text-[11px] text-slate-500">Resolve skipped questions in Skill Arena</p>
                 </div>
-                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-200">
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
                   In Progress
                 </span>
               </div>
@@ -414,14 +414,14 @@ export default function ProgressPage() {
                   }`}
                 >
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    ach.unlocked ? 'bg-indigo-100 text-indigo-700 font-bold' : 'bg-slate-100 text-slate-400'
+                    ach.unlocked ? 'bg-emerald-100 text-emerald-700 font-bold' : 'bg-slate-100 text-slate-400'
                   }`}>
                     {ach.unlocked ? <Award className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900">{ach.title}</h4>
                     <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{ach.description}</p>
-                    <span className="text-[10px] font-mono text-indigo-600 block mt-1">+{ach.xpReward || 50} XP</span>
+                    <span className="text-[10px] font-mono text-emerald-600 block mt-1">+{ach.xpReward || 50} XP</span>
                   </div>
                 </div>
               ))}

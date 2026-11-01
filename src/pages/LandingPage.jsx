@@ -32,7 +32,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCFC] text-slate-900 selection:bg-indigo-600 selection:text-white font-sans antialiased">
+    <div className="min-h-screen bg-[#FDFCFC] text-slate-900 selection:bg-emerald-600 selection:text-white font-sans antialiased">
       <Navbar />
 
       {/* ───────────────────────────────────────────────────────────── */}
@@ -53,8 +53,8 @@ export default function LandingPage() {
 
           {/* Floating White Architectural Card */}
           <div className="relative z-10 max-w-xl bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-6 sm:p-8 lg:p-10 shadow-2xl space-y-5 animate-in fade-in duration-500">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[11px] font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-[11px] font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
               <span>Real-Time AI Interview Calibration</span>
             </div>
 
@@ -70,7 +70,7 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
               <button
                 onClick={handleStart}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all shadow-lg shadow-indigo-600/25 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all shadow-lg shadow-emerald-600/25 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Enter Practice Room</span>
                 <ArrowRight className="w-4 h-4" />
@@ -90,7 +90,7 @@ export default function LandingPage() {
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> 0-1 YOE Campus Ready
               </span>
               <span className="flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" /> Raw JD Grounding
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Raw JD Grounding
               </span>
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function LandingPage() {
           {/* Card 1: Adaptive Questioning */}
           <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 group">
             <div className="space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform">
                 <Brain className="w-5 h-5" />
               </div>
               <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">
@@ -135,7 +135,7 @@ export default function LandingPage() {
                 Campus Freshers are never grilled on distributed multi-region SLAs. Questions focus on core DSA, clean syntax, OOP fundamentals, and REST APIs.
               </p>
             </div>
-            <div className="pt-2 border-t border-slate-100 text-[11px] font-bold text-indigo-600 flex items-center gap-1">
+            <div className="pt-2 border-t border-slate-100 text-[11px] font-bold text-emerald-600 flex items-center gap-1">
               <span>Calibrate Level</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </div>
@@ -236,7 +236,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           <div className="lg:col-span-5 space-y-4">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
               METHODOLOGY HIGHLIGHT
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-snug font-sans">
@@ -248,7 +248,7 @@ export default function LandingPage() {
             <div className="pt-2 flex items-center gap-3">
               <button
                 onClick={handleStart}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
               >
                 Run Free Simulation →
               </button>
@@ -297,22 +297,22 @@ export default function LandingPage() {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-100 shadow-2xs hover:border-indigo-200 transition-colors">
+                <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 shadow-2xs hover:border-emerald-200 transition-colors">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-800 flex items-center gap-1">
-                      <Target className="w-3 h-3 text-indigo-600" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                      <Target className="w-3 h-3 text-emerald-600" />
                       COMMUNICATION QUALITY
                     </span>
-                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100/70 px-1.5 py-0.5 rounded font-mono">
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded font-mono">
                       STAR
                     </span>
                   </div>
                   <div className="flex items-baseline gap-1.5 mt-1">
-                    <span className="text-2xl font-mono font-extrabold text-indigo-700">95%</span>
-                    <span className="text-xs text-indigo-600 font-medium">Clarity</span>
+                    <span className="text-2xl font-mono font-extrabold text-emerald-700">95%</span>
+                    <span className="text-xs text-emerald-600 font-medium">Clarity</span>
                   </div>
-                  <div className="w-full h-1.5 bg-indigo-200/60 rounded-full mt-2.5 overflow-hidden">
-                    <div className="h-full bg-indigo-600 rounded-full w-[95%]" />
+                  <div className="w-full h-1.5 bg-emerald-200/60 rounded-full mt-2.5 overflow-hidden">
+                    <div className="h-full bg-emerald-600 rounded-full w-[95%]" />
                   </div>
                   <p className="text-[11px] text-slate-600 mt-2 font-sans leading-tight">
                     Structured STAR responses with quantified impact and verbal poise.
@@ -360,7 +360,7 @@ export default function LandingPage() {
             { title: 'Web Audio Speech Analysis', desc: 'Real-time mic dictation with volume visualizer, duration timer, and STAR scoring.' },
             { title: 'ATS Resume Alignment', desc: 'Deterministic keyword audit scoring your resume against any target tech role.' }
           ].map((item, idx) => (
-            <div key={idx} className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs hover:border-indigo-200 hover:shadow-xs transition-all">
+            <div key={idx} className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs hover:border-emerald-200 hover:shadow-xs transition-all">
               <h4 className="text-xs font-bold text-slate-900 font-sans mb-1">{item.title}</h4>
               <p className="text-[11px] text-slate-500 font-sans leading-relaxed">{item.desc}</p>
             </div>
@@ -374,7 +374,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-200/80 bg-white py-12 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-xs">
               TP
             </div>
             <span className="font-bold text-slate-900 text-sm font-sans">TalentPath AI</span>
@@ -383,10 +383,10 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-6 text-slate-500 font-sans">
-            <Link to="/interview-setup" className="hover:text-indigo-600 transition-colors">Mock Interview</Link>
-            <Link to="/skill-arena" className="hover:text-indigo-600 transition-colors">Skill Arena</Link>
-            <Link to="/ats" className="hover:text-indigo-600 transition-colors">Resume ATS</Link>
-            <Link to="/login" className="hover:text-indigo-600 transition-colors">Sign In</Link>
+            <Link to="/interview-setup" className="hover:text-emerald-600 transition-colors">Mock Interview</Link>
+            <Link to="/skill-arena" className="hover:text-emerald-600 transition-colors">Skill Arena</Link>
+            <Link to="/ats" className="hover:text-emerald-600 transition-colors">Resume ATS</Link>
+            <Link to="/login" className="hover:text-emerald-600 transition-colors">Sign In</Link>
           </div>
 
           <p className="text-[11px] text-slate-400 font-sans">

@@ -199,7 +199,7 @@
    ========================================================================= */
 
 /* Primary Action Buttons */
-button.bg-indigo-600,
+button.bg-emerald-600,
 .btn-primary,
 button.bg-gradient-to-r {
   background-color: #4F46E5 !important;
@@ -208,7 +208,7 @@ button.bg-gradient-to-r {
   font-weight: 600 !important;
 }
 
-button.bg-indigo-600:hover,
+button.bg-emerald-600:hover,
 .btn-primary:hover,
 button.bg-gradient-to-r:hover {
   background-color: #4338CA !important;

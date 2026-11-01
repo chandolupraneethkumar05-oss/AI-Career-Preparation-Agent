@@ -423,18 +423,123 @@ Return valid JSON with exactly these fields:
             session, questions, answers, evaluations, career_context, language
         )
 
-    def generate_interview_question(self, *args, **kwargs) -> Dict[str, Any]:
+    def generate_interview_question(
+        self,
+        career_context: Dict[str, Any] = None,
+        session_config: Dict[str, Any] = None,
+        sequence_number: int = 1,
+        previous_questions: List[Dict[str, Any]] = None,
+        previous_evaluations: List[Dict[str, Any]] = None,
+        retrieved_chunk: Optional[Dict[str, Any]] = None,
+        language: str = "en",
+        adaptive_decision: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
         """
-        Question generation is delegated to Groq (or fallback cascade)
-        to maintain ultra-low latency interactive question turn-taking.
+        Dynamically synthesizes authentic, level-calibrated interview questions using NVIDIA NIM.
+        Keeps questions concise, realistic, and tailored to role and seniority level.
         """
+        if self.api_key:
+            career_context = career_context or {}
+            session_config = session_config or kwargs.get("session_context") or {}
+            if kwargs.get("question_index") is not None:
+                sequence_number = kwargs["question_index"] + 1
+            previous_questions = previous_questions or kwargs.get("previous_qa") or []
+            previous_evaluations = previous_evaluations or []
+
+            target_role = (
+                session_config.get("target_role")
+                or session_config.get("role")
+                or career_context.get("target_role")
+                or "Software Engineer"
+            )
+            difficulty_raw = session_config.get("difficulty") or "Intermediate"
+            difficulty = normalize_difficulty(difficulty_raw)
+            interview_type = session_config.get("interview_type") or session_config.get("category") or "Technical"
+            job_description = (
+                session_config.get("job_description")
+                or career_context.get("job_description")
+                or ""
+            ).strip()
+
+            prev_q_texts = [q.get("question") or q.get("question_text", "") for q in previous_questions]
+            past_q_texts = career_context.get("past_interview_questions", [])
+            all_forbidden = list(set([t for t in (prev_q_texts + past_q_texts) if t]))
+
+            system_prompt = (
+                f"You are a Senior Technical Interviewer conducting an authentic {difficulty}-level {interview_type} mock interview for the role of {target_role}.\n"
+                "CRITICAL QUESTION CALIBRATION RULES:\n"
+                "1. Keep the question CONCISE, SHARP, AND ACCESSIBLE (2 to 4 sentences). NEVER write a full-page wall of text.\n"
+                "2. Level Calibration:\n"
+                "   - Beginner (0-2 Yrs): Test core syntax, data structures, debugging intuition, fundamental APIs, and practical understanding.\n"
+                "   - Intermediate (2-4 Yrs): Test engineering trade-offs, concurrency, caching, database indexing, or lifecycle management.\n"
+                "   - Advanced (4+ Yrs): Test distributed architecture, failure recovery, data consistency vs throughput, or complex scalability bottlenecks concisely.\n"
+                "3. STRICT REQUIREMENT: NEVER repeat or closely rephrase any previously asked questions.\n"
+                "4. Return clean, valid JSON with exact fields."
+            )
+
+            user_prompt = f"""
+Target Role: {target_role}
+Difficulty Level: {difficulty}
+Interview Type: {interview_type}
+Sequence Number: Question #{sequence_number}
+Job Description Context: {job_description[:300] if job_description else "None"}
+Strictly Do NOT Repeat Any of These Questions: {json.dumps(all_forbidden[:15])}
+Target Language: {language}
+
+Return valid JSON with exactly these fields:
+{{
+  "question": "The fresh, authentic, concise (2-4 sentences) interview question",
+  "skill": "Specific core skill or technology tested",
+  "topic": "Specific technical topic",
+  "rationale": "Why this question tests the role at this level",
+  "expected_focus": "Key points candidate should cover",
+  "rubric_guidance": "Evaluation guidance calibrated to {difficulty} level"
+}}
+"""
+            raw_resp = self._call_nvidia(user_prompt, system_prompt, temperature=0.5, json_mode=True)
+            if raw_resp:
+                try:
+                    parsed = json.loads(self._clean_json_text(raw_resp))
+                    q_text = parsed.get("question") or parsed.get("question_text")
+                    if q_text:
+                        qid = f"nv_q_{sequence_number}_{int(time.time())}"
+                        return {
+                            "id": qid,
+                            "question_id": qid,
+                            "sequence_number": sequence_number,
+                            "question": q_text,
+                            "question_text": q_text,
+                            "skill": parsed.get("skill", "Engineering Fundamentals"),
+                            "topic": parsed.get("topic", "Technical Architecture"),
+                            "difficulty": difficulty,
+                            "question_type": interview_type,
+                            "source_type": "nvidia_nim_real_llm",
+                            "generated_source": f"nvidia_{self.model}",
+                            "rationale": parsed.get("rationale", f"NVIDIA NIM generation for {target_role}"),
+                            "expected_focus": parsed.get("expected_focus", "Architectural trade-offs and concrete implementation."),
+                            "rubric_guidance": parsed.get("rubric_guidance", "Examine correctness, edge cases, and depth."),
+                            "is_follow_up": bool(previous_evaluations and sequence_number > 1)
+                        }
+                except Exception:
+                    pass
+
+        # Try Groq if key exists, otherwise fallback
         if os.getenv("GROQ_API_KEY"):
             try:
                 from .groq_service import GroqLLMService
-                return GroqLLMService().generate_interview_question(*args, **kwargs)
+                return GroqLLMService().generate_interview_question(
+                    career_context, session_config, sequence_number,
+                    previous_questions, previous_evaluations, retrieved_chunk,
+                    language, adaptive_decision, **kwargs
+                )
             except Exception:
                 pass
-        return self._fallback.generate_interview_question(*args, **kwargs)
+        return self._fallback.generate_interview_question(
+            career_context, session_config, sequence_number,
+            previous_questions, previous_evaluations, retrieved_chunk,
+            language, adaptive_decision, **kwargs
+        )
 
     def generate_grounded_response(self, *args, **kwargs) -> Dict[str, Any]:
         """Grounded knowledge queries are delegated to Gemini/Google AI Studio (or fallback)."""

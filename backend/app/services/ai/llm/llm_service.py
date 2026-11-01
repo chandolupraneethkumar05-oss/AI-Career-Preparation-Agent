@@ -405,86 +405,11 @@ class LocalGroundedLLMService(BaseLLMService):
 
     def _get_curriculum_questions(self, category: str, topic: str, difficulty: str, target_role: str, interview_type: str) -> List[str]:
         cat = category.strip()
-        diff = difficulty.strip()
+        diff = normalize_difficulty(difficulty.strip())
+        role_lower = (target_role or "").lower()
 
-        if cat == "Machine Learning":
-            if diff == "Advanced":
-                return [
-                    "How do L1 and L2 regularization mathematically influence the loss surface and parameter weights in machine learning, and in what scenario would ElasticNet be preferred over pure Lasso or Ridge?",
-                    "When architecting gradient boosting trees (e.g. XGBoost, LightGBM), how do histogram-based splitting and gradient-based one-side sampling (GOSS) drastically reduce training latency compared to exact greedy splitting?",
-                    "How do you formulate the bias-variance decomposition mathematically, and how do ensemble methods like Bagging vs Boosting specifically target each component?",
-                    "How do you design a real-time recommendation retrieval system using approximate nearest neighbors (HNSW or ScaNN), and what trade-offs exist between index build latency, memory footprint, and recall at K?",
-                    "In large-scale click-through-rate (CTR) prediction models, how do factorization machines and Deep & Cross Networks (DCN) model high-order sparse feature interactions efficiently without manual combinatorial explosion?",
-                    "How do focal loss and class-balanced loss mathematically reshape cross-entropy gradients when training models under severe class imbalance (e.g. 1:10,000 fraud detection)?",
-                    "When serving large deep learning models under strict p99 latency SLAs (<15ms), what are the architectural trade-offs between dynamic tensor batching, FP16/INT8 quantization, and speculative decoding?"
-                ]
-            elif diff == "Beginner":
-                return [
-                    "What is the difference between supervised and unsupervised learning, and what are common real-world use cases for each?",
-                    "Can you explain the difference between classification and regression in machine learning, and what evaluation metrics you use for each?",
-                    "Why is it essential to split a dataset into training, validation, and test sets, and what happens if you evaluate your final model on the training data?",
-                    "What is the curse of dimensionality in machine learning, and how does high dimensionality affect distance-based algorithms like KNN?",
-                    "Can you explain the difference between parameters and hyperparameters in machine learning with concrete examples of each?",
-                    "What are common methods for handling missing values and numerical scaling (MinMaxScaler vs StandardScaler) before training linear models?"
-                ]
-            else:  # Intermediate
-                return [
-                    "How do you distinguish between high bias and high variance when evaluating machine learning models, and what concrete actions do you take when your model overfits the training dataset?",
-                    "What is the difference between Precision, Recall, and ROC-AUC? In what real-world ML application would you prioritize Recall over Precision?",
-                    "How do tree-based models like Random Forests determine feature importance, and what are the limitations of Gini impurity-based importance on high-cardinality features?",
-                    "How would you detect and address data drift (covariate shift) versus concept drift when monitoring a deployed machine learning model in production?",
-                    "Can you explain how cross-validation works with k-folds, and why must stratified k-fold or group k-fold be used when evaluating customer churn or patient healthcare datasets?",
-                    "How does gradient descent optimize neural network weights, and what advantages do momentum-based optimizers like Adam have over vanilla stochastic gradient descent (SGD)?",
-                    "What are the mathematical differences between Bagging and Boosting, and why does a Random Forest reduce variance while AdaBoost reduces bias?",
-                    "In NLP and recommendation systems, what are vector embeddings, and how do cosine similarity and dot product differ when comparing semantic document representations?"
-                ]
-
-        elif cat == "Deep Learning":
-            if diff == "Advanced":
-                return [
-                    "Can you explain the mathematical formulation of scaled dot-product attention in Transformers, why the square root of the key dimension is used for scaling, and how multi-head attention facilitates representation learning?",
-                    "How do layer normalization and batch normalization differ in terms of dimension reduction and operational statistics during distributed training vs inference?",
-                    "In self-supervised pretraining (such as Masked Autoencoders or Contrastive Learning), how does the loss function prevent catastrophic representation collapse?"
-                ]
-            else:
-                return [
-                    "Can you explain the mathematical mechanism of backpropagation through deep layers, how vanishing gradients occur, and how modern activation functions or residual architectures mitigate this problem?",
-                    "What are the structural trade-offs between Convolutional Neural Networks (CNNs) and Transformer architectures for computer vision and sequence modeling?",
-                    "How do dropout and weight decay operate during the forward and backward passes, and why must dropout be deactivated during model inference?"
-                ]
-
-        elif cat == "SQL":
-            if diff == "Beginner":
-                return [
-                    "What is the difference between an INNER JOIN and a LEFT JOIN in SQL, and can you give a simple real-world example of when to use each?",
-                    "What is the difference between WHERE and HAVING clauses in SQL, and which one is used with GROUP BY aggregations?",
-                    "Can you explain what Primary Keys and Foreign Keys are, and why relationships are important in relational databases?",
-                    "What is the purpose of an index on a database table, and how does it speed up search queries?",
-                    "What is the difference between DELETE, TRUNCATE, and DROP statements in SQL?",
-                    "How do you use aggregate functions like COUNT, SUM, AVG, and GROUP BY to summarize records from a database table?"
-                ]
-            else:
-                return [
-                    "Explain the functional differences between INNER JOIN, LEFT OUTER JOIN, and FULL OUTER JOIN. In query execution, what happens under the hood during a Hash Join versus a Nested Loop Join?",
-                    "How do B-Tree indexes accelerate WHERE clause lookups, and what query patterns cause the query optimizer to perform a full table scan despite an index being present?",
-                    "How do ACID properties guarantee transactional reliability in relational databases, and what are the concurrency trade-offs between Read Committed and Serializable isolation levels?"
-                ]
-
-        elif cat == "MLOps":
-            if diff == "Beginner":
-                return [
-                    "What is the difference between experimenting with machine learning in a Jupyter notebook versus deploying it as an API service?",
-                    "Why do developers use virtual environments and requirements files or Docker containers when building machine learning projects?",
-                    "What does it mean when a deployed model experiences data drift, and why is ongoing monitoring important?"
-                ]
-            else:
-                return [
-                    "Describe the complete lifecycle of moving an ML model from an experimental notebook into an automated CI/CD and deployment pipeline. How do you detect and handle data drift versus concept drift post-deployment?",
-                    "How would you design a low-latency model serving system with model caching, batching, and GPU acceleration for real-time inference (e.g. sub-20ms p99 SLA)?",
-                    "What role does a Feature Store play in preventing training-serving skew, and how does it ensure point-in-time correctness for historical feature lookups?"
-                ]
-
-        elif cat in ["STAR Method", "Behavioral Interviews"] or interview_type == "Behavioral":
+        # 1. Behavioral & STAR
+        if cat in ["STAR Method", "Behavioral Interviews"] or interview_type == "Behavioral":
             if diff == "Beginner":
                 return [
                     "Tell me about a challenging academic or personal project you worked on. Using the STAR framework, explain the Situation, the Task, the Action you took, and the final Result.",
@@ -500,7 +425,8 @@ class LocalGroundedLLMService(BaseLLMService):
                     "Give an example of a complex technical decision you made under significant ambiguity or incomplete data. How did you validate your assumptions and mitigate risks?"
                 ]
 
-        elif cat in ["HR Interviews", "Career Preparation"] or interview_type == "HR":
+        # 2. HR & Culture Fit
+        if cat in ["HR Interviews", "Career Preparation"] or interview_type == "HR":
             if diff == "Beginner":
                 return [
                     f"What motivated you to pursue a career in {target_role}, and what personal projects or coursework have you enjoyed the most?",
@@ -514,68 +440,192 @@ class LocalGroundedLLMService(BaseLLMService):
                     "How do you manage your time and maintain engineering quality when multiple high-priority deliverables and operational incidents compete for your attention?"
                 ]
 
-        elif cat == "Software Engineering":
+        # 3. Role-Specific Curriculum Banks (Technical & System Design)
+        # FRONTEND / UI
+        if any(k in role_lower for k in ["front", "ui", "react", "vue", "web"]):
             if diff == "Beginner":
                 return [
-                    "Can you explain the difference between synchronous and asynchronous execution in programming, with a simple code or real-world example?",
-                    "What are the core principles of Object-Oriented Programming (OOP) like Encapsulation and Inheritance, and why are they useful?",
-                    "What is Git, and what is the difference between 'git pull' and 'git push'? How do you handle a simple merge conflict?",
-                    "What is a REST API, and what are the standard HTTP methods like GET, POST, PUT, and DELETE used for?",
-                    "Why is writing unit tests important, and what is the difference between testing a single function versus an entire system?",
-                    "How do you handle errors and exceptions in your code to prevent crashes when unexpected input arrives?"
+                    "Can you explain the difference between state and props in React (or modern component frameworks), and how data flows down the component tree?",
+                    "What is the Virtual DOM, how does reconciliation work at a high level, and why are unique keys essential when rendering dynamic lists?",
+                    "How does the browser event loop handle microtasks (Promises) versus macrotasks (setTimeout), and what is event bubbling?",
+                    "What is the difference between CSS Flexbox and Grid, and how do you build responsive components that adapt cleanly between mobile and desktop?",
+                    "When fetching data in a frontend component, how do you manage loading, success, and error states gracefully in the user interface?",
+                    "What is the difference between synchronous and asynchronous code in JavaScript, and how do async/await and Promises prevent callback hell?"
                 ]
-            else:
+            elif diff == "Intermediate":
                 return [
-                    "How do you apply SOLID design principles when architecting backend APIs and data processing services, and how does Dependency Inversion facilitate comprehensive unit and integration testing?",
-                    "What are the architectural trade-offs between synchronous REST APIs, gRPC, and asynchronous event-driven messaging (Kafka/RabbitMQ) for inter-service communication?",
-                    "How do you design database schema migrations in a high-availability production environment without incurring service downtime or table lockouts?"
+                    "When should you use `useMemo` and `useCallback`, and what are the performance overheads of prematurely memoizing every value?",
+                    "How do you prevent and resolve race conditions in frontend data fetching when a user rapidly changes search queries or tab filters before prior requests resolve?",
+                    "What are the key architectural differences between Client-Side Rendering (CSR), Server-Side Rendering (SSR), and Static Site Generation (SSG)?",
+                    "How would you design a custom React hook to manage global keyboard shortcuts or handle debounced search inputs with clean unmount cleanup?",
+                    "How do browser caching headers (Cache-Control, ETag) and Service Workers interact to enable reliable offline progressive web applications?"
+                ]
+            else:  # Advanced
+                return [
+                    "How would you diagnose and systematically optimize poor Core Web Vitals (specifically high LCP and CLS) on a high-traffic single-page application?",
+                    "When architecting a design system or micro-frontend architecture across autonomous teams, how do you govern shared state, versioning, and bundle size constraints?",
+                    "How do you architect real-time collaborative state synchronization (using WebSockets, CRDTs, or optimistic UI updates) to guarantee smooth multi-user editing without race conditions?"
                 ]
 
-        elif cat in ["Data Structures & Algorithms", "DSA"]:
+        # BACKEND / API / SYSTEMS
+        if any(k in role_lower for k in ["back", "api", "node", "golang", "java", "python developer", "backend engineer"]):
             if diff == "Beginner":
                 return [
-                    "What is the difference between an Array and a Linked List, and what are the advantages and disadvantages of each?",
-                    "Can you explain Big-O notation in simple terms and compare O(1), O(n), and O(n^2) with everyday programming examples?",
-                    "What is a Stack and what is a Queue? What are common programming examples of Last-In-First-Out (LIFO) and First-In-First-Out (FIFO)?",
-                    "What is a Hash Map (Dictionary), and why does it allow fast O(1) key lookups?",
-                    "How does Binary Search work, and why must an array be sorted before you can perform binary search?",
-                    "What is recursion in programming, what is a base case, and what happens if a recursive function does not have a base case?"
+                    "What is the difference between synchronous and asynchronous execution, and why is non-blocking I/O beneficial for web servers?",
+                    "What are standard HTTP status codes (200, 201, 400, 401, 403, 404, 500), and when would you return a 401 Unauthorized versus a 403 Forbidden?",
+                    "What is the difference between an Array and a Hash Map (Dictionary), and what are the typical time complexities for lookup and insertion?",
+                    "How do you securely store user passwords in a backend database, and why is plain SHA-256 insufficient without salted key derivation like bcrypt?",
+                    "What is an ORM (Object-Relational Mapper), what is the classic N+1 query problem, and how do you prevent it?"
                 ]
-            else:
+            elif diff == "Intermediate":
                 return [
-                    "When would you choose a Hash Map over a Balanced Binary Search Tree (Red-Black / AVL tree), and what are the worst-case time complexity implications of hash collisions?",
-                    "How does Dijkstra's algorithm find the shortest path in a weighted graph, and why does it fail when negative edge weights are present?",
-                    "Can you explain the trade-offs between dynamic programming with memoization (top-down) versus tabulation (bottom-up), particularly with respect to recursion stack depth?"
+                    "How do database indexes (such as B-Tree and Hash indexes) work internally, and what queries cause the query planner to ignore an index and run a sequential scan?",
+                    "What is the difference between horizontal and vertical database scaling, and how do read replicas and connection pooling (e.g., PgBouncer) alleviate bottlenecks?",
+                    "How do token-based authentication mechanisms (like JWT) work, and how do you securely handle token expiration, revocation, and refresh rotation?",
+                    "What are the architectural trade-offs between REST, GraphQL, and gRPC when designing inter-service communication?",
+                    "How would you design a distributed rate limiter to protect backend APIs from abusive traffic bursts using Redis token bucket or sliding window algorithms?"
+                ]
+            else:  # Advanced
+                return [
+                    "How do you handle data consistency across distributed microservices, and when would you use the Saga pattern (choreography vs orchestration) over two-phase commit (2PC)?",
+                    "How do you design a high-throughput message processing pipeline using Apache Kafka or RabbitMQ, ensuring at-least-once or exactly-once delivery semantics without consumer lag buildup?",
+                    "How do database transaction isolation levels (Read Committed, Repeatable Read, Serializable) and MVCC locks influence concurrency throughput under high write contention?",
+                    "Walk me through how you execute a zero-downtime database schema migration on a 50-million-row production table with active high-frequency writes."
                 ]
 
-        elif cat in ["AI Engineering", "Data Science", "Data Analytics"]:
+        # FULL STACK
+        if any(k in role_lower for k in ["full", "fullstack", "full-stack"]):
             if diff == "Beginner":
                 return [
-                    "What is the difference between supervised and unsupervised learning, and can you provide a simple example of each?",
-                    "Can you explain the difference between Precision and Recall, and when you would prioritize one over the other?",
-                    "What is overfitting in machine learning, and how do training vs validation loss curves help identify it?",
-                    "What is the purpose of train/validation/test dataset splits, and why should we never evaluate a model on training data alone?"
+                    "Can you walk through the complete lifecycle of a request from when a user clicks a button on the frontend until the database updates and the UI refreshes?",
+                    "What is Cross-Origin Resource Sharing (CORS), why does the browser enforce it, and how do you configure CORS headers on the backend correctly?",
+                    "Why is client-side form validation alone never sufficient for security, and how do you coordinate validation between frontend and backend models?",
+                    "What are environment variables, and why must private secrets (like database credentials and API keys) never be bundled into frontend client code?"
                 ]
-            else:
+            elif diff == "Intermediate":
                 return [
-                    f"In building production RAG systems for a {target_role}, how do you evaluate chunking strategies, embedding dimensionality, and re-ranking algorithms to minimize retrieval hallucinations?",
-                    "How do you design an A/B testing framework to statistically validate whether a newly deployed model or feature significantly outperforms the production baseline?",
-                    "When engineering features from raw temporal and categorical data, how do you handle high cardinality and prevent future information leakage into training sets?"
+                    "How do you design an end-to-end pagination strategy (offset-based vs cursor-based) across database queries, REST API responses, and infinite-scroll frontend UI?",
+                    "When building a full-stack application, how do you handle user authentication state seamlessly across server-side rendering, client navigation, and API requests?",
+                    "How do you implement optimistic UI updates so that the interface feels instantaneous while properly rolling back state if the backend mutation rejects?"
+                ]
+            else:  # Advanced
+                return [
+                    "How would you architect a resilient full-stack application expected to handle sudden 20x traffic spikes, covering CDN edge caching, API gateway rate limiting, and database connection pooling?",
+                    "When designing an end-to-end full-stack analytics dashboard with real-time updates, how do you choose between Server-Sent Events (SSE), WebSockets, and short polling?",
+                    "How do you architect end-to-end observability (distributed tracing, frontend real-user monitoring, structured error tracking) across a full-stack microservices deployment?"
                 ]
 
-        else:
+        # DEVOPS / CLOUD / SRE
+        if any(k in role_lower for k in ["devops", "sre", "cloud", "infra", "platform"]):
             if diff == "Beginner":
                 return [
-                    f"Regarding {topic}: Can you explain what it is in simple terms, why it is used in {target_role} development, and give a basic practical example?",
-                    f"When working with {topic}, what are the most common beginner mistakes or errors developers encounter, and how do you debug them?",
-                    f"What fundamental concepts or best practices should an entry-level engineer follow when writing clean, readable code for {topic}?"
+                    "What is Docker, what is the difference between a Docker image and a Docker container, and why are containers useful for developers?",
+                    "What is CI/CD (Continuous Integration and Continuous Deployment), and what automated checks should run before code merges into the main branch?",
+                    "What is the difference between SSH keys and passwords for server access, and how do you securely manage environment variables in production?",
+                    "What is the purpose of a reverse proxy like Nginx, and how does it handle SSL termination and load balancing for backend services?"
                 ]
-            else:
+            elif diff == "Intermediate":
                 return [
-                    f"Regarding {topic}: Can you explain the core architectural principles, common trade-offs, and how you evaluate readiness for {target_role} applications?",
-                    f"In your experience with {topic}, how do you diagnose performance bottlenecks and design systems for high availability and fault tolerance?",
-                    f"What are the key technical standards and best practices you enforce when reviewing code and architecture for {topic} in a team setting?"
+                    "How do you write a multi-stage Dockerfile to minimize final image size, improve build caching, and ensure the container runs as an unprivileged non-root user?",
+                    "What are Kubernetes Pods, Deployments, and Services, and how does Kubernetes perform zero-downtime rolling updates?",
+                    "What is Infrastructure as Code (IaC) with tools like Terraform, and how do you safely manage Terraform remote state locking and avoid configuration drift?",
+                    "What is the difference between Blue-Green deployments and Canary deployments, and how do you configure automated rollbacks if error rates spike?"
                 ]
+            else:  # Advanced
+                return [
+                    "How do you architect a multi-region active-active disaster recovery strategy on public cloud with automated DNS failover and cross-region database replication?",
+                    "When a Kubernetes pod intermittently terminates with exit code 137 (OOMKilled) under peak load, how do you systematically diagnose whether it is a memory leak, misconfigured cgroup limits, or JVM heap miscalibration?",
+                    "How do you design a Zero-Trust cloud network architecture using service mesh (like Istio), mutual TLS (mTLS), and fine-grained IAM policies?"
+                ]
+
+        # DATA SCIENCE & DATA ANALYTICS
+        if any(k in role_lower for k in ["data scientist", "data analyst", "analytics", "business intelligence"]):
+            if diff == "Beginner":
+                return [
+                    "What is the difference between an INNER JOIN and a LEFT JOIN in SQL, and can you give a simple real-world example of when to use each?",
+                    "What is the difference between WHERE and HAVING clauses in SQL, and which one is used with GROUP BY aggregations?",
+                    "What is exploratory data analysis (EDA), and how do you handle missing values or outliers in a numerical dataset?",
+                    "Can you explain the difference between Correlation and Causation with an everyday example?"
+                ]
+            elif diff == "Intermediate":
+                return [
+                    "How do SQL Window Functions (like ROW_NUMBER, RANK, DENSE_RANK, and LAG/LEAD) work, and when are they preferred over self-joins?",
+                    "How do you design an A/B testing experiment, determine sample size requirements, and interpret p-values to avoid false positive conclusions?",
+                    "What are the mathematical differences between Bagging and Boosting, and why does a Random Forest reduce variance while AdaBoost reduces bias?",
+                    "How do you engineer temporal and categorical features from raw transactional data to prevent future target leakage during model training?"
+                ]
+            else:  # Advanced
+                return [
+                    "How do you formulate causal inference methodologies (such as Difference-in-Differences or Propensity Score Matching) when observational bias prevents standard randomized A/B testing?",
+                    "When designing petabyte-scale ELT pipelines in BigQuery or Snowflake, what partitioning, clustering, and materialized view strategies optimize query latency and reduce scan costs?",
+                    "How do you detect and mitigate data pipeline anomalies and silent corruption in high-throughput streaming pipelines using dbt tests and Great Expectations?"
+                ]
+
+        # ML / AI ENGINEERING
+        if any(k in role_lower for k in ["ml", "machine learning", "ai", "deep learning", "nlp", "computer vision"]):
+            if diff == "Beginner":
+                return [
+                    "What is the difference between supervised and unsupervised learning, and what are common real-world use cases for each?",
+                    "Can you explain the difference between Precision and Recall, and give an example of an application where high Recall is much more critical than high Precision?",
+                    "Why is it essential to split a dataset into training, validation, and test sets, and what happens if you evaluate your final model on the training data?",
+                    "What is overfitting in machine learning, and how do training vs validation loss curves help identify it?"
+                ]
+            elif diff == "Intermediate":
+                return [
+                    "How do you detect and differentiate between covariate shift (data drift) and concept drift in a deployed machine learning model, and what automated retraining strategies do you use?",
+                    "In retrieval-augmented generation (RAG) systems, how do you evaluate chunking strategies, embedding dimensionality, and re-ranking algorithms to minimize hallucinations?",
+                    "How do you distinguish between high bias and high variance when evaluating models, and what concrete actions do you take when your model overfits the training dataset?",
+                    "How would you design an end-to-end ML pipeline with MLflow or Airflow to track model experiments, parameters, and artifact registries?"
+                ]
+            else:  # Advanced
+                return [
+                    "When serving large language models under strict latency SLAs (<30ms time-to-first-token), how do continuous batching, KV-cache paged attention, and INT4/INT8 quantization trade off throughput vs perplexity?",
+                    "How do you architect a real-time feature store that guarantees point-in-time correctness to eliminate training-serving skew for high-throughput streaming inference?",
+                    "How do L1 and L2 regularization mathematically influence the loss surface and parameter weights in machine learning, and in what scenario would ElasticNet be preferred over pure Lasso or Ridge?"
+                ]
+
+        # MOBILE
+        if any(k in role_lower for k in ["mobile", "android", "ios", "flutter", "swift", "kotlin"]):
+            if diff == "Beginner":
+                return [
+                    "What is the mobile application lifecycle (create, start, resume, pause, stop, destroy), and why is saving state when an app goes to the background important?",
+                    "How do you handle asynchronous networking and JSON parsing on mobile without freezing or blocking the main UI thread?",
+                    "What is the difference between native development (Swift/Kotlin) and cross-platform frameworks (Flutter/React Native)?"
+                ]
+            elif diff == "Intermediate":
+                return [
+                    "How do you implement local offline persistence (e.g., SQLite, Room, CoreData, or Hive) with background synchronization to ensure offline-first reliability?",
+                    "How do you profile and eliminate mobile app memory leaks, retain cycles, and frame drops (jank) to maintain a smooth 60/120 FPS experience?",
+                    "How do state management patterns (like Bloc, Riverpod, or Redux) structure data flow and prevent unnecessary widget rebuilds in mobile applications?"
+                ]
+            else:  # Advanced
+                return [
+                    "How do you optimize mobile app cold start launch time (pre-warming, lazy initialization, binary size reduction), and how do you architect modular dynamic feature delivery?",
+                    "How do you architect native bridge interop and background work managers to handle long-running Bluetooth or location streaming without draining battery?"
+                ]
+
+        # GENERAL / DSA / FALLBACK
+        if diff == "Beginner":
+            return [
+                "What is the difference between an Array and a Linked List, and what are the advantages and disadvantages of each?",
+                "Can you explain Big-O notation in simple terms and compare O(1), O(n), and O(n^2) with everyday programming examples?",
+                "What is a Stack and what is a Queue? What are common programming examples of Last-In-First-Out (LIFO) and First-In-First-Out (FIFO)?",
+                "What is a Hash Map (Dictionary), and why does it allow fast O(1) key lookups?",
+                "How does Binary Search work, and why must an array be sorted before you can perform binary search?"
+            ]
+        elif diff == "Intermediate":
+            return [
+                f"When designing a production service for a {target_role}, how do you evaluate concurrency, caching, and database read/write bottlenecks?",
+                "When would you choose a Hash Map over a Balanced Binary Search Tree (Red-Black / AVL tree), and what are the worst-case time complexity implications of hash collisions?",
+                "How does Dijkstra's algorithm find the shortest path in a weighted graph, and why does it fail when negative edge weights are present?",
+                "What are the key technical standards and best practices you enforce when reviewing code and architecture in a team setting?"
+            ]
+        else:  # Advanced
+            return [
+                f"Suppose you are architecting a mission-critical {target_role} system with strict latency SLAs (<50ms p99) and 99.99% availability. What key partitioning, caching, and failover strategies would guide your design choices?",
+                "When scaling a distributed system from prototype to high-throughput production, what architectural trade-offs between consistency, availability, and engineering velocity would you present to technical leadership?",
+                "In a production incident where sudden latency spikes cause cascading downstream timeouts, walk me through your diagnostic triage and remediation workflow."
+            ]
 
     def _synthesize_novel_scenario_question(self, target_role: str, topic: str, difficulty: str, sequence_number: int) -> str:
         if normalize_difficulty(difficulty) == "Beginner":
@@ -1782,15 +1832,23 @@ class OpenAICompatibleLLMService(BaseLLMService):
         try:
             from openai import OpenAI
             client = self._get_client()
+            role = session_config.get('role') or session_config.get('target_role') or career_context.get('target_role', 'Software Engineer')
+            diff = session_config.get('difficulty', 'Intermediate')
             prompt = (
-                f"You are a technical interviewer hiring for {session_config.get('role', 'Software Engineer')} ({session_config.get('difficulty', 'Intermediate')}).\n"
+                f"You are a technical interviewer hiring for {role} ({diff} level).\n"
                 f"Candidate career context: {json.dumps(career_context)}\n"
                 f"Previous Q&A: {json.dumps(previous_questions)}\n"
                 f"RAG Knowledge: {json.dumps(retrieved_knowledge or [retrieved_chunk] if retrieved_chunk else [])}\n"
                 f"Adaptive Strategy Decision: {json.dumps(adaptive_decision or {})}\n"
-                f"Generate interview question #{sequence_number} of {total_questions or 5}. "
-                f"If adaptive decision indicates follow_up or escalate, craft an authentic follow-up question respecting the requested follow_up_type and targeting any missing_concepts.\n"
-                f"Return JSON with fields: question_text, topic, difficulty, skill, question_type, source_type, rationale, rubric_guidance, is_follow_up."
+                f"Generate interview question #{sequence_number} of {total_questions or 5}.\n"
+                "CRITICAL QUALITY RULES:\n"
+                "1. The question must be CONCISE, SHARP, AND ACCESSIBLE (2 to 4 sentences). NEVER output a full-page essay or bloated preamble.\n"
+                f"2. Tailor directly and realistically to the {role} role and {diff} seniority level:\n"
+                "   - Beginner (0-2 Yrs): Test fundamental syntax, data structures, debugging intuition, or core framework concepts.\n"
+                "   - Intermediate (2-4 Yrs): Test real-world tradeoffs, performance bottlenecks, caching, database indexing, or lifecycle management.\n"
+                "   - Advanced (4+ Yrs): Test distributed architecture, failure modes, data consistency vs throughput, or complex scalability bottlenecks concisely.\n"
+                "3. NEVER duplicate or closely rephrase any of the previously asked questions.\n"
+                "Return JSON with fields: question_text, topic, difficulty, skill, question_type, source_type, rationale, rubric_guidance, is_follow_up."
             )
             resp = client.chat.completions.create(
                 model=self.model,
@@ -1802,11 +1860,13 @@ class OpenAICompatibleLLMService(BaseLLMService):
                 temperature=0.4
             )
             raw = json.loads(resp.choices[0].message.content or "{}")
-            if raw.get("question_text"):
+            q_text = raw.get("question_text") or raw.get("question")
+            if q_text:
                 return {
-                    "question_text": raw["question_text"],
-                    "topic": raw.get("topic", "System Architecture"),
-                    "difficulty": raw.get("difficulty", session_config.get("difficulty", "Intermediate")),
+                    "question_text": q_text,
+                    "question": q_text,
+                    "topic": raw.get("topic", f"{role} Architecture"),
+                    "difficulty": raw.get("difficulty", diff),
                     "skill": raw.get("skill", "Engineering"),
                     "question_type": raw.get("question_type", "Follow-up" if raw.get("is_follow_up") else "technical"),
                     "source_type": raw.get("source_type", "adaptive_followup" if raw.get("is_follow_up") else "rag_curriculum"),

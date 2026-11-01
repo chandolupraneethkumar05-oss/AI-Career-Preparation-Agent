@@ -167,7 +167,7 @@ export default function CodeEditor({
                 className="px-2.5 py-1 text-[11px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-mono font-medium flex items-center gap-1.5 hover:border-slate-400 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
               >
                 <span>{supportedLanguages.find(l => l.id === language)?.name || language}</span>
-                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${langDropdownOpen ? 'rotate-180 text-indigo-600' : ''}`} />
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${langDropdownOpen ? 'rotate-180 text-emerald-600' : ''}`} />
               </button>
 
               {langDropdownOpen && (
@@ -187,12 +187,12 @@ export default function CodeEditor({
                         }}
                         className={`w-full px-3 py-1.5 text-left text-xs font-mono flex items-center justify-between transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-indigo-50 text-indigo-700 font-bold dark:bg-indigo-950/60 dark:text-indigo-300'
+                            ? 'bg-emerald-50 text-emerald-700 font-bold dark:bg-emerald-950/60 dark:text-emerald-300'
                             : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
                         }`}
                       >
                         <span>{lang.name}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />}
                       </button>
                     );
                   })}

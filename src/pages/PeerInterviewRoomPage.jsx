@@ -548,15 +548,28 @@ export default function PeerInterviewRoomPage() {
     };
   }, [urlRoomId, roleParam, user, setupSpeechRecognition, startAudioMixerRecording]);
 
-  // Video Re-render Watcher
+  // Persistent Stream Binder & Re-render Watcher
   useEffect(() => {
-    if (peerConnected && peerMediaState.video && remoteVideoRef.current && peerRoomService.remoteStream) {
+    // Bind Local Camera Stream
+    if (localVideoRef.current && peerRoomService.localStream) {
+      if (localVideoRef.current.srcObject !== peerRoomService.localStream) {
+        localVideoRef.current.srcObject = peerRoomService.localStream;
+      }
+      if (isVideoOn) {
+        localVideoRef.current.play().catch(() => {});
+      }
+    }
+
+    // Bind Remote Peer Camera Stream
+    if (remoteVideoRef.current && peerRoomService.remoteStream) {
       if (remoteVideoRef.current.srcObject !== peerRoomService.remoteStream) {
         remoteVideoRef.current.srcObject = peerRoomService.remoteStream;
       }
-      remoteVideoRef.current.play().catch(() => {});
+      if (peerMediaState.video) {
+        remoteVideoRef.current.play().catch(() => {});
+      }
     }
-  }, [peerConnected, peerMediaState.video]);
+  }, [isSessionActive, isVideoOn, peerConnected, peerMediaState.video]);
 
   // Copy Room Link & Code
   const handleCopyLink = () => {
@@ -596,9 +609,11 @@ export default function PeerInterviewRoomPage() {
     const next = !isVideoOn;
     setIsVideoOn(next);
     peerRoomService.toggleVideo(next);
-    if (next && localVideoRef.current && peerRoomService.localStream) {
+    if (localVideoRef.current && peerRoomService.localStream) {
       localVideoRef.current.srcObject = peerRoomService.localStream;
-      localVideoRef.current.play().catch(() => {});
+      if (next) {
+        localVideoRef.current.play().catch(() => {});
+      }
     }
   };
 
@@ -775,7 +790,7 @@ export default function PeerInterviewRoomPage() {
     // 1. Send WebSocket event
     peerRoomService.concludeSession();
 
-    // 2. Guaranteed 4.5-second HTTP fallback so it NEVER hangs indefinitely
+    // 2. HTTP fallback timer so it never hangs indefinitely if WebSocket closes
     fallbackReportTimerRef.current = setTimeout(async () => {
       try {
         const res = await reverseInterviewApi.getPeerReport(roomId);
@@ -787,7 +802,7 @@ export default function PeerInterviewRoomPage() {
         console.warn('Fallback report fetch fallback:', err);
         setIsConcluding(false);
       }
-    }, 4500);
+    }, 22000);
   };
 
   return (
@@ -801,7 +816,7 @@ export default function PeerInterviewRoomPage() {
       {/* ROLE SWAP TOAST NOTIFICATION                                   */}
       {/* ───────────────────────────────────────────────────────────── */}
       {roleToast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-indigo-600 border border-indigo-400 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 animate-bounce">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-emerald-600 border border-emerald-400 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 animate-bounce">
           <RefreshCw className="w-4 h-4 animate-spin" />
           <span>{roleToast}</span>
         </div>
@@ -832,7 +847,7 @@ export default function PeerInterviewRoomPage() {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
               <Users className="w-4 h-4" />
             </div>
             <div>
@@ -841,7 +856,7 @@ export default function PeerInterviewRoomPage() {
                 <button
                   type="button"
                   onClick={handleCopyCode}
-                  className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-300 flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-300 flex items-center gap-1 cursor-pointer"
                   title="Click to copy room code"
                 >
                   <span>{roomId}</span>
@@ -854,7 +869,7 @@ export default function PeerInterviewRoomPage() {
           <button
             type="button"
             onClick={handleCopyLink}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-700/50 text-indigo-300 text-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 text-xs transition-colors cursor-pointer"
             title="Copy invite link for your peer"
           >
             {isCopiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -878,10 +893,10 @@ export default function PeerInterviewRoomPage() {
             <button
               type="button"
               onClick={handleSwapRoles}
-              className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-indigo-600/80 border border-slate-700 hover:border-indigo-500 text-[11px] font-medium text-slate-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-emerald-600/80 border border-slate-700 hover:border-emerald-500 text-[11px] font-medium text-slate-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
               title="Reverse roles: Interviewer becomes Candidate, Candidate becomes Interviewer"
             >
-              <RefreshCw className="w-3 h-3 text-indigo-400" />
+              <RefreshCw className="w-3 h-3 text-emerald-400" />
               <span className="hidden md:inline">Swap Roles</span>
             </button>
           )}
@@ -907,7 +922,7 @@ export default function PeerInterviewRoomPage() {
               <img
                 src={peerAvatar}
                 alt={peerName}
-                className={`w-6 h-6 rounded-full object-cover border-2 ${peerConnected ? 'border-indigo-500' : 'border-slate-600 opacity-70'}`}
+                className={`w-6 h-6 rounded-full object-cover border-2 ${peerConnected ? 'border-emerald-500' : 'border-slate-600 opacity-70'}`}
                 title={`${peerName} (${peerRoleLabel})`}
               />
             </div>
@@ -920,11 +935,11 @@ export default function PeerInterviewRoomPage() {
               peerConnected
                 ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
                 : peerInRoom
-                ? 'bg-indigo-950/40 text-indigo-400 border-indigo-800/60'
+                ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
                 : 'bg-amber-950/40 text-amber-400 border-amber-800/60 animate-pulse'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${peerConnected ? 'bg-emerald-400' : peerInRoom ? 'bg-indigo-400' : 'bg-amber-400'}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${peerConnected ? 'bg-emerald-400' : peerInRoom ? 'bg-emerald-400' : 'bg-amber-400'}`} />
             <span>{peerConnected ? 'Live P2P Stream Active' : peerInRoom ? 'Connecting P2P...' : 'Waiting for Peer...'}</span>
           </div>
 
@@ -951,7 +966,7 @@ export default function PeerInterviewRoomPage() {
         /* ============================================================= */
         <div className="flex-1 flex flex-col p-4 md:p-8 max-w-5xl mx-auto w-full justify-center space-y-6">
           <div className="text-center space-y-1">
-            <Badge variant="indigo" size="sm">PRE-MEETING LOBBY</Badge>
+            <Badge variant="emerald" size="sm">PRE-MEETING LOBBY</Badge>
             <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
               Collaborative Chamber Setup
             </h2>
@@ -965,7 +980,7 @@ export default function PeerInterviewRoomPage() {
             <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Video className="w-4 h-4 text-indigo-400" />
+                  <Video className="w-4 h-4 text-emerald-400" />
                   Your Video &amp; Mic Preview
                 </span>
                 <span className="text-[11px] font-mono text-emerald-400">Ready</span>
@@ -1039,17 +1054,17 @@ export default function PeerInterviewRoomPage() {
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-400">Chamber Room Code:</span>
-                  <Badge variant="indigo" size="xs">P2P CODE</Badge>
+                  <Badge variant="emerald" size="xs">P2P CODE</Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-2xl font-mono font-extrabold text-indigo-300 tracking-wider">
+                  <span className="text-2xl font-mono font-extrabold text-emerald-300 tracking-wider">
                     {roomId}
                   </span>
                   <div className="flex gap-1.5">
                     <button
                       type="button"
                       onClick={handleCopyCode}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                       title="Copy 6-character room code"
                     >
                       {isCopiedCode ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
@@ -1081,13 +1096,13 @@ export default function PeerInterviewRoomPage() {
                     onClick={() => handleSelectRole('interviewer')}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                       assignedRole === 'interviewer'
-                        ? 'bg-indigo-950/60 border-indigo-500 text-white ring-1 ring-indigo-500/50'
+                        ? 'bg-emerald-950/60 border-emerald-500 text-white ring-1 ring-emerald-500/50'
                         : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-indigo-400">🎙️ Lead Interviewer</span>
-                      {assignedRole === 'interviewer' && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                      <span className="text-xs font-bold text-emerald-400">🎙️ Lead Interviewer</span>
+                      {assignedRole === 'interviewer' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
                     </div>
                     <p className="text-[11px] text-slate-400 leading-snug">
                       Access AI teleprompter, scenario questions, rubric criteria &amp; hints.
@@ -1121,7 +1136,7 @@ export default function PeerInterviewRoomPage() {
                     <img
                       src={peerAvatar}
                       alt={peerName}
-                      className="w-11 h-11 rounded-full object-cover border-2 border-indigo-500/60 shadow-md"
+                      className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500/60 shadow-md"
                     />
                     <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-900 ${peerInRoom ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
                   </div>
@@ -1186,7 +1201,7 @@ export default function PeerInterviewRoomPage() {
                       <img
                         src={peerAvatar}
                         alt={peerName}
-                        className="w-24 h-24 rounded-full object-cover border-4 border-indigo-500/60 shadow-2xl shadow-indigo-500/25 ring-4 ring-indigo-500/20"
+                        className="w-24 h-24 rounded-full object-cover border-4 border-emerald-500/60 shadow-2xl shadow-emerald-500/25 ring-4 ring-emerald-500/20"
                       />
                       <span className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-slate-900 ${peerConnected ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
                     </div>
@@ -1210,10 +1225,10 @@ export default function PeerInterviewRoomPage() {
                   <img
                     src={peerAvatar}
                     alt={peerName}
-                    className="w-5 h-5 rounded-full object-cover border border-indigo-400 shrink-0"
+                    className="w-5 h-5 rounded-full object-cover border border-emerald-400 shrink-0"
                   />
                   <span className="font-semibold">{peerName && !['Remote Peer', 'Candidate', 'Interviewer', 'Lead Interviewer'].includes(peerName) ? peerName : peerRoleLabel}</span>
-                  <span className="text-[10px] text-indigo-400">
+                  <span className="text-[10px] text-emerald-400">
                     ({peerRoleLabel})
                   </span>
                 </div>
@@ -1276,7 +1291,7 @@ export default function PeerInterviewRoomPage() {
             {interimCaption.text && (
               <div className="absolute bottom-20 left-1/2 -translate-x-1/2 max-w-xl w-11/12 px-4 py-2.5 rounded-xl bg-slate-950/90 backdrop-blur-md border border-slate-700/80 shadow-2xl flex items-center gap-3 z-20">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider shrink-0">
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider shrink-0">
                   {interimCaption.speaker === assignedRole ? 'You' : peerRoleLabel}:
                 </span>
                 <p className="text-xs text-slate-100 font-medium truncate sm:whitespace-normal">
@@ -1341,7 +1356,7 @@ export default function PeerInterviewRoomPage() {
                 }}
                 className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                   isSpeechListening
-                    ? 'bg-indigo-950/80 text-indigo-300 border-indigo-700'
+                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
                     : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700'
                 }`}
                 title={isSpeechListening ? 'Live Subtitles & ASR: Active' : 'Enable Live Subtitles & ASR'}
@@ -1373,7 +1388,7 @@ export default function PeerInterviewRoomPage() {
                 onClick={() => setActiveTab('question')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'question'
-                    ? 'bg-indigo-600 text-white shadow-xs'
+                    ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -1386,7 +1401,7 @@ export default function PeerInterviewRoomPage() {
                 onClick={() => setActiveTab('code')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'code'
-                    ? 'bg-indigo-600 text-white shadow-xs'
+                    ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -1399,7 +1414,7 @@ export default function PeerInterviewRoomPage() {
                 onClick={() => setActiveTab('notes')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'notes'
-                    ? 'bg-indigo-600 text-white shadow-xs'
+                    ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -1415,9 +1430,9 @@ export default function PeerInterviewRoomPage() {
                 <div className="space-y-4">
                   {assignedRole === 'interviewer' ? (
                     <>
-                      <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-800/60 space-y-2">
+                      <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold tracking-wider text-indigo-400 uppercase flex items-center gap-1.5">
+                          <span className="text-[11px] font-bold tracking-wider text-emerald-400 uppercase flex items-center gap-1.5">
                             <Brain className="w-3.5 h-3.5" />
                             <span>AI Bar-Raiser Teleprompter</span>
                           </span>
@@ -1433,7 +1448,7 @@ export default function PeerInterviewRoomPage() {
                             type="button"
                             onClick={handleRequestAiQuestion}
                             disabled={isGeneratingQuestion}
-                            className="flex-1 py-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                            className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                             <span>{isGeneratingQuestion ? 'Synthesizing...' : 'Generate Calibrated Question'}</span>
@@ -1445,7 +1460,7 @@ export default function PeerInterviewRoomPage() {
                         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-amber-400">{suggestedQuestion.topic}</span>
-                            <Badge variant="indigo" size="xs">{suggestedQuestion.difficulty}</Badge>
+                            <Badge variant="emerald" size="xs">{suggestedQuestion.difficulty}</Badge>
                           </div>
 
                           <p className="text-sm font-medium text-white leading-relaxed">
@@ -1472,7 +1487,7 @@ export default function PeerInterviewRoomPage() {
 
                             {suggestedQuestion.probing_follow_ups?.length > 0 && (
                               <div className="pt-2 border-t border-slate-800">
-                                <span className="font-semibold text-indigo-400 block">Recommended Probing Follow-ups:</span>
+                                <span className="font-semibold text-emerald-400 block">Recommended Probing Follow-ups:</span>
                                 <ul className="space-y-1 text-slate-400 list-disc list-inside mt-1">
                                   {suggestedQuestion.probing_follow_ups.map((f, i) => (
                                     <li key={i}>"{f}"</li>
@@ -1622,13 +1637,13 @@ export default function PeerInterviewRoomPage() {
                 <div className="space-y-2 flex flex-col h-full">
                   <div className="flex items-center justify-between text-xs text-slate-400">
                     <span>Collaborative Sandbox (Real-time P2P Sync)</span>
-                    <span className="font-mono text-[10px] text-indigo-400">Python / JavaScript</span>
+                    <span className="font-mono text-[10px] text-emerald-400">Python / JavaScript</span>
                   </div>
                   <textarea
                     value={sharedCode}
                     onChange={handleCodeChange}
                     rows={16}
-                    className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
+                    className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none leading-relaxed"
                   />
                 </div>
               )}
@@ -1672,13 +1687,13 @@ export default function PeerInterviewRoomPage() {
                         onChange={(e) => setInterviewerNote(e.target.value)}
                         placeholder="Record observations, strengths, missed edge cases, or communication clarity..."
                         rows={5}
-                        className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
+                        className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
                       />
 
                       <button
                         type="button"
                         onClick={handleSaveNote}
-                        className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors cursor-pointer"
+                        className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors cursor-pointer"
                       >
                         Save Evaluation Note
                       </button>
@@ -1688,7 +1703,7 @@ export default function PeerInterviewRoomPage() {
                   {/* Live Speech Transcript List */}
                   <div className="space-y-2">
                     <span className="text-xs font-semibold text-slate-400 block flex items-center gap-1.5">
-                      <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
                       Live Dual-Channel Speech Transcript:
                     </span>
                     <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
@@ -1698,7 +1713,7 @@ export default function PeerInterviewRoomPage() {
                         transcript.map((u, i) => (
                           <div key={i} className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs space-y-0.5">
                             <div className="flex items-center justify-between text-[10px] text-slate-400">
-                              <span className="font-semibold text-indigo-400 uppercase">{u.speaker}</span>
+                              <span className="font-semibold text-emerald-400 uppercase">{u.speaker}</span>
                               <span className="font-mono">{u.time}</span>
                             </div>
                             <p className="text-slate-200">{u.text}</p>
@@ -1765,7 +1780,7 @@ export default function PeerInterviewRoomPage() {
               {/* Interviewer Scorecard */}
               <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Interviewer Scorecard</span>
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Interviewer Scorecard</span>
                   <span className="text-xl font-bold font-mono text-white">
                     {finalReport.interviewer_evaluation?.overall_score}/100
                   </span>
@@ -1783,7 +1798,7 @@ export default function PeerInterviewRoomPage() {
                 </div>
                 <div className="pt-2 border-t border-slate-800 text-xs">
                   <span className="text-slate-400 font-medium">Leadership Bar: </span>
-                  <span className="text-indigo-400 font-bold">{finalReport.interviewer_evaluation?.leadership_verdict}</span>
+                  <span className="text-emerald-400 font-bold">{finalReport.interviewer_evaluation?.leadership_verdict}</span>
                 </div>
               </div>
             </div>

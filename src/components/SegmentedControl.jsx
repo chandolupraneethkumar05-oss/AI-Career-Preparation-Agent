@@ -96,19 +96,19 @@ export default function SegmentedControl({
                 ${fullWidth ? 'flex-1' : ''}
                 ${sizeClasses}
                 ${isSelected
-                  ? 'bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-400 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700 ring-1 ring-black/5 dark:ring-white/10'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700 ring-1 ring-black/5 dark:ring-white/10'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50'
                 }
               `}
             >
               {Icon && (
-                <Icon className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`} />
               )}
               <span className="truncate">{opt.label}</span>
               {opt.badge && (
                 <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-semibold uppercase tracking-wider ${
                   isSelected
-                    ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300'
+                    ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
                     : 'bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                 }`}>
                   {opt.badge}

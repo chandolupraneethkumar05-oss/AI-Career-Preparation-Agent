@@ -45,8 +45,6 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
-  const [resetApiKey, setResetApiKey] = useState('');
-  const [showResetApiKey, setShowResetApiKey] = useState(false);
 
   // Check for reset_token query parameter in URL on mount
   useEffect(() => {
@@ -120,7 +118,7 @@ export default function LoginPage() {
     setIsSendingReset(true);
     setResetError('');
     try {
-      const res = await authApi.forgotPassword(resetEmail, resetApiKey);
+      const res = await authApi.forgotPassword(resetEmail);
       setResetSent(true);
       if (res.reset_token) {
         setResetToken(res.reset_token);
@@ -142,7 +140,7 @@ export default function LoginPage() {
     setIsResettingPassword(true);
     setResetError('');
     try {
-      await authApi.resetPassword(resetToken, newPassword, resetApiKey);
+      await authApi.resetPassword(resetToken, newPassword);
       setPasswordResetSuccess(true);
       setPassword(newPassword);
       if (resetEmail) setEmail(resetEmail);
@@ -164,7 +162,7 @@ export default function LoginPage() {
   const strokeDashoffset = circumference - (0.92 * circumference);
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#0F172A] text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#0F172A] text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white">
       
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 1. LEFT COLUMN: INTERACTIVE SIMULATION & CRAFT MOTIVATION      */}
@@ -173,12 +171,12 @@ export default function LoginPage() {
         
         {/* Subtle Ambient Lighting Orbs */}
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Header & Brand */}
         <div className="relative z-10 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-600/30 group-hover:scale-105 transition-transform">
               <span className="text-sm font-bold tracking-wider">TP</span>
             </div>
             <div>
@@ -229,7 +227,7 @@ export default function LoginPage() {
 
             {/* Question Text Prompt */}
             <div className="space-y-1.5 mb-5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
                 Technical Calibration • Distributed Systems
               </span>
               <h2 className="text-base sm:text-lg font-bold text-white leading-snug">
@@ -296,7 +294,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30">
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-300 bg-emerald-500/20 px-2.5 py-1 rounded-md border border-emerald-500/30">
                 <span>Cache-Aside Pattern</span>
               </div>
             </div>
@@ -385,11 +383,11 @@ export default function LoginPage() {
             className="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 flex items-center justify-between transition-all group cursor-pointer hover:border-slate-300"
           >
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
               <div className="text-left">
-                <span className="text-xs font-bold text-slate-900 block group-hover:text-indigo-600 transition-colors">
+                <span className="text-xs font-bold text-slate-900 block group-hover:text-emerald-600 transition-colors">
                   Instant Demo Access
                 </span>
                 <span className="text-[10px] text-slate-500">
@@ -397,7 +395,7 @@ export default function LoginPage() {
                 </span>
               </div>
             </div>
-            <span className="text-xs font-bold text-indigo-600 flex items-center group-hover:translate-x-0.5 transition-transform">
+            <span className="text-xs font-bold text-emerald-600 flex items-center group-hover:translate-x-0.5 transition-transform">
               Enter →
             </span>
           </button>
@@ -425,7 +423,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="praneeth@example.com"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
                 />
               </div>
             </div>
@@ -441,7 +439,7 @@ export default function LoginPage() {
                     setResetEmail(email);
                     setShowForgotModal(true);
                   }}
-                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer"
                 >
                   Forgot password?
                 </button>
@@ -455,7 +453,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
                 />
                 <button
                   type="button"
@@ -475,7 +473,7 @@ export default function LoginPage() {
               className={`w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-[0.99] ${
                 authStatus === 'success'
                   ? 'bg-emerald-600 text-white shadow-emerald-500/30 ring-2 ring-emerald-400'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25 hover:shadow-lg hover:shadow-indigo-600/30'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/25 hover:shadow-lg hover:shadow-emerald-600/30'
               }`}
             >
               {authStatus === 'loading' && (
@@ -501,7 +499,7 @@ export default function LoginPage() {
             Don't have an account?{' '}
             <Link
               to={`/signup${location.search}`}
-              className="text-indigo-600 font-bold hover:underline"
+              className="text-emerald-600 font-bold hover:underline"
             >
               Create Account
             </Link>
@@ -528,7 +526,7 @@ export default function LoginPage() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
                 <KeyRound className="w-5 h-5" />
               </div>
               <div>
@@ -560,7 +558,7 @@ export default function LoginPage() {
                     <span>Recovery Request Processed</span>
                   </div>
                   <p className="leading-relaxed">
-                    Instructions sent to <strong className="font-semibold text-emerald-950">{resetEmail || 'your email'}</strong>. You can also set your new password directly below:
+                    Instructions sent to <strong className="font-semibold text-emerald-950">{resetEmail || 'your email'}</strong>. Enter your new password below to update your account:
                   </p>
                 </div>
 
@@ -576,34 +574,8 @@ export default function LoginPage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new strong password"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                      <span>Password Reset API Key</span>
-                      <span className="text-[10px] text-indigo-600 font-mono">From .env</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <KeyRound className="w-4 h-4 text-indigo-500" />
-                      </div>
-                      <input
-                        type={showResetApiKey ? 'text' : 'password'}
-                        value={resetApiKey}
-                        onChange={(e) => setResetApiKey(e.target.value)}
-                        placeholder="Enter API key from environment"
-                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowResetApiKey(!showResetApiKey)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showResetApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
                   </div>
 
                   <button
@@ -647,64 +619,24 @@ export default function LoginPage() {
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     placeholder="candidate@example.com"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-                    <span>Password Reset API Key</span>
-                    <span className="text-[10px] text-indigo-600 font-mono">From .env</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <KeyRound className="w-4 h-4 text-indigo-500" />
-                    </div>
-                    <input
-                      type={showResetApiKey ? 'text' : 'password'}
-                      value={resetApiKey}
-                      onChange={(e) => setResetApiKey(e.target.value)}
-                      placeholder="Enter PASSWORD_RESET_API_KEY from environment"
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowResetApiKey(!showResetApiKey)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      {showResetApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Security key specified in your environment file (<code className="text-indigo-600 font-mono">PASSWORD_RESET_API_KEY</code>).
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <button
-                    type="submit"
-                    disabled={isSendingReset}
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
-                  >
-                    {isSendingReset ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Verifying & Sending...</span>
-                      </>
-                    ) : (
-                      <span>Send Reset Instructions</span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleAutoFillDemo}
-                    className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Auto-Fill Demo Credentials (1-Click)</span>
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={isSendingReset}
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSendingReset ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Sending Instructions...</span>
+                    </>
+                  ) : (
+                    <span>Send Reset Instructions</span>
+                  )}
+                </button>
               </form>
             )}
 

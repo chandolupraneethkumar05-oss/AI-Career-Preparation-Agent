@@ -205,13 +205,13 @@ export default function ReverseInterviewWorkspace({ targetRole = 'Software Engin
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-2xs">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-2xs">
             <UserCheck className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-slate-900">Reverse Mock Interview</h2>
-              <Badge variant="indigo" size="xs">YOU ARE THE INTERVIEWER</Badge>
+              <Badge variant="emerald" size="xs">YOU ARE THE INTERVIEWER</Badge>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
               Assessing Candidate: <strong>Alex Rivera</strong> ({targetRole} • {difficulty})
@@ -257,16 +257,16 @@ export default function ReverseInterviewWorkspace({ targetRole = 'Software Engin
 
             <div className="space-y-1">
               <h3 className="text-base font-bold text-slate-900">Alex Rivera</h3>
-              <p className="text-xs text-indigo-600 font-mono font-medium">{targetRole} Applicant ({difficulty})</p>
+              <p className="text-xs text-emerald-600 font-mono font-medium">{targetRole} Applicant ({difficulty})</p>
               <p className="text-xs text-slate-500 leading-relaxed pt-1">
                 Knows core CS algorithms, but may overlook edge cases, proposes quadratic solutions first, or assumes unbounded memory unless guided by your questions.
               </p>
             </div>
 
             {isCandidateThinking ? (
-              <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center gap-2">
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center gap-2">
                 <VoiceWaveformIndicator isSpeaking={true} />
-                <span className="text-xs font-mono text-indigo-700 font-medium">Alex is thinking &amp; speaking...</span>
+                <span className="text-xs font-mono text-emerald-700 font-medium">Alex is thinking &amp; speaking...</span>
               </div>
             ) : (
               <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center gap-2 text-xs font-mono text-emerald-700">
@@ -321,7 +321,7 @@ export default function ReverseInterviewWorkspace({ targetRole = 'Software Engin
                     onClick={() => setActiveCategory(key)}
                     className={`px-2 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer ${
                       isActive
-                        ? 'bg-indigo-600 text-white font-semibold'
+                        ? 'bg-emerald-600 text-white font-semibold'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                     }`}
                   >
@@ -339,7 +339,7 @@ export default function ReverseInterviewWorkspace({ targetRole = 'Software Engin
                   key={i}
                   type="button"
                   onClick={() => handleSendPrompt(promptText)}
-                  className="w-full text-left p-2.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-xs text-slate-800 transition-colors cursor-pointer line-clamp-2"
+                  className="w-full text-left p-2.5 rounded-lg bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-xs text-slate-800 transition-colors cursor-pointer line-clamp-2"
                 >
                   "{promptText}"
                 </button>
@@ -364,14 +364,14 @@ export default function ReverseInterviewWorkspace({ targetRole = 'Software Engin
                   <div
                     className={`max-w-[88%] p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                       isUser
-                        ? 'bg-indigo-600 text-white rounded-tr-none shadow-xs'
+                        ? 'bg-emerald-600 text-white rounded-tr-none shadow-xs'
                         : 'bg-slate-50 text-slate-800 border border-slate-200 rounded-tl-none'
                     }`}
                   >
                     <p className="whitespace-pre-line">{turn.text}</p>
 
                     {turn.candidate_thought && (
-                      <div className="mt-2.5 pt-2 border-t border-slate-200/80 text-[11px] text-indigo-700 italic font-sans flex items-start gap-1.5">
+                      <div className="mt-2.5 pt-2 border-t border-slate-200/80 text-[11px] text-emerald-700 italic font-sans flex items-start gap-1.5">
                         <span className="shrink-0">💭</span>
                         <span>Alex's Internal Thought: {turn.candidate_thought}</span>
                       </div>
@@ -413,7 +413,7 @@ export default function ReverseInterviewWorkspace({ targetRole = 'Software Engin
               type="button"
               onClick={() => handleSendPrompt()}
               disabled={isCandidateThinking || !userInput.trim()}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 shadow-xs"
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Ask</span>
@@ -468,9 +468,9 @@ export default function ReverseInterviewWorkspace({ targetRole = 'Software Engin
                   {finalEvaluation.hint_calibration}/100
                 </span>
               </div>
-              <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-100 space-y-1">
-                <span className="text-indigo-700 font-semibold block">Mentorship Verdict:</span>
-                <span className="text-base font-bold text-indigo-900">
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-100 space-y-1">
+                <span className="text-emerald-700 font-semibold block">Mentorship Verdict:</span>
+                <span className="text-base font-bold text-emerald-900">
                   {finalEvaluation.verdict}
                 </span>
               </div>
@@ -486,8 +486,8 @@ export default function ReverseInterviewWorkspace({ targetRole = 'Software Engin
               </ul>
             </div>
 
-            <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-950 space-y-1">
-              <span className="font-bold text-indigo-900 block">Executive Coaching Advice:</span>
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-950 space-y-1">
+              <span className="font-bold text-emerald-900 block">Executive Coaching Advice:</span>
               <p className="leading-relaxed">{finalEvaluation.interviewer_coaching_advice}</p>
             </div>
 
