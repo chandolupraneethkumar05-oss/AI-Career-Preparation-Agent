@@ -116,7 +116,7 @@ export default function LandingPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 3. FOUR VERTICAL TACTILE FEATURE CARDS                         */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <section id="curriculum" className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section id="features" className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-24">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           
           {/* Card 1: Adaptive Questioning */}
@@ -232,7 +232,7 @@ export default function LandingPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 5. METHODOLOGY & SCORECARD SHOWCASE                           */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+      <section id="how-it-works" className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto scroll-mt-24">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           <div className="lg:col-span-5 space-y-4">
@@ -350,7 +350,7 @@ export default function LandingPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 6. 6-GRID CAPABILITY SHOWCASE                                 */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <section className="py-14 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+      <section id="curriculum" className="py-14 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto scroll-mt-24">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
             { title: 'Campus Fresher Calibration', desc: 'No system architecture SLAs for fresh graduates; strictly DSA, OOP, and REST.' },

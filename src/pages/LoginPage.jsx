@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetToken, setResetToken] = useState('');
+  const [deliveredVia, setDeliveredVia] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
@@ -120,6 +121,9 @@ export default function LoginPage() {
     try {
       const res = await authApi.forgotPassword(resetEmail);
       setResetSent(true);
+      if (res.delivered_via) {
+        setDeliveredVia(res.delivered_via);
+      }
       if (res.reset_token) {
         setResetToken(res.reset_token);
       }
@@ -555,10 +559,12 @@ export default function LoginPage() {
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-2">
                   <div className="flex items-center gap-2 font-bold text-emerald-900">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Recovery Request Processed</span>
+                    <span>{deliveredVia === 'smtp' || deliveredVia === 'resend' ? 'Email Dispatched via Mail Gateway' : 'Secure Recovery Session Ready'}</span>
                   </div>
                   <p className="leading-relaxed">
-                    Instructions sent to <strong className="font-semibold text-emerald-950">{resetEmail || 'your email'}</strong>. Enter your new password below to update your account:
+                    {deliveredVia === 'smtp' || deliveredVia === 'resend'
+                      ? `Instructions were dispatched to ${resetEmail || 'your email'}. You can check your inbox, or set your new password directly below:`
+                      : `A secure 30-minute password recovery session is verified for ${resetEmail || 'your account'}. Enter your new password below to update your account immediately:`}
                   </p>
                 </div>
 

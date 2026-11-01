@@ -108,7 +108,7 @@ async def get_or_generate_peer_report(room_id: str):
     try:
         report = await asyncio.wait_for(
             loop.run_in_executor(None, default_peer_room_service.generate_360_evaluation, room),
-            timeout=5.0
+            timeout=2.5
         )
     except Exception as exc:
         logger.warning(f"Peer report generation fell back to instant grounded evaluation: {exc}")
@@ -535,7 +535,7 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                 try:
                     report = await asyncio.wait_for(
                         loop.run_in_executor(None, default_peer_room_service.generate_360_evaluation, room),
-                        timeout=8.0
+                        timeout=2.5
                     )
                 except Exception as exc:
                     logger.warning(f"Error or timeout during async 360 evaluation: {exc}")

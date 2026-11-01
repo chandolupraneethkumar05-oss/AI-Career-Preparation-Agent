@@ -140,8 +140,8 @@ export default function SkillArenaPage() {
     }
   }, [userId, targetRole]);
 
-  // Fetch recommended challenge
-  const fetchChallenge = (modeFilter = null) => {
+  // Fetch recommended challenge with explicit role support
+  const fetchChallenge = (modeFilter = null, roleOverride = null) => {
     setIsLoadingChallenge(true);
     setEvaluationResult(null);
     setSandboxRunResult(null);
@@ -149,9 +149,10 @@ export default function SkillArenaPage() {
     setUserAnswer('');
     setSelectedOption(null);
 
+    const activeTargetRole = roleOverride || targetRole;
     const mode = (modeFilter && modeFilter !== 'all') ? modeFilter : (selectedMode !== 'all' ? selectedMode : null);
 
-    skillArenaApi.getNextChallenge(userId, targetRole, mode)
+    skillArenaApi.getNextChallenge(userId, activeTargetRole, mode)
       .then((challenge) => {
         if (challenge) {
           setActiveChallenge(challenge);
@@ -178,10 +179,18 @@ export default function SkillArenaPage() {
     }).catch(() => setArenaStats(null));
   };
 
-  useEffect(() => {
-    fetchChallenge();
+  // Immediate Role Switching Handler
+  const handleRoleChange = (newRole) => {
+    setTargetRole(newRole);
+    if (updateUser) updateUser({ targetRole: newRole });
+    fetchChallenge(selectedMode, newRole);
     refreshHistoryAndStats();
-  }, [userId]);
+  };
+
+  useEffect(() => {
+    fetchChallenge(selectedMode, targetRole);
+    refreshHistoryAndStats();
+  }, [userId, targetRole]);
 
   const handleModeChange = (modeId) => {
     setSelectedMode(modeId);
@@ -360,10 +369,7 @@ export default function SkillArenaPage() {
           <SelectDropdown
             label="Target Career Discipline"
             value={targetRole}
-            onChange={(newRole) => {
-              setTargetRole(newRole);
-              if (updateUser) updateUser({ targetRole: newRole });
-            }}
+            onChange={handleRoleChange}
             options={AVAILABLE_ROLES}
             placeholder="Select target role..."
             icon={Target}

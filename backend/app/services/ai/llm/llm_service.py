@@ -1994,7 +1994,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
     ) -> Dict[str, Any]:
         text = (answer_text or user_answer or "").strip()
         career_context = career_context or {}
-        if not self.api_key:
+        if not self.api_key or len(text.split()) < 5 or len(text) < 15:
             return self._fallback.evaluate_interview_answer(
                 question=question,
                 answer_text=text,

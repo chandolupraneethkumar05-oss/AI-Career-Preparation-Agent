@@ -191,7 +191,7 @@ class NvidiaLLMService:
                 "evaluator": "calibrated_skip_handler"
             }
 
-        if not self.api_key or len(effective_answer) < 10:
+        if not self.api_key or len(effective_answer) < 15 or len(effective_answer.split()) < 5:
             return self._fallback.evaluate_interview_answer(
                 question=question,
                 answer_text=effective_answer,

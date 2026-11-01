@@ -1,3 +1,63 @@
+
+/**
+ * Creates an active animated canvas video stream for environments
+ * without physical camera hardware or when camera permissions are blocked.
+ */
+function createVirtualVideoStream(userName = 'Candidate') {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 480;
+  const ctx = canvas.getContext('2d');
+  let angle = 0;
+
+  function draw() {
+    ctx.fillStyle = '#0b0f17';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Subtle gradient glow
+    const grad = ctx.createRadialGradient(320, 220, 10, 320, 220, 180);
+    grad.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
+    grad.addColorStop(1, 'rgba(11, 15, 23, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Glowing avatar circle
+    ctx.beginPath();
+    ctx.arc(320, 210, 80, 0, Math.PI * 2);
+    ctx.fillStyle = '#111827';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#10b981';
+    ctx.stroke();
+
+    // Initials
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 40px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const initials = (userName || 'Candidate').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    ctx.fillText(initials, 320, 210);
+
+    // Label
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(userName || 'Candidate', 320, 320);
+
+    // Active waveform bars
+    for (let i = 0; i < 14; i++) {
+      const h = 8 + Math.abs(Math.sin(angle + i * 0.4)) * 20;
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(215 + i * 15, 365 - h / 2, 7, h);
+    }
+
+    angle += 0.08;
+    requestAnimationFrame(draw);
+  }
+  draw();
+  return canvas.captureStream ? canvas.captureStream(25) : null;
+}
+
 /**
  * Peer-to-Peer Collaborative Video Chamber Service
  * AI Career Preparation Agent
@@ -121,41 +181,54 @@ export class PeerRoomService {
    * Captures local camera and microphone stream.
    */
   async startMedia(video = true, audio = true) {
+    let stream = null;
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: video ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } : false,
-        audio: audio ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true } : false
+      // 1. Try standard getUserMedia with audio & video
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: video ? true : false,
+        audio: audio ? { echoCancellation: true, noiseSuppression: true } : false
       });
+    } catch (err1) {
+      console.warn('[PeerRoomService] Direct getUserMedia error, trying fallback:', err1);
+      try {
+        // 2. Try facingMode video
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: video ? { facingMode: 'user' } : false,
+          audio: audio ? true : false
+        });
+      } catch (err2) {
+        console.warn('[PeerRoomService] FacingMode camera error, creating virtual video fallback:', err2);
+        try {
+          // 3. Audio only + virtual animated video stream
+          const audioStream = audio ? await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null) : null;
+          const virtualVideo = createVirtualVideoStream(this.userName || 'Candidate');
+          const combined = new MediaStream();
+          if (virtualVideo) {
+            virtualVideo.getVideoTracks().forEach((t) => combined.addTrack(t));
+          }
+          if (audioStream) {
+            audioStream.getAudioTracks().forEach((t) => combined.addTrack(t));
+          }
+          stream = combined;
+        } catch (err3) {
+          console.warn('[PeerRoomService] Complete media fallback failed:', err3);
+        }
+      }
+    }
 
-      // If peer connection already instantiated, attach tracks immediately
+    if (stream) {
+      this.localStream = stream;
       if (this.peerConnection) {
         this._attachLocalTracks(this.peerConnection);
       }
-
       this._emit('localStream', this.localStream);
-
-      // Signal media captured to signaling hub
       this._send({ type: 'peer_ready', clientId: this.clientId });
       if (this.isInitiator && !this.makingOffer) {
         this._createAndSendOffer();
       }
-
       return this.localStream;
-    } catch (err) {
-      console.warn('[PeerRoomService] Camera/Mic capture error, falling back to audio only or mute:', err);
-      try {
-        this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        if (this.peerConnection) {
-          this._attachLocalTracks(this.peerConnection);
-        }
-        this._emit('localStream', this.localStream);
-        this._send({ type: 'peer_ready', clientId: this.clientId });
-        return this.localStream;
-      } catch (fallbackErr) {
-        this._emit('error', { type: 'media_error', error: fallbackErr });
-        return null;
-      }
     }
+    return null;
   }
 
   /**

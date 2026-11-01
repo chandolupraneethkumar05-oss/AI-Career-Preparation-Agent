@@ -11,6 +11,289 @@ from typing import List, Dict, Any
 
 SKILL_ARENA_CATALOG: List[Dict[str, Any]] = [
     # =========================================================================
+    # 11. FRONTEND DEVELOPER (React, JavaScript, DOM)
+    # =========================================================================
+    {
+        "id": "arena-fe-code-01",
+        "title": "Build a Debounced Search Input Handler in JavaScript",
+        "mode": "coding",
+        "skill": "JavaScript",
+        "subtopic": "Asynchronous Event Handling",
+        "difficulty": "Intermediate",
+        "question": (
+            "Implement a higher-order `debounce(func, delay_ms)` utility in Python or JavaScript "
+            "that delays invoking `func` until after `delay_ms` milliseconds have elapsed since "
+            "the last time the debounced function was invoked. Explain how it eliminates redundant API calls."
+        ),
+        "initial_code": """import time
+from typing import Callable, Any
+
+def debounce(fn: Callable, delay_ms: int) -> Callable:
+    # Track last invocation timestamp or timer
+    pass
+""",
+        "options": [],
+        "expected_answer": """import time
+from typing import Callable, Any
+
+def debounce(fn: Callable, delay_ms: int) -> Callable:
+    last_call = 0
+    def debounced(*args, **kwargs):
+        nonlocal last_call
+        now = time.time() * 1000
+        if now - last_call >= delay_ms:
+            last_call = now
+            return fn(*args, **kwargs)
+    return debounced
+""",
+        "explanation": (
+            "Debouncing ensures that a rapid sequence of events (such as keystrokes in a search input) "
+            "only fires a single execution after the user pauses typing for the specified delay threshold."
+        ),
+        "hints": [
+            "Use a closure with a `nonlocal` variable to store the timer or timestamp.",
+            "Compare the elapsed time against `delay_ms`."
+        ],
+        "keywords": ["debounce", "timer", "closure", "nonlocal", "time", "delay", "fn", "return"],
+        "test_criteria": {
+            "required_patterns": ["def debounce", "return"],
+            "concepts": ["Closure encapsulation", "Rate limiting user events"]
+        },
+        "estimated_minutes": 8,
+        "career_relevance": "Critical for frontend performance optimization in search bars and resize listeners.",
+        "target_roles": ["Frontend Developer", "Full Stack Web Developer", "Software Engineer"]
+    },
+    {
+        "id": "arena-fe-debug-01",
+        "title": "Fix React useEffect Infinite Re-render Memory Leak",
+        "mode": "debug",
+        "skill": "React",
+        "subtopic": "Hooks & Component Lifecycle",
+        "difficulty": "Intermediate",
+        "question": (
+            "Identify why the following React component triggers an infinite re-render loop, and provide the fixed code:\n\n"
+            "```jsx\n"
+            "function UserProfile({ userId }) {\n"
+            "  const [user, setUser] = useState(null);\n"
+            "  const filters = { activeOnly: true };\n\n"
+            "  useEffect(() => {\n"
+            "    fetchUser(userId, filters).then(data => setUser(data));\n"
+            "  }, [userId, filters]);\n\n"
+            "  return <div>{user?.name}</div>;\n"
+            "}\n"
+            "```"
+        ),
+        "initial_code": "// Explain the root cause and provide the corrected React hook implementation\n",
+        "options": [],
+        "expected_answer": (
+            "The `filters` object is recreated as a new reference on every render, causing the dependency array `[userId, filters]` "
+            "to fail referential equality (`Object.is`), triggering an infinite fetch-and-set loop. Fix by memoizing with `useMemo` or moving outside."
+        ),
+        "explanation": (
+            "In React, non-primitive values (objects, arrays, functions) receive a fresh memory reference on each render cycle. "
+            "Passing an object literal directly into a `useEffect` dependency array causes `Object.is` comparison to evaluate to false every render."
+        ),
+        "hints": [
+            "Check referential equality of the `filters` object.",
+            "Consider `useMemo(() => ({ activeOnly: true }), [])` or declaring the object outside the component."
+        ],
+        "keywords": ["referential equality", "usememo", "reference", "render", "infinite", "useeffect", "dependency"],
+        "test_criteria": {
+            "required_patterns": ["reference", "usememo", "infinite"],
+            "concepts": ["Referential equality in React hooks", "Preventing state re-trigger loops"]
+        },
+        "estimated_minutes": 7,
+        "career_relevance": "Essential React hook hygiene required by mid and senior frontend interview panels.",
+        "target_roles": ["Frontend Developer", "Full Stack Web Developer"]
+    },
+
+    # =========================================================================
+    # 12. DEVOPS & CLOUD ARCHITECTURE (Docker, Kubernetes, CI/CD, AWS)
+    # =========================================================================
+    {
+        "id": "arena-devops-mcq-01",
+        "title": "Kubernetes Pod CrashLoopBackOff Remediation",
+        "mode": "mcq",
+        "skill": "Kubernetes",
+        "subtopic": "Container Orchestration & Reliability",
+        "difficulty": "Intermediate",
+        "question": (
+            "A newly deployed microservice enters a `CrashLoopBackOff` state immediately after startup in a Kubernetes cluster. "
+            "What is the most effective sequence of diagnostic commands to identify the failure root cause?"
+        ),
+        "options": [
+            "kubectl describe pod <pod_name> followed by kubectl logs <pod_name> --previous",
+            "kubectl delete pod <pod_name> --force --grace-period=0",
+            "kubectl scale deployment <dep_name> --replicas=0",
+            "kubectl top pod <pod_name> to inspect memory saturation"
+        ],
+        "expected_answer": "kubectl describe pod <pod_name> followed by kubectl logs <pod_name> --previous",
+        "explanation": (
+            "`kubectl describe pod` reveals scheduler events, exit codes (e.g., OOMKilled 137, Command not found 127), and liveness probe failures. "
+            "`kubectl logs --previous` captures stdout/stderr before the container crashed."
+        ),
+        "hints": [
+            "Look for commands that inspect terminated container state rather than restarting or deleting resources."
+        ],
+        "keywords": ["kubectl", "describe", "logs", "previous", "events", "exit code"],
+        "test_criteria": {
+            "required_patterns": ["describe", "logs"],
+            "concepts": ["Container triage", "Kubernetes troubleshooting sequence"]
+        },
+        "estimated_minutes": 5,
+        "career_relevance": "Standard SRE & DevOps interview screening question.",
+        "target_roles": ["DevOps & Cloud Engineer", "Cloud Architect", "Backend Engineer"]
+    },
+    {
+        "id": "arena-devops-code-01",
+        "title": "Optimize Docker Multi-Stage Build for Python Microservice",
+        "mode": "coding",
+        "skill": "Docker",
+        "subtopic": "Containerization & Security",
+        "difficulty": "Intermediate",
+        "question": (
+            "Write a production-grade multi-stage `Dockerfile` for a Python FastAPI app. "
+            "Requirements: 1) Build wheel dependencies in a builder stage with compiler tools. "
+            "2) Copy only installed wheels to a minimal distroless/slim runtime image. "
+            "3) Run as a non-root user for security."
+        ),
+        "initial_code": """# Stage 1: Build dependencies
+FROM python:3.11-slim AS builder
+# Complete builder and final runtime stages
+""",
+        "options": [],
+        "expected_answer": """FROM python:3.11-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --wheel-dir=/app/wheels -r requirements.txt
+
+FROM python:3.11-slim AS runtime
+WORKDIR /app
+RUN useradd -m -u 1000 appuser
+COPY --from=builder /app/wheels /wheels
+RUN pip install --no-cache /wheels/* && rm -rf /wheels
+COPY . .
+USER appuser
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+""",
+        "explanation": (
+            "Multi-stage builds eliminate heavy build dependencies from the final production container, "
+            "reducing the attack surface and image size by over 70%. Running as `USER appuser` prevents container breakout exploits."
+        ),
+        "hints": [
+            "Use `COPY --from=builder` to copy build artifacts.",
+            "Add `useradd` and `USER` directive to avoid running as root."
+        ],
+        "keywords": ["from", "builder", "copy --from", "user", "requirements", "wheels", "pip"],
+        "test_criteria": {
+            "required_patterns": ["FROM", "AS", "USER", "COPY"],
+            "concepts": ["Multi-stage Docker builds", "Non-root container security"]
+        },
+        "estimated_minutes": 10,
+        "career_relevance": "Core DevOps and infrastructure delivery competency tested in cloud roles.",
+        "target_roles": ["DevOps & Cloud Engineer", "Cloud Architect", "Backend Engineer"]
+    },
+
+    # =========================================================================
+    # 13. CYBERSECURITY & APPLICATION DEFENSE (JWT, OWASP, SQLi, Auth)
+    # =========================================================================
+    {
+        "id": "arena-sec-debug-01",
+        "title": "Remediate SQL Injection & Insecure Auth Query",
+        "mode": "debug",
+        "skill": "Security",
+        "subtopic": "OWASP Top 10 Defense",
+        "difficulty": "Foundational",
+        "question": (
+            "Fix the critical vulnerability in this database query function:\n\n"
+            "```python\n"
+            "def authenticate_user(db_cursor, username, password):\n"
+            "    query = f\"SELECT id, name FROM users WHERE username = '{username}' AND password_hash = '{password}'\"\n"
+            "    db_cursor.execute(query)\n"
+            "    return db_cursor.fetchone()\n"
+            "```\n"
+            "Show the secure parameterized query version."
+        ),
+        "initial_code": """def authenticate_user(db_cursor, username, password_hash):
+    # Implement secure parameterized query
+    pass
+""",
+        "options": [],
+        "expected_answer": """def authenticate_user(db_cursor, username, password_hash):
+    query = "SELECT id, name FROM users WHERE username = %s AND password_hash = %s"
+    db_cursor.execute(query, (username, password_hash))
+    return db_cursor.fetchone()
+""",
+        "explanation": (
+            "Direct string interpolation allows attackers to inject `' OR 1=1 --` into inputs to bypass authentication. "
+            "Parameterized queries transmit SQL command structure and data separately to the database engine, rendering injection impossible."
+        ),
+        "hints": [
+            "Use placeholders (`%s` or `?`) in the query string.",
+            "Pass parameters as a tuple in the second argument to `execute()`."
+        ],
+        "keywords": ["execute", "parameterized", "%s", "tuple", "query", "injection", "select"],
+        "test_criteria": {
+            "required_patterns": ["execute", "%s"],
+            "concepts": ["SQL Injection defense", "Prepared statements"]
+        },
+        "estimated_minutes": 6,
+        "career_relevance": "Fundamental security check for every backend, fullstack, and security engineer.",
+        "target_roles": ["Cybersecurity Analyst", "Security Engineer", "Backend Engineer", "Software Engineer"]
+    },
+
+    # =========================================================================
+    # 14. BACKEND & DISTRIBUTED SYSTEMS (REST APIs, Redis, Idempotency)
+    # =========================================================================
+    {
+        "id": "arena-be-code-01",
+        "title": "Design an Idempotent API Request Handler with Redis",
+        "mode": "coding",
+        "skill": "REST API",
+        "subtopic": "Distributed API Reliability",
+        "difficulty": "Advanced",
+        "question": (
+            "Write a Python function `process_payment_idempotent(redis_client, idempotency_key: str, amount_cents: int) -> dict` "
+            "that ensures duplicate client network retries do not charge a customer twice. "
+            "Use Redis `set(key, val, nx=True, ex=300)` for atomic locking."
+        ),
+        "initial_code": """def process_payment_idempotent(redis_client, idempotency_key: str, amount_cents: int) -> dict:
+    # Check Redis for idempotency key and atomically acquire lock
+    pass
+""",
+        "options": [],
+        "expected_answer": """def process_payment_idempotent(redis_client, idempotency_key: str, amount_cents: int) -> dict:
+    cache_key = f"idemp:{idempotency_key}"
+    cached = redis_client.get(cache_key)
+    if cached:
+        return {"status": "cached", "data": cached}
+    acquired = redis_client.set(f"lock:{idempotency_key}", "processing", nx=True, ex=30)
+    if not acquired:
+        return {"status": "concurrent_request_in_flight"}
+    result = {"status": "success", "charged": amount_cents}
+    redis_client.set(cache_key, str(result), ex=86400)
+    redis_client.delete(f"lock:{idempotency_key}")
+    return result
+""",
+        "explanation": (
+            "Idempotency keys prevent double billing on network timeouts. By atomically locking with `nx=True` and caching the final response, "
+            "any repeated retry immediately returns the cached confirmation without re-executing the payment charge."
+        ),
+        "hints": [
+            "Check if the key is already cached in Redis.",
+            "Use `set(..., nx=True)` for distributed locking to avoid race conditions."
+        ],
+        "keywords": ["redis", "idempotency", "nx=True", "get", "set", "lock", "status"],
+        "test_criteria": {
+            "required_patterns": ["def process_payment_idempotent", "redis", "get", "set"],
+            "concepts": ["Distributed idempotency", "Redis atomic operations"]
+        },
+        "estimated_minutes": 10,
+        "career_relevance": "Crucial concept evaluated in Senior and Staff Backend interview rounds.",
+        "target_roles": ["Backend Engineer", "Software Engineer", "Cloud Architect"]
+    },
+
+    # =========================================================================
     # 1. PYTHON
     # =========================================================================
     {

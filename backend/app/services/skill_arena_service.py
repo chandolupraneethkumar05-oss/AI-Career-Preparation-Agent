@@ -99,15 +99,41 @@ def get_next_challenge(
     mode: Optional[str] = None
 ) -> SkillArenaChallengeResponse:
     """
-    Career-aware selection prioritizing candidate's largest active skill gaps,
+    Career-aware selection strictly matching candidate's active target role,
     calibrating difficulty, and rotating challenges to prevent repetition.
     """
     user = db.query(User).filter(User.id == user_id).first()
-    active_role = target_role or (user.target_role if user else "Machine Learning Engineer")
+    active_role = target_role or (user.target_role if user else "Software Engineer")
 
-    # 1. Fetch unified profile & skill gaps
-    profile = aggregate_user_skill_evidence(db, user_id, target_role=active_role)
-    top_gaps = profile.get("top_skill_gaps", [])
+    # 1. Map active role to taxonomy requirements
+    matched_role_key = None
+    for r in ROLE_REQUIREMENTS:
+        if r.lower() == active_role.lower() or r.lower() in active_role.lower() or active_role.lower() in r.lower():
+            matched_role_key = r
+            break
+    if not matched_role_key:
+        lower_role = active_role.lower()
+        if "front" in lower_role:
+            matched_role_key = "Frontend Developer"
+        elif "devops" in lower_role or "cloud" in lower_role:
+            matched_role_key = "DevOps & Cloud Engineer"
+        elif "security" in lower_role or "cyber" in lower_role:
+            matched_role_key = "Security Engineer"
+        elif "full" in lower_role:
+            matched_role_key = "Full Stack Web Developer"
+        elif "backend" in lower_role:
+            matched_role_key = "Backend Engineer"
+        elif "mobile" in lower_role:
+            matched_role_key = "Mobile Developer"
+        elif "data" in lower_role and "scientist" in lower_role:
+            matched_role_key = "Data Scientist"
+        else:
+            matched_role_key = "Software Engineer"
+
+    role_spec = ROLE_REQUIREMENTS.get(matched_role_key, {})
+    role_core_skills = [normalize_skill(s).lower() for s in role_spec.get("core_skills", [])]
+    role_important_skills = [normalize_skill(s).lower() for s in role_spec.get("important_skills", [])]
+    all_role_skills = set(role_core_skills + role_important_skills)
 
     # 2. Query user's past attempts for anti-repetition & calibration
     past_attempts = (
@@ -117,91 +143,70 @@ def get_next_challenge(
         .all()
     )
     completed_ids = {a.challenge_id for a in past_attempts if a.correctness}
-    recent_skills = {normalize_skill(a.skill).lower() for a in past_attempts[:5]}
+    recent_attempt_ids = {a.challenge_id for a in past_attempts[:4]}
 
-    # 3. Identify prioritized target skill
-    target_skill = None
-    target_difficulty = "Intermediate"
-
-    total_evidences = profile.get("evidence_summary", {}).get("total_evidences", 0)
-
-    # Rule A: Priority skill gap not yet practiced in recent attempts
-    for gap_item in top_gaps:
-        norm_gap = normalize_skill(gap_item.skill_name).lower()
-        if norm_gap not in recent_skills and gap_item.gap >= 15:
-            target_skill = gap_item.skill_name
-            # Difficulty baseline
-            if gap_item.demonstrated_score <= 55 or gap_item.evidence_count == 0 or total_evidences == 0:
-                target_difficulty = "Foundational"
-            elif gap_item.demonstrated_score > 75:
-                target_difficulty = "Advanced"
-            else:
-                target_difficulty = "Intermediate"
-            break
-
-    # Rule B: Fallback to highest gap regardless of recency if all have been attempted
-    if not target_skill and top_gaps:
-        primary_gap = top_gaps[0]
-        target_skill = primary_gap.skill_name
-        if primary_gap.demonstrated_score <= 55 or primary_gap.evidence_count == 0 or total_evidences == 0:
-            target_difficulty = "Foundational"
-        elif primary_gap.demonstrated_score > 75:
-            target_difficulty = "Advanced"
-        else:
-            target_difficulty = "Intermediate"
-
-    # Rule C: New user with 0 evidence -> Role-grounded foundational challenge
-    if not target_skill:
-        role_reqs = ROLE_REQUIREMENTS.get(active_role, {})
-        core_list = role_reqs.get("core_skills", ["Python", "SQL", "Machine Learning"])
-        target_skill = core_list[0] if core_list else "Python"
-        target_difficulty = "Foundational"
-
-    # If new user with no attempts and no evidence, default to foundational
-    if not past_attempts and total_evidences == 0:
-        target_difficulty = "Foundational"
-
-    # Check recent attempt scores to dynamically calibrate difficulty
-    skill_attempts = [a for a in past_attempts if normalize_skill(a.skill).lower() == normalize_skill(target_skill).lower()]
-    if skill_attempts:
-        last_score = skill_attempts[0].score
-        if last_score >= 85:
-            if target_difficulty == "Foundational":
-                target_difficulty = "Intermediate"
-            elif target_difficulty == "Intermediate":
-                target_difficulty = "Advanced"
-        elif last_score < 50:
-            target_difficulty = "Foundational"
-    elif past_attempts and past_attempts[0].score >= 85:
-        if target_difficulty == "Foundational":
-            target_difficulty = "Intermediate"
-    elif past_attempts and past_attempts[0].score < 50:
-        target_difficulty = "Foundational"
-
-    # 4. Filter matching challenges from catalog
-    norm_target = normalize_skill(target_skill).lower()
+    # 3. Filter candidates strictly aligned with the target role
     candidates = []
     for c in SKILL_ARENA_CATALOG:
         c_skill = normalize_skill(c["skill"]).lower()
+        c_roles = [r.lower() for r in c.get("target_roles", [])]
         if mode and c["mode"].lower() != mode.lower():
             continue
-        if c_skill == norm_target or norm_target in c_skill or c_skill in norm_target:
+        if (
+            c_skill in all_role_skills
+            or any(matched_role_key.lower() in r for r in c_roles)
+            or any(active_role.lower() in r for r in c_roles)
+        ):
             candidates.append(c)
 
-    # If no exact skill match with mode filter, loosen skill filter
+    # Fallback if mode filter was too strict
     if not candidates and mode:
         candidates = [c for c in SKILL_ARENA_CATALOG if c["mode"].lower() == mode.lower()]
     elif not candidates:
         candidates = SKILL_ARENA_CATALOG
 
-    # Prefer: Not recently attempted & Uncompleted > Matching Difficulty
-    recent_attempt_ids = {a.challenge_id for a in past_attempts[:3]}
+    # 4. Anti-repetition selection & Role Specialization Priority
+    target_difficulty = "Intermediate"
+    if past_attempts and past_attempts[0].score >= 85:
+        target_difficulty = "Advanced"
+    elif not past_attempts or (past_attempts and past_attempts[0].score < 50):
+        target_difficulty = "Foundational"
+
+    def candidate_specialization_score(c):
+        c_skill = normalize_skill(c["skill"]).lower()
+        c_roles = [r.lower() for r in c.get("target_roles", [])]
+        score = 0
+        if any(matched_role_key.lower() == r.lower() for r in c_roles):
+            score += 200
+        elif any(matched_role_key.lower() in r.lower() for r in c_roles):
+            score += 150
+        elif c_skill in role_core_skills:
+            score += 100
+        elif c_skill in role_important_skills:
+            score += 50
+
+        # Strongly prioritize domain-specific questions over generic Python/Git
+        if "front" in matched_role_key.lower() and c_skill not in ["javascript", "react", "html5", "css3", "typescript"]:
+            score -= 130
+        if "devops" in matched_role_key.lower() and c_skill not in ["docker", "kubernetes", "ci/cd", "linux", "aws", "terraform"]:
+            score -= 130
+        if "security" in matched_role_key.lower() and c_skill not in ["security", "cryptography", "networking"]:
+            score -= 130
+        if "backend" in matched_role_key.lower() and c_skill not in ["rest api", "sql", "postgresql", "redis", "fastapi", "system design"]:
+            score -= 70
+
+        if c.get("difficulty", "").lower() == target_difficulty.lower():
+            score += 25
+        return score
+
+    candidates.sort(key=candidate_specialization_score, reverse=True)
+
     avoid_ids = completed_ids | recent_attempt_ids
     fresh = [c for c in candidates if c["id"] not in avoid_ids]
-    pool = fresh if fresh else ([c for c in candidates if c["id"] not in completed_ids] or candidates)
+    uncompleted = [c for c in candidates if c["id"] not in completed_ids]
+    pool = fresh if fresh else (uncompleted if uncompleted else candidates)
 
-    diff_matches = [c for c in pool if c["difficulty"].lower() == target_difficulty.lower()]
-    selected = diff_matches[0] if diff_matches else pool[0]
+    selected = pool[0]
 
     return SkillArenaChallengeResponse(
         id=selected["id"],

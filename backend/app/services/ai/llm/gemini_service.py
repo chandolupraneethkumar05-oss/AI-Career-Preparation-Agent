@@ -395,7 +395,7 @@ Return valid JSON with exactly these fields:
                 "evaluator": "calibrated_skip_handler"
             }
 
-        if not self.api_key or len(effective_answer.strip()) < 10:
+        if not self.api_key or len(effective_answer.strip()) < 15 or len(effective_answer.strip().split()) < 5:
             return self._fallback.evaluate_interview_answer(
                 question, answer_text, career_context, language,
                 user_answer, retrieved_knowledge, target_role, difficulty, interview_type

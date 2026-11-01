@@ -301,19 +301,79 @@ export default function SettingsPage() {
             <Badge variant="navy" size="sm">4 Themes Available</Badge>
           </div>
 
-          <div className="pt-1">
-            <SegmentedControl
-              options={availableThemes.map((thm) => ({
-                id: thm.id,
-                label: `${thm.emoji} ${thm.name}`,
-                badge: thm.badge,
-                description: thm.description
-              }))}
-              value={activeTheme}
-              onChange={changeTheme}
-              dynamicHint={(val, opt) => opt?.description}
-              ariaLabel="Visual appearance theme selector"
-            />
+          {/* Attractive Interactive Theme Card Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+            {availableThemes.map((thm) => {
+              const isSelected = activeTheme === thm.id;
+              return (
+                <button
+                  key={thm.id}
+                  type="button"
+                  onClick={() => changeTheme(thm.id)}
+                  className={`relative text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 group ${
+                    isSelected
+                      ? 'border-emerald-600 bg-emerald-50/20 ring-2 ring-emerald-500/20 shadow-md'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 shadow-xs'
+                  }`}
+                >
+                  {/* Visual Layout Mockup */}
+                  <div
+                    className="w-full h-20 rounded-lg p-2 flex flex-col justify-between overflow-hidden border border-black/10 shadow-2xs transition-transform group-hover:scale-[1.02]"
+                    style={{ backgroundColor: thm.preview?.bg || '#F8FAFC' }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: thm.preview?.primary || '#10B981' }} />
+                        <div className="w-8 h-1.5 rounded-full bg-slate-400/40" />
+                      </div>
+                      <div className="w-3 h-1.5 rounded-full bg-slate-400/30" />
+                    </div>
+                    <div
+                      className="w-full h-10 rounded-md p-1.5 border border-black/5 flex items-center justify-between"
+                      style={{ backgroundColor: thm.preview?.card || '#FFFFFF' }}
+                    >
+                      <div className="space-y-1">
+                        <div className="w-12 h-1.5 rounded-full" style={{ backgroundColor: thm.preview?.primary || '#10B981' }} />
+                        <div className="w-16 h-1 rounded-full bg-slate-400/30" />
+                      </div>
+                      <div
+                        className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-bold text-white shadow-2xs"
+                        style={{ backgroundColor: thm.preview?.primary || '#10B981' }}
+                      >
+                        ✓
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Title & Badge */}
+                  <div>
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>{thm.emoji}</span>
+                        <span>{thm.name}</span>
+                      </span>
+                      {isSelected ? (
+                        <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                          ✓
+                        </span>
+                      ) : (
+                        <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
+                      {thm.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-slate-400 uppercase tracking-wider">{thm.badge}</span>
+                    {isSelected && (
+                      <span className="font-bold text-emerald-600">Active</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </GlassCard>
 

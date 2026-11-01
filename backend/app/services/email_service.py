@@ -289,7 +289,11 @@ class SMTPEmailService(BaseEmailService):
         self.port = int(os.getenv("SMTP_PORT", "587"))
         self.user = os.getenv("SMTP_USER", "").strip()
         self.password = os.getenv("SMTP_PASSWORD", "").strip()
-        self.sender = os.getenv("SMTP_FROM", "noreply@career-agent.dev").strip()
+        self.sender = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "noreply@career-agent.dev")).strip()
+        self.sender_name = os.getenv("SMTP_SENDER_NAME", "TalentPath AI").strip()
+        self.use_tls = os.getenv("SMTP_USE_TLS", "true").strip().lower() in ("true", "1", "yes")
+        if self.port == 465:
+            self.use_tls = False
 
     def send_email(
         self,
@@ -409,6 +413,7 @@ class ResendEmailService(BaseEmailService):
     def __init__(self, api_key: Optional[str] = None, sender: Optional[str] = None):
         self.api_key = api_key or os.getenv("RESEND_API_KEY")
         self.sender = sender or os.getenv("RESEND_FROM", "onboarding@resend.dev")
+        self.from_email = self.sender
 
     def send_email(
         self,

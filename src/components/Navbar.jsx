@@ -22,6 +22,23 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   };
 
+  const handleNavAnchor = (e, sectionId) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    if (window.location.pathname === '/') {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+    navigate(`/#${sectionId}`);
+    setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 150);
+  };
+
   const isLoggedIn = Boolean(isAuthenticated && user);
 
   return (
@@ -51,13 +68,13 @@ export default function Navbar() {
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center gap-7 font-sans text-xs uppercase tracking-wider font-semibold">
-            <a href="#features" className="text-slate-600 hover:text-emerald-600 transition-colors">
+            <a href="#features" onClick={(e) => handleNavAnchor(e, 'features')} className="text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer">
               Features
             </a>
-            <a href="#how-it-works" className="text-slate-600 hover:text-emerald-600 transition-colors">
+            <a href="#how-it-works" onClick={(e) => handleNavAnchor(e, 'how-it-works')} className="text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer">
               How It Works
             </a>
-            <a href="#curriculum" className="text-slate-600 hover:text-emerald-600 transition-colors">
+            <a href="#curriculum" onClick={(e) => handleNavAnchor(e, 'curriculum')} className="text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer">
               Curriculum
             </a>
             <Link to="/ats" className="text-slate-600 hover:text-emerald-600 transition-colors">
@@ -134,17 +151,24 @@ export default function Navbar() {
           <div className="flex flex-col space-y-3 font-sans text-xs uppercase tracking-wider font-semibold">
             <a
               href="#features"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-emerald-600"
+              onClick={(e) => handleNavAnchor(e, 'features')}
+              className="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-emerald-600 cursor-pointer"
             >
               Features
             </a>
             <a
               href="#how-it-works"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-emerald-600"
+              onClick={(e) => handleNavAnchor(e, 'how-it-works')}
+              className="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-emerald-600 cursor-pointer"
             >
               How It Works
+            </a>
+            <a
+              href="#curriculum"
+              onClick={(e) => handleNavAnchor(e, 'curriculum')}
+              className="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-emerald-600 cursor-pointer"
+            >
+              Curriculum
             </a>
             <Link
               to="/ats"
