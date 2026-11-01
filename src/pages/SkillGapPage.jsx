@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Brain,
+  Target,
   Sparkles,
   TrendingUp,
   ArrowRight,
@@ -26,6 +27,20 @@ import { analyzeSkillGaps } from '../utils/skillGapAnalyzer';
 import { skillApi } from '../services/skillApi';
 import { storageService } from '../utils/storage/storageService';
 import MarqueeBanner from '../components/MarqueeBanner';
+import SelectDropdown from '../components/SelectDropdown';
+
+
+const AVAILABLE_ROLES = [
+  { value: 'Frontend Developer', label: 'Frontend Developer', badge: 'UI & Web' },
+  { value: 'Backend Engineer', label: 'Backend Engineer', badge: 'APIs & DB' },
+  { value: 'Full Stack Engineer', label: 'Full Stack Engineer', badge: 'End-to-End' },
+  { value: 'Machine Learning Engineer', label: 'Machine Learning Engineer', badge: 'AI & Models' },
+  { value: 'DevOps / Cloud Engineer', label: 'DevOps / Cloud Engineer', badge: 'Infra & CI/CD' },
+  { value: 'Data Engineer', label: 'Data Engineer', badge: 'Pipelines & BigData' },
+  { value: 'Mobile App Developer', label: 'Mobile App Developer', badge: 'iOS & Android' },
+  { value: 'Cybersecurity Engineer', label: 'Cybersecurity Engineer', badge: 'SecOps' },
+  { value: 'QA Automation Engineer', label: 'QA Automation Engineer', badge: 'Testing' }
+];
 
 export default function SkillGapPage() {
   const navigate = useNavigate();
@@ -55,7 +70,7 @@ export default function SkillGapPage() {
     return () => { mounted = false; };
   }, [currentUserId]);
 
-  const displayRole = user?.targetRole || user?.role || profileData?.target_role || setup?.targetRole || 'Machine Learning Engineer';
+  const [displayRole, setDisplayRole] = useState(user?.targetRole || user?.role || profileData?.target_role || setup?.targetRole || 'Software Engineer');
 
   // Run dynamic skill analysis as fallback, isolated to this candidate and their selected role
   const analysis = analyzeSkillGaps(session.summaryResult, session.answers, displayRole, currentUserId);
@@ -198,6 +213,19 @@ export default function SkillGapPage() {
           <span className="w-2 h-2 rounded-full bg-[#235E3B]" />
           <span>● Analysis Up to Date</span>
         </div>
+      </div>
+
+      {/* Target Role Benchmark Selector */}
+      <div className="max-w-md mx-auto">
+        <SelectDropdown
+          label="Benchmark Target Role"
+          value={displayRole}
+          onChange={(newRole) => setDisplayRole(newRole)}
+          options={AVAILABLE_ROLES}
+          placeholder="Select target role..."
+          icon={Target}
+          helperText="Benchmarks your demonstrated skills against industry requirements"
+        />
       </div>
 
       {/* Dynamic Skill Gap Benchmark Ticker */}

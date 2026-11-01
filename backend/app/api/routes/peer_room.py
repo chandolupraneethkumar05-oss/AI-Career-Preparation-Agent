@@ -92,6 +92,7 @@ async def get_peer_room(room_id: str):
     return {"success": True, "room": room.to_dict()}
 
 
+@router.get("/peer-rooms/{room_id}/report")
 @router.post("/peer-rooms/{room_id}/report")
 async def get_or_generate_peer_report(room_id: str):
     """Generates or retrieves the joint 360° evaluation report for interviewer & candidate with zero hanging."""
@@ -534,12 +535,13 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                 try:
                     report = await asyncio.wait_for(
                         loop.run_in_executor(None, default_peer_room_service.generate_360_evaluation, room),
-                        timeout=25.0
+                        timeout=8.0
                     )
                 except Exception as exc:
                     logger.warning(f"Error or timeout during async 360 evaluation: {exc}")
                     report = default_peer_room_service.generate_fallback_360_evaluation(room)
 
+                room.final_report = report
                 payload = {
                     "type": "session_concluded",
                     "report": report

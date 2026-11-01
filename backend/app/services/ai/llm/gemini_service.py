@@ -273,7 +273,9 @@ Return valid JSON with exactly these fields:
         topic_seeds = profile.get("topic_seeds", [
             f"core {target_role} mechanisms, practical engineering trade-offs, and failure modes"
         ])
-        focus_seed = topic_seeds[sequence_number % len(topic_seeds)]
+        session_num = session_config.get("session_number") or len(career_context.get("past_interview_questions", [])) + 1
+        seed_idx = (sequence_number - 1 + session_num * 2) % len(topic_seeds)
+        focus_seed = topic_seeds[seed_idx]
         interviewer_persona = profile.get("interviewer_persona", f"a Technical Interviewer ({company_playbook.title()} playbook)")
         level_guidance = profile.get("guidance", "Ask clear, constructive questions appropriate for candidate seniority.")
 

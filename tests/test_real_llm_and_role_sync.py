@@ -39,7 +39,7 @@ class TestRealLLMAndRoleSync(unittest.TestCase):
 
     def test_02_llm_service_factory_picks_gemini_when_key_present(self):
         """When GEMINI_API_KEY is present, automatically instantiates GeminiLLMService."""
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-mock-gemini-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-mock-gemini-key"}, clear=True):
             service = get_llm_service()
             self.assertIsInstance(service, GeminiLLMService)
             self.assertEqual(service.api_key, "test-mock-gemini-key")
@@ -195,12 +195,12 @@ class TestRealLLMAndRoleSync(unittest.TestCase):
         from backend.app.services.ai.llm.nvidia_service import NvidiaLLMService
 
         # 1. Question Generator routes to Groq
-        with patch.dict(os.environ, {"GROQ_API_KEY": "gsk-mock-groq-key"}):
+        with patch.dict(os.environ, {"GROQ_API_KEY": "gsk-mock-groq-key"}, clear=True):
             q_service = get_question_generator_llm_service()
             self.assertIsInstance(q_service, GroqLLMService)
 
         # 2. Answer Evaluator routes to NVIDIA
-        with patch.dict(os.environ, {"NVIDIA_API_KEY": "nvapi-mock-nvidia-key"}):
+        with patch.dict(os.environ, {"NVIDIA_API_KEY": "nvapi-mock-nvidia-key"}, clear=True):
             eval_service = get_evaluator_llm_service()
             self.assertIsInstance(eval_service, NvidiaLLMService)
             self.assertEqual(eval_service.api_key, "nvapi-mock-nvidia-key")
@@ -211,7 +211,7 @@ class TestRealLLMAndRoleSync(unittest.TestCase):
             self.assertIsInstance(resume_service, OpenAICompatibleLLMService)
 
         # 4. General tasks route to Gemini
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-mock-gemini-key"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-mock-gemini-key"}, clear=True):
             gen_service = get_general_llm_service()
             self.assertIsInstance(gen_service, GeminiLLMService)
 

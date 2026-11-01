@@ -53,6 +53,9 @@ export class PeerRoomService {
     this.isInitiator = false;
     this.iceCandidateQueue = [];
     this.hasRemoteDescription = false;
+    this.makingOffer = false;
+    this.ignoreOffer = false;
+    this.isPolite = false;
   }
 
   /**
@@ -65,6 +68,7 @@ export class PeerRoomService {
     this.userId = userId || this.clientId;
     this.userAvatar = userAvatar;
     this.callbacks = callbacks;
+    this.isPolite = (this.role === 'candidate');
 
     const wsUrl = getWebSocketUrl(`/ws/peer-room/${this.roomId}`);
 
@@ -130,8 +134,11 @@ export class PeerRoomService {
 
       this._emit('localStream', this.localStream);
 
-      // Signal ready state to signaling hub
+      // Signal media captured to signaling hub
       this._send({ type: 'peer_ready', clientId: this.clientId });
+      if (this.isInitiator && !this.makingOffer) {
+        this._createAndSendOffer();
+      }
 
       return this.localStream;
     } catch (err) {
@@ -253,6 +260,8 @@ export class PeerRoomService {
    * Creates an SDP offer and sends it to the remote peer.
    */
   async _createAndSendOffer() {
+    if (this.makingOffer) return;
+    this.makingOffer = true;
     try {
       const pc = this._ensurePeerConnection();
       this._attachLocalTracks(pc);
@@ -261,6 +270,7 @@ export class PeerRoomService {
         offerToReceiveAudio: true,
         offerToReceiveVideo: true
       });
+      if (pc.signalingState !== 'stable') return;
       await pc.setLocalDescription(offer);
 
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -271,6 +281,8 @@ export class PeerRoomService {
       }
     } catch (err) {
       console.error('[PeerRoomService] Error creating SDP offer:', err);
+    } finally {
+      this.makingOffer = false;
     }
   }
 
@@ -565,6 +577,9 @@ export class PeerRoomService {
     this.remoteStream = null;
     this.iceCandidateQueue = [];
     this.hasRemoteDescription = false;
+    this.makingOffer = false;
+    this.ignoreOffer = false;
+    this.isPolite = false;
   }
 }
 

@@ -81,6 +81,16 @@ export const reverseInterviewApi = {
    * Generates or retrieves the joint 360° evaluation report for a peer room.
    */
   async getPeerReport(roomId) {
+    try {
+      const getRes = await authenticatedFetch(`${API_BASE_URL}/peer-rooms/${roomId}/report`, {
+        method: 'GET'
+      });
+      if (getRes.ok) {
+        return getRes.json();
+      }
+    } catch {
+      // Fall through to POST if GET fails
+    }
     const res = await authenticatedFetch(`${API_BASE_URL}/peer-rooms/${roomId}/report`, {
       method: 'POST'
     });

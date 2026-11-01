@@ -402,16 +402,71 @@ export default function ATSScannerPage() {
               </span>
             </div>
 
-            {/* Document Skeleton with Scanning Animation */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 relative overflow-hidden text-left shadow-2xs">
-              <div className="h-3 bg-slate-200 rounded-sm w-3/4 animate-pulse" />
-              <div className="h-2 bg-slate-200/80 rounded-sm w-full animate-pulse" />
-              <div className="h-2 bg-slate-200/80 rounded-sm w-5/6 animate-pulse" />
-              <div className="h-2 bg-slate-200/70 rounded-sm w-2/3 animate-pulse" />
-              <div className="pt-2 flex gap-2">
-                <div className="h-4 bg-emerald-100 rounded-md w-16 animate-pulse" />
-                <div className="h-4 bg-emerald-100 rounded-md w-20 animate-pulse" />
-                <div className="h-4 bg-emerald-100 rounded-md w-14 animate-pulse" />
+            {/* Interactive Laser Document Scanner Animation */}
+            <div className="relative p-5 rounded-xl bg-slate-950 border border-emerald-500/30 overflow-hidden text-left shadow-lg">
+              {/* Animated Laser Scanning Beam */}
+              <div 
+                className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_rgba(52,211,153,1)] z-10 pointer-events-none transition-all duration-300 ease-out"
+                style={{ top: `${Math.min(95, Math.max(5, scanProgress))}%` }}
+              />
+              <div 
+                className="absolute inset-x-0 h-16 bg-gradient-to-b from-emerald-500/10 to-transparent pointer-events-none transition-all duration-300 ease-out"
+                style={{ top: `${Math.max(0, Math.min(85, scanProgress - 10))}%` }}
+              />
+
+              {/* Document Header & Structure Tokens */}
+              <div className="space-y-3 relative z-0">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-mono font-bold text-slate-200">
+                      {fileName || 'Document_Payload.pdf'}
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+                    {scanStage}
+                  </span>
+                </div>
+
+                {/* Simulated Document Sections with Active Scanning Token Highlighting */}
+                <div className="space-y-2 font-mono text-[11px]">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scanProgress >= 20 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
+                      SECTION: HEADER &amp; CONTACT
+                    </span>
+                    <div className="h-1.5 bg-slate-800 rounded flex-1" />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scanProgress >= 45 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
+                      SKILLS MATRIX
+                    </span>
+                    <div className="flex gap-1.5 flex-1">
+                      <span className={`px-2 py-0.5 rounded text-[10px] ${scanProgress >= 50 ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/60' : 'bg-slate-900 text-slate-600'}`}>
+                        Core Stack Match
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] ${scanProgress >= 65 ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/60' : 'bg-slate-900 text-slate-600'}`}>
+                        Role Taxonomy: {targetRole}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scanProgress >= 70 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
+                      EXPERIENCE QUANTIFIERS
+                    </span>
+                    <div className="h-1.5 bg-slate-800 rounded flex-1" />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scanProgress >= 90 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
+                      ATS RUBRIC SYNTHESIS
+                    </span>
+                    <span className="text-[10px] text-emerald-400 animate-pulse font-mono">
+                      Calculating 100-pt rubric score...
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -629,7 +684,7 @@ export default function ATSScannerPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="editorial-overline">AUTONOMOUS ARTIFACT GENERATOR</span>
-                    <Badge variant="navy" size="sm">GOOGLE XYZ FORMULA</Badge>
+                    <Badge variant="navy" size="sm">ACTION + METRIC IMPACT (ATS RE-WRITER)</Badge>
                   </div>
                   <h3 className="text-xl font-serif font-bold text-[#1F1B16]">
                     Autonomous Curriculum Vitæ Optimization Agent
@@ -645,7 +700,7 @@ export default function ATSScannerPage() {
                   loading={isTailoring}
                   icon={Sparkles}
                 >
-                  Re-engineer Résumé with XYZ Formula
+                  Optimize My Résumé (ATS Score Boost)
                 </GradientButton>
               ) : (
                 <div className="flex items-center gap-2">
@@ -670,7 +725,7 @@ export default function ATSScannerPage() {
             </div>
 
             <p className="text-xs sm:text-sm text-[#70685E] leading-relaxed">
-              Transform passive experience descriptions into high-conviction accomplishments using Google's executive standard: <em>"Accomplished [X], as measured by [Y], by doing [Z]"</em> while seamlessly weaving in verified missing keywords.
+              Transform basic resume descriptions into high-conviction, ATS-optimized accomplishments. See exactly which missing skill was added, the measurable metric included, and the predictive score boost.
             </p>
 
             {/* Generated Tailoring Output */}

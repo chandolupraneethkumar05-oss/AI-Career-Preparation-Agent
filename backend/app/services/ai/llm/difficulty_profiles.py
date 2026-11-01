@@ -149,6 +149,98 @@ ROLE_TOPIC_SEEDS: Dict[str, Dict[str, List[str]]] = {
             "architecting battery consumption and network efficiency for continuous location tracking"
         ]
     },
+    "fullstack": {
+        "Beginner": [
+            "client-server request-response lifecycle, HTTP methods, and status codes",
+            "coordinating form validation between frontend client and backend models",
+            "understanding CORS headers, why browsers enforce them, and basic configuration",
+            "environment variables and keeping secret credentials out of frontend client bundles",
+            "basic relational database queries and rendering dynamic lists on the UI"
+        ],
+        "Intermediate": [
+            "designing cursor-based vs offset pagination across database, API, and frontend components",
+            "implementing optimistic UI state updates with clean rollback on mutation error",
+            "managing authentication state seamlessly across client routing and protected API endpoints",
+            "caching architecture: CDN headers, API rate limiting, and database connection pooling",
+            "structuring modular monorepos and sharing type contracts between frontend and backend"
+        ],
+        "Senior": [
+            "architecting resilient systems for sudden 20x traffic spikes across CDN, gateway, and database",
+            "real-time collaborative state synchronization: WebSockets vs SSE vs polling trade-offs",
+            "distributed tracing, frontend real-user monitoring (RUM), and end-to-end incident triage",
+            "zero-downtime database schema migrations on high-traffic full-stack applications",
+            "micro-frontend and modular service decomposition trade-offs for cross-functional teams"
+        ]
+    },
+    "qa": {
+        "Beginner": [
+            "core differences between unit tests, integration tests, and end-to-end (E2E) tests",
+            "writing clear, reproducible bug reports with steps, expected vs actual behavior, and logs",
+            "understanding boundary value analysis and equivalence partitioning for test cases",
+            "difference between functional testing, regression testing, and smoke testing",
+            "basic API testing using Postman or curl: validating HTTP status codes and JSON payloads"
+        ],
+        "Intermediate": [
+            "designing automated E2E testing suites using Cypress or Playwright with robust selectors",
+            "mocking external third-party services and setting up test databases with isolated fixtures",
+            "integrating automated test pipelines into CI/CD with parallel execution and flaky test retries",
+            "API contract testing with Pact or OpenAPI specs to prevent breaking schema changes",
+            "performance and load testing with k6 or JMeter to identify throughput bottlenecks"
+        ],
+        "Senior": [
+            "architecting enterprise test automation frameworks with cross-browser matrix coverage",
+            "implementing continuous quality gates, code coverage thresholds, and static analysis in CI/CD",
+            "chaos engineering and fault injection testing to validate resilient system recovery",
+            "test data management strategies across ephemeral staging environments and databases",
+            "measuring quality engineering metrics (Defect Escape Rate, Mean Time to Detect, Flakiness Index)"
+        ]
+    },
+    "cybersecurity": {
+        "Beginner": [
+            "OWASP Top 10 vulnerabilities: SQL Injection and Cross-Site Scripting (XSS) fundamentals",
+            "differences between authentication and authorization, and principles of least privilege",
+            "symmetric vs asymmetric encryption concepts and the purpose of SSL/TLS certificates",
+            "secure password storage: why salted hashing (bcrypt/argon2) is required over plain SHA-256",
+            "identifying phishing vectors, social engineering, and basic multi-factor authentication (MFA)"
+        ],
+        "Intermediate": [
+            "mitigating Cross-Site Request Forgery (CSRF) and Cross-Site Scripting (XSS) in modern SPAs",
+            "JWT security: preventing token forgery, handling signature verification, and secure revocation",
+            "configuring Content Security Policy (CSP), CORS, and HTTP security headers effectively",
+            "vulnerability scanning, dependency audit automation (Snyk/Trivy), and secure code review",
+            "implementing role-based access control (RBAC) and attribute-based access control (ABAC)"
+        ],
+        "Senior": [
+            "architecting Zero-Trust enterprise architectures with mutual TLS (mTLS) and fine-grained network policies",
+            "threat modeling complex distributed systems (STRIDE framework) and incident response plans",
+            "cloud security posture management (CSPM), IAM privilege escalation analysis, and secrets management",
+            "defending against Server-Side Request Forgery (SSRF) and supply-chain attacks in dependencies",
+            "forensics triage, SIEM correlation rule tuning, and automated red-teaming pipelines"
+        ]
+    },
+    "product": {
+        "Beginner": [
+            "defining clear user personas, problem statements, and writing effective user stories",
+            "differences between agile methodologies: Scrum ceremonies, sprints, and Kanban flow",
+            "understanding North Star metrics and standard product KPIs (DAU/MAU, retention, churn)",
+            "prioritizing user feature requests using basic frameworks (MoSCoW, Impact vs Effort)",
+            "conducting user interviews, synthesizing feedback, and identifying pain points"
+        ],
+        "Intermediate": [
+            "feature prioritization using the RICE framework (Reach, Impact, Confidence, Effort)",
+            "designing and interpreting A/B tests: defining hypotheses, sample sizes, and guardrail metrics",
+            "managing technical debt trade-offs in partnership with engineering leads",
+            "mapping customer journey funnels and identifying drop-off bottlenecks in conversion",
+            "crafting product requirements documents (PRDs) with clear scope, edge cases, and success metrics"
+        ],
+        "Senior": [
+            "defining multi-year product strategy, vision, and aligning cross-functional executive stakeholders",
+            "balancing technical feasibility, business viability, and customer desirability on complex platforms",
+            "go-to-market (GTM) launch architecture, pricing tiering, and commercialization models",
+            "building platform ecosystems with third-party developer APIs and developer experience (DevEx)",
+            "portfolio governance, resource allocation, and measuring return on engineering investment (ROEI)"
+        ]
+    },
     "dsa": {
         "Beginner": [
             "Big-O time and space complexity analysis for common array and string operations",
@@ -216,19 +308,116 @@ DIFFICULTY_PROFILES: Dict[str, Dict[str, Any]] = {
 
 def _detect_role_category(role: str) -> str:
     r = (role or "").lower()
-    if any(k in r for k in ["front", "react", "vue", "angular", "ui", "web"]):
+    if any(k in r for k in ["front", "react", "vue", "angular", "ui", "web designer", "client-side"]):
         return "frontend"
-    if any(k in r for k in ["devops", "sre", "cloud", "infra", "platform", "kubernetes"]):
+    if any(k in r for k in ["qa", "quality", "test", "automation engineer", "sdet"]):
+        return "qa"
+    if any(k in r for k in ["security", "cyber", "soc", "infosec", "penetration", "appsec"]):
+        return "cybersecurity"
+    if any(k in r for k in ["product", "project manager", "technical program", "scrum master"]):
+        return "product"
+    if any(k in r for k in ["devops", "sre", "cloud", "infra", "platform", "kubernetes", "site reliability"]):
         return "devops"
-    if any(k in r for k in ["data science", "data analyst", "analytics", "bi "]):
+    if any(k in r for k in ["data science", "data analyst", "analytics", "bi ", "data engineer", "etl", "bigquery", "spark", "databricks", "data warehouse"]):
         return "data"
-    if any(k in r for k in ["machine learning", "ml", "ai", "deep learning", "nlp"]):
+    if any(k in r for k in ["machine learning", "ml", "ai", "deep learning", "nlp", "computer vision", "llm", "research scientist"]):
         return "ai_ml"
-    if any(k in r for k in ["mobile", "android", "ios", "flutter", "swift", "kotlin"]):
+    if any(k in r for k in ["mobile", "android", "ios", "flutter", "swift", "kotlin", "react native"]):
         return "mobile"
-    if any(k in r for k in ["algorithm", "dsa", "competitive"]):
+    if any(k in r for k in ["full", "fullstack", "full-stack", "software engineer", "software developer", "sde", "application engineer"]):
+        return "fullstack"
+    if any(k in r for k in ["algorithm", "dsa", "competitive", "problem solving"]):
         return "dsa"
     return "backend"
+
+
+def get_role_turn_facets(target_role: str, category: str = "Technical", difficulty: str = "Intermediate") -> List[str]:
+    """
+    Dynamically generates 5 distinct, role-calibrated query seeds for RAG syllabus retrieval across interview turns.
+    Guarantees that candidates interviewing for Frontend, QA, DevOps, Mobile, Security, Product, or Backend
+    receive authentic, domain-appropriate questions instead of unrelated topics.
+    """
+    cat = _detect_role_category(target_role)
+    facets_by_cat = {
+        "frontend": [
+            f"{target_role} DOM event loop component lifecycle and modern framework fundamentals",
+            f"{target_role} state management re-rendering optimization and client caching",
+            f"{target_role} responsive CSS grid flexbox and web accessibility WCAG standards",
+            f"{target_role} core web vitals LCP CLS bundle size code splitting and SSR",
+            f"{target_role} real-world frontend error boundaries optimistic mutations and debugging"
+        ],
+        "backend": [
+            f"{target_role} RESTful API architecture HTTP methods and stateless routing",
+            f"{target_role} database query execution indexing B-tree and transaction isolation",
+            f"{target_role} caching strategies Redis cache-aside stampede and connection pooling",
+            f"{target_role} distributed microservices asynchronous messaging Kafka and idempotency",
+            f"{target_role} production fault tolerance rate limiting circuit breakers and telemetry"
+        ],
+        "fullstack": [
+            f"{target_role} client-server request lifecycle CORS and full-stack security validation",
+            f"{target_role} end-to-end state synchronization API design and database modeling",
+            f"{target_role} caching across CDN edge reverse proxies and database connection pools",
+            f"{target_role} server-side rendering optimistic updates and asynchronous background jobs",
+            f"{target_role} production monitoring distributed tracing and high-traffic incident triage"
+        ],
+        "devops": [
+            f"{target_role} containerization Docker multi-stage builds and process isolation",
+            f"{target_role} CI/CD automated test verification security scanning and release gates",
+            f"{target_role} Kubernetes core primitives pods deployments services and ingress",
+            f"{target_role} Infrastructure as Code Terraform state remote backends and drift",
+            f"{target_role} multi-region cloud disaster recovery zero-trust mTLS and cost tuning"
+        ],
+        "data": [
+            f"{target_role} relational SQL joins aggregations window functions and data models",
+            f"{target_role} batch ELT pipelines schema design incremental models and dbt testing",
+            f"{target_role} streaming data architectures Kafka watermarks and late-arriving records",
+            f"{target_role} data lakehouse partitioning clustering and query cost optimization",
+            f"{target_role} data quality governance automated lineage tracking and anomaly alerts"
+        ],
+        "ai_ml": [
+            f"{target_role} machine learning paradigms precision recall and dataset validation",
+            f"{target_role} feature engineering regularization bias-variance and model drift",
+            f"{target_role} retrieval-augmented generation RAG chunking embeddings and re-ranking",
+            f"{target_role} high-throughput model serving continuous batching and quantization",
+            f"{target_role} distributed model training safety guardrails and evaluation pipelines"
+        ],
+        "mobile": [
+            f"{target_role} mobile application lifecycle async networking and UI thread safety",
+            f"{target_role} offline-first local persistence database syncing and background workers",
+            f"{target_role} state management eliminating jank and maintaining 60/120 FPS performance",
+            f"{target_role} mobile app memory leak profiling retain cycles and battery optimization",
+            f"{target_role} modular architecture native bridge interop and automated CI/CD builds"
+        ],
+        "qa": [
+            f"{target_role} test pyramid unit integration and end-to-end testing strategies",
+            f"{target_role} automated test frameworks Cypress Playwright Selenium and test isolation",
+            f"{target_role} API contract testing mocking service virtualization and regression suites",
+            f"{target_role} performance load testing stress testing and identifying response bottlenecks",
+            f"{target_role} defect lifecycle triage root cause analysis and CI/CD quality gates"
+        ],
+        "cybersecurity": [
+            f"{target_role} OWASP top 10 vulnerabilities input sanitization and XSS/CSRF defenses",
+            f"{target_role} cryptographic primitives key management hashing and secure session auth",
+            f"{target_role} network security firewall rules zero trust and mutual TLS architecture",
+            f"{target_role} cloud IAM least privilege role-based access control and token security",
+            f"{target_role} threat modeling incident response forensics and vulnerability triage"
+        ],
+        "product": [
+            f"{target_role} product vision roadmap prioritization frameworks RICE and user personas",
+            f"{target_role} defining North Star metrics OKRs KPIs and measuring business outcomes",
+            f"{target_role} technical feasibility cross-functional trade-offs with engineering leads",
+            f"{target_role} A/B experimentation hypothesis design and interpreting conversion funnels",
+            f"{target_role} product launch go-to-market strategies and stakeholder alignment"
+        ],
+        "dsa": [
+            f"{target_role} time and space complexity Big-O analysis and fundamental data structures",
+            f"{target_role} two-pointer techniques sliding window and hash map frequency indexing",
+            f"{target_role} tree traversals binary search trees and monotonic stacks",
+            f"{target_role} graph algorithms BFS DFS topological sort and shortest paths",
+            f"{target_role} dynamic programming memoization bottom-up tables and optimization"
+        ]
+    }
+    return facets_by_cat.get(cat, facets_by_cat["backend"])
 
 
 def normalize_difficulty(difficulty: str) -> str:

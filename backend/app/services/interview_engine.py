@@ -9,6 +9,7 @@ Handles session initialization, dynamic question generation via RAG & candidate 
 
 import json
 import uuid
+import random
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
@@ -42,6 +43,7 @@ from .activity_service import record_activity
 from .skill_service import record_skill_evidence, sync_unified_skill_profile
 from .ai.career.career_context_builder import build_user_career_context
 from .ai.rag.retrieval_service import default_retrieval_service
+from .ai.llm.difficulty_profiles import get_role_turn_facets
 from .ai.llm.llm_service import (
     default_llm_service,
     get_llm_service,
@@ -158,15 +160,10 @@ class InterviewEngine:
         past_session_count = db.query(Interview).filter(Interview.user_id == user_id).count()
 
         # Grounding: retrieve diverse syllabus / interview knowledge
-        # Vary retrieval query seed based on past session count and target role
-        query_seeds = [
-            f"{target_role} {category} {difficulty} system architecture and core fundamentals",
-            f"{target_role} {difficulty} practical engineering design patterns and tradeoffs",
-            f"{target_role} {difficulty} model optimization latency and debugging",
-            f"{target_role} {difficulty} data pipelines algorithms and scalability",
-            f"{target_role} {difficulty} technical interview lifecycle and screening questions"
-        ]
-        retrieval_query = query_seeds[past_session_count % len(query_seeds)]
+        # Dynamically retrieve role-calibrated facets with session entropy so back-to-back sessions get fresh topics
+        role_facets = get_role_turn_facets(target_role, category, difficulty)
+        seed_offset = (past_session_count + random.randint(0, len(role_facets) - 1)) % len(role_facets)
+        retrieval_query = role_facets[seed_offset]
         rag_res = default_retrieval_service.retrieve_relevant_knowledge(
             query=retrieval_query,
             top_k=8
@@ -647,15 +644,9 @@ class InterviewEngine:
                 rag_chunks = rag_res.get("chunks", []) if isinstance(rag_res, dict) else (rag_res or [])
                 effective_chunks = rag_chunks
             else:
-                # Rotate curriculum focus across turns to cover diverse domains
-                turn_facets = [
-                    f"{interview.role} core technical algorithms and domain foundations",
-                    f"{interview.role} {question.skill} system architecture and deep dive",
-                    f"{interview.role} production tooling data pipelines and MLOps",
-                    f"{interview.role} performance optimization debugging and edge cases",
-                    f"{interview.role} behavioral leadership and STAR conflict resolution"
-                ]
-                retrieval_query = turn_facets[next_index % len(turn_facets)]
+                # Rotate role-calibrated curriculum focus across turns to cover diverse domains
+                role_facets = get_role_turn_facets(interview.role, interview.interview_type or "Technical", adaptive_decision.get("difficulty", "Intermediate"))
+                retrieval_query = role_facets[next_index % len(role_facets)]
                 rag_res = default_retrieval_service.retrieve_relevant_knowledge(
                     query=retrieval_query,
                     user_context=career_context,
@@ -1005,11 +996,17 @@ class InterviewEngine:
             difficulty=interview.difficulty,
             overall_score=interview.overall_score,
             passed=interview.passed,
-            rubric_scores=final_data["rubric_scores"],
-            strengths=final_data["strengths"],
-            weaknesses=final_data["weaknesses"],
-            recommendations=final_data["recommendations"],
-            next_best_action=final_data["next_best_action"],
+            rubric_scores=final_data.get("rubric_scores", {}),
+            strengths=final_data.get("strengths", []),
+            weaknesses=final_data.get("weaknesses", []),
+            recommendations=final_data.get("recommendations", []),
+            next_best_action=final_data.get("next_best_action") or {
+                "title": "Review Performance & Practice Gaps",
+                "action": "Open Skill Arena",
+                "route": "/skill-arena",
+                "action_type": "practice",
+                "reason": "Reinforce concepts identified during interview review."
+            },
             skill_gap_updates=final_data.get("skill_gap_updates", []),
             observed_skills=observed_skills,
             feedback_summary=interview.feedback_summary or "",

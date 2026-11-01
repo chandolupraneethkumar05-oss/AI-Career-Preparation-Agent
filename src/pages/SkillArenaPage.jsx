@@ -29,11 +29,25 @@ import GradientButton from '../components/GradientButton';
 import Badge from '../components/Badge';
 import CodeEditor from '../components/CodeEditor';
 import SegmentedControl from '../components/SegmentedControl';
+import SelectDropdown from '../components/SelectDropdown';
 import XpRewardPopup from '../components/XpRewardPopup';
 import { useAuth } from '../context/AuthContext';
 import { skillArenaApi } from '../services/skillArenaApi';
 import { skillApi } from '../services/skillApi';
 import { executionApi } from '../services/executionApi';
+
+
+const AVAILABLE_ROLES = [
+  { value: 'Frontend Developer', label: 'Frontend Developer', badge: 'UI & Web' },
+  { value: 'Backend Engineer', label: 'Backend Engineer', badge: 'APIs & DB' },
+  { value: 'Full Stack Engineer', label: 'Full Stack Engineer', badge: 'End-to-End' },
+  { value: 'Machine Learning Engineer', label: 'Machine Learning Engineer', badge: 'AI & Models' },
+  { value: 'DevOps / Cloud Engineer', label: 'DevOps / Cloud Engineer', badge: 'Infra & CI/CD' },
+  { value: 'Data Engineer', label: 'Data Engineer', badge: 'Pipelines & BigData' },
+  { value: 'Mobile App Developer', label: 'Mobile App Developer', badge: 'iOS & Android' },
+  { value: 'Cybersecurity Engineer', label: 'Cybersecurity Engineer', badge: 'SecOps' },
+  { value: 'QA Automation Engineer', label: 'QA Automation Engineer', badge: 'Testing' }
+];
 
 const PRACTICE_MODES = [
   {
@@ -81,7 +95,8 @@ export default function SkillArenaPage() {
 
   const { user, updateUser } = useAuth();
   const userId = user?.id || 'user-001';
-  const targetRole = user?.targetRole || 'Machine Learning Engineer';
+  const [targetRole, setTargetRole] = useState(user?.targetRole || 'Software Engineer');
+  const [practiceDifficulty, setPracticeDifficulty] = useState('Intermediate');
 
   // Active mode & challenge states
   const [selectedMode, setSelectedMode] = useState(initialTab);
@@ -337,6 +352,39 @@ export default function SkillArenaPage() {
             </div>
           </div>
         )}
+
+        {/* =========================================================================
+            CAREER FOCUS & ROLE CALIBRATION SELECTORS (NATURAL COLOR PALETTE)
+           ========================================================================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SelectDropdown
+            label="Target Career Discipline"
+            value={targetRole}
+            onChange={(newRole) => {
+              setTargetRole(newRole);
+              if (updateUser) updateUser({ targetRole: newRole });
+            }}
+            options={AVAILABLE_ROLES}
+            placeholder="Select target role..."
+            icon={Target}
+            helperText="Calibrates coding challenges & MCQs to your career focus"
+          />
+          <SelectDropdown
+            label="Practice Difficulty Tier"
+            value={practiceDifficulty}
+            onChange={(newDiff) => {
+              setPracticeDifficulty(newDiff);
+            }}
+            options={[
+              { value: 'Beginner', label: 'Beginner / Entry Level', badge: 'Easy' },
+              { value: 'Intermediate', label: 'Mid-Level Engineer', badge: 'Medium' },
+              { value: 'Senior', label: 'Senior / Staff Architect', badge: 'Hard' }
+            ]}
+            placeholder="Select difficulty..."
+            icon={Zap}
+            helperText="Matches challenge complexity and test case expectations"
+          />
+        </div>
 
         {/* =========================================================================
             MODE SELECTOR (HIGH-DENSITY SEGMENTED CONTROL)

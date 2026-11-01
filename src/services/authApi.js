@@ -1,29 +1,22 @@
 /**
  * Authentication API Service
  * Handles candidate sign in, registration, forgot-password token dispatch, and password resets.
+ * Cryptographically secured via signed, time-limited JWT tokens with zero API key requirement.
  */
 
 import { API_BASE_URL } from './apiConfig';
 
 export const authApi = {
   /**
-   * Request password recovery token & email dispatch with optional API Key verification
+   * Request password recovery token & email dispatch
    */
-  async forgotPassword(email, apiKey = '') {
+  async forgotPassword(email) {
     const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanApiKey = (apiKey || '').trim();
-    const headers = { 'Content-Type': 'application/json' };
-    if (cleanApiKey) {
-      headers['X-API-Key'] = cleanApiKey;
-    }
 
     const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
       method: 'POST',
-      headers,
-      body: JSON.stringify({
-        email: cleanEmail,
-        api_key: cleanApiKey || undefined
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail })
     });
 
     if (!res.ok) {
@@ -35,22 +28,15 @@ export const authApi = {
   },
 
   /**
-   * Complete password reset with one-time token and optional API Key verification
+   * Complete password reset with one-time signed token
    */
-  async resetPassword(token, newPassword, apiKey = '') {
-    const cleanApiKey = (apiKey || '').trim();
-    const headers = { 'Content-Type': 'application/json' };
-    if (cleanApiKey) {
-      headers['X-API-Key'] = cleanApiKey;
-    }
-
+  async resetPassword(token, newPassword) {
     const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        token: token.trim(),
-        new_password: newPassword,
-        api_key: cleanApiKey || undefined
+        token: (token || '').trim(),
+        new_password: newPassword
       })
     });
 

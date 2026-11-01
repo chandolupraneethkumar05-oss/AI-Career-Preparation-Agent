@@ -29,7 +29,6 @@ class TokenResponse(BaseModel):
 
 class ForgotPasswordRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=128, description="Registered candidate email address")
-    api_key: Optional[str] = Field(None, description="Security API key configured in server environment")
 
 
 class ForgotPasswordResponse(BaseModel):
@@ -44,7 +43,6 @@ class ForgotPasswordResponse(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str = Field(..., min_length=10, description="One-time signed password reset JWT token")
     new_password: str = Field(..., min_length=6, max_length=72, description="New account password (6-72 characters)")
-    api_key: Optional[str] = Field(None, description="Security API key configured in server environment")
 
 
 class ResetPasswordResponse(BaseModel):

@@ -75,13 +75,34 @@ export default function PeerInterviewRoomPage() {
     roleParam === 'interviewer' ? DEFAULT_CANDIDATE_AVATAR : DEFAULT_INTERVIEWER_AVATAR
   );
 
-  // Video & Audio Element Refs
+  // Video & Audio Element Refs & Callback Handlers
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const assignedRoleRef = useRef(assignedRole);
   const isSessionActiveRef = useRef(isSessionActive);
   const peerRoleRef = useRef(peerRole);
+  const concludeIntervalRef = useRef(null);
+
+  const setLocalVideoRef = useCallback((node) => {
+    localVideoRef.current = node;
+    if (node && peerRoomService.localStream) {
+      if (node.srcObject !== peerRoomService.localStream) {
+        node.srcObject = peerRoomService.localStream;
+      }
+      node.play().catch(() => {});
+    }
+  }, []);
+
+  const setRemoteVideoRef = useCallback((node) => {
+    remoteVideoRef.current = node;
+    if (node && peerRoomService.remoteStream) {
+      if (node.srcObject !== peerRoomService.remoteStream) {
+        node.srcObject = peerRoomService.remoteStream;
+      }
+      node.play().catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     assignedRoleRef.current = assignedRole;
@@ -491,6 +512,10 @@ export default function PeerInterviewRoomPage() {
           },
           sessionConcluded: (report) => {
             if (!active) return;
+            if (concludeIntervalRef.current) {
+              clearInterval(concludeIntervalRef.current);
+              concludeIntervalRef.current = null;
+            }
             if (fallbackReportTimerRef.current) {
               clearTimeout(fallbackReportTimerRef.current);
             }
@@ -526,6 +551,9 @@ export default function PeerInterviewRoomPage() {
     return () => {
       active = false;
       isSpeechListeningRef.current = false;
+      if (concludeIntervalRef.current) {
+        clearInterval(concludeIntervalRef.current);
+      }
       if (fallbackReportTimerRef.current) {
         clearTimeout(fallbackReportTimerRef.current);
       }
@@ -774,7 +802,7 @@ export default function PeerInterviewRoomPage() {
     peerRoomService.sendCodeSync(newCode);
   };
 
-  // Conclude Session with Guaranteed Non-Hanging Fallback
+  // Conclude Session with Guaranteed Non-Hanging Active Polling Fallback
   const handleConcludeSession = async () => {
     if (isConcluding) return;
     setIsConcluding(true);
@@ -790,19 +818,34 @@ export default function PeerInterviewRoomPage() {
     // 1. Send WebSocket event
     peerRoomService.concludeSession();
 
-    // 2. HTTP fallback timer so it never hangs indefinitely if WebSocket closes
-    fallbackReportTimerRef.current = setTimeout(async () => {
+    // 2. Fast active polling immediately every 1.5s (up to 12s) to get report without hanging
+    let attempts = 0;
+    if (concludeIntervalRef.current) clearInterval(concludeIntervalRef.current);
+    concludeIntervalRef.current = setInterval(async () => {
+      attempts++;
       try {
         const res = await reverseInterviewApi.getPeerReport(roomId);
-        if (res.report) {
-          setFinalReport(res.report);
+        if (res && (res.report || res.data || res.overall_score)) {
+          const report = res.report || res.data || res;
+          if (concludeIntervalRef.current) {
+            clearInterval(concludeIntervalRef.current);
+            concludeIntervalRef.current = null;
+          }
+          setFinalReport(report);
           setIsConcluding(false);
+          return;
         }
       } catch (err) {
-        console.warn('Fallback report fetch fallback:', err);
+        // Will retry next interval
+      }
+      if (attempts >= 8) {
+        if (concludeIntervalRef.current) {
+          clearInterval(concludeIntervalRef.current);
+          concludeIntervalRef.current = null;
+        }
         setIsConcluding(false);
       }
-    }, 22000);
+    }, 1500);
   };
 
   return (
@@ -989,7 +1032,7 @@ export default function PeerInterviewRoomPage() {
               {/* Local Mirror Box */}
               <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
                 <video
-                  ref={localVideoRef}
+                  ref={setLocalVideoRef}
                   autoPlay
                   playsInline
                   muted
@@ -1188,14 +1231,14 @@ export default function PeerInterviewRoomPage() {
               {/* Remote Peer Video Container */}
               <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg group">
                 <video
-                  ref={remoteVideoRef}
+                  ref={setRemoteVideoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover ${(!peerConnected || !peerMediaState.video) ? 'hidden' : ''}`}
+                  className={`w-full h-full object-cover ${peerMediaState.video === false ? 'hidden' : ''}`}
                 />
 
-                {(!peerConnected || !peerMediaState.video) && (
+                {peerMediaState.video === false && (
                   <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center gap-3.5 p-4 text-center">
                     <div className="relative">
                       <img
@@ -1243,7 +1286,7 @@ export default function PeerInterviewRoomPage() {
               {/* Local Video Container */}
               <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg">
                 <video
-                  ref={localVideoRef}
+                  ref={setLocalVideoRef}
                   autoPlay
                   playsInline
                   muted

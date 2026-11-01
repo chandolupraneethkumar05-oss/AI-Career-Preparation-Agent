@@ -36,12 +36,7 @@ from ..deps import get_current_user, get_token_from_header
 router = APIRouter(prefix="/auth", tags=["Authentication & Identity"])
 
 
-def _verify_reset_api_key(provided_key: Optional[str] = None, header_key: Optional[str] = None):
-    """
-    Self-service password recovery is cryptographically authenticated via single-use,
-    time-limited signed JWT tokens. No client API key prompt is required.
-    """
-    return
+
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -205,10 +200,8 @@ def login_as_demo(
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 def forgot_password(
     request: ForgotPasswordRequest,
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    _verify_reset_api_key(request.api_key, x_api_key)
     """
     Initiates candidate password recovery.
     Validates candidate presence, creates signed 30-minute JWT token,
@@ -264,10 +257,8 @@ def forgot_password(
 @router.post("/reset-password", response_model=ResetPasswordResponse)
 def reset_password(
     request: ResetPasswordRequest,
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    _verify_reset_api_key(request.api_key, x_api_key)
     """
     Completes password recovery by validating signed token and updating password hash.
     """

@@ -670,7 +670,7 @@ class LocalGroundedLLMService(BaseLLMService):
         if not retrieved_chunk and retrieved_knowledge:
             retrieved_chunk = retrieved_knowledge[0] if isinstance(retrieved_knowledge, list) and len(retrieved_knowledge) > 0 else None
 
-        target_role = session_config.get("target_role") or session_config.get("role") or career_context.get("target_role", "Machine Learning Engineer")
+        target_role = session_config.get("target_role") or session_config.get("role") or career_context.get("target_role") or "Software Engineer"
         interview_type = session_config.get("interview_type") or session_config.get("category", "Technical")
         difficulty = session_config.get("difficulty", "Intermediate")
         matched_skills = career_context.get("matched_skills", [])
@@ -2385,29 +2385,48 @@ class CascadingLLMService(BaseLLMService):
 
 def get_question_generator_llm_service() -> BaseLLMService:
     """
-    Dedicated Question Generation Service:
-    Primary: Groq Cloud LPU (ultra-fast question synthesis and dynamic adaptive follow-ups)
-    Fallback: Gemini -> OpenAI -> Local Grounded
+    Dedicated Question Generation Service with Multi-Provider Cascading:
+    Chains Groq Cloud LPU, Google Gemini, OpenAI, and NVIDIA NIM with zero-failure local fallback.
+    If one provider fails or hits a rate limit, the next cloud provider activates immediately.
     """
-    provider = os.getenv("QUESTION_LLM_PROVIDER", "").lower()
-    if provider == "groq" or not provider:
-        if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
-            try:
-                from .groq_service import GroqLLMService
-                return GroqLLMService()
-            except Exception:
-                pass
+    generators: List[BaseLLMService] = []
+
+    # 1. Groq Cloud LPU (ultra-fast question synthesis and dynamic adaptive follow-ups)
+    if os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_FALLBACK"):
+        try:
+            from .groq_service import GroqLLMService
+            generators.append(GroqLLMService())
+        except Exception:
+            pass
+
+    # 2. Google Gemini (nuanced multi-turn syllabus grounding)
     if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
         try:
             from .gemini_service import GeminiLLMService
-            return GeminiLLMService()
+            generators.append(GeminiLLMService())
         except Exception:
             pass
+
+    # 3. OpenAI (gpt-4o-mini / gpt-4o)
     if os.getenv("OPENAI_API_KEY"):
         try:
-            return OpenAICompatibleLLMService()
+            generators.append(OpenAICompatibleLLMService())
         except Exception:
             pass
+
+    # 4. NVIDIA NIM (Llama-3.3-70b-instruct)
+    if os.getenv("NVIDIA_API_KEY"):
+        try:
+            from .nvidia_service import NvidiaLLMService
+            generators.append(NvidiaLLMService())
+        except Exception:
+            pass
+
+    cloud_generators = [s for s in generators if not isinstance(s, LocalGroundedLLMService)]
+    if len(cloud_generators) == 1:
+        return cloud_generators[0]
+    elif len(cloud_generators) > 1:
+        return CascadingLLMService(cloud_generators[0], cloud_generators[1:] + [LocalGroundedLLMService()])
     return LocalGroundedLLMService()
 
 
@@ -2450,11 +2469,12 @@ def get_evaluator_llm_service() -> BaseLLMService:
         except Exception:
             pass
 
-    evaluators.append(LocalGroundedLLMService())
-
-    if len(evaluators) > 1:
-        return CascadingLLMService(evaluators[0], evaluators[1:])
-    return evaluators[0]
+    cloud_evaluators = [s for s in evaluators if not isinstance(s, LocalGroundedLLMService)]
+    if len(cloud_evaluators) == 1:
+        return cloud_evaluators[0]
+    elif len(cloud_evaluators) > 1:
+        return CascadingLLMService(cloud_evaluators[0], cloud_evaluators[1:] + [LocalGroundedLLMService()])
+    return LocalGroundedLLMService()
 
 
 def create_service_for_key(api_key: Optional[str], default_factory=None) -> BaseLLMService:
@@ -2536,8 +2556,8 @@ def get_interview_mode_llm_service(mode: Optional[str] = "text", purpose: str = 
     - 'face_to_face' (Face-to-Face AI): INTERVIEW_FACE_TO_FACE_API_KEY
     - 'peer_chamber' (Peer Collaborative Chamber): INTERVIEW_PEER_CHAMBER_API_KEY
     - 'reverse_mock' (Reverse Mock Interview): INTERVIEW_REVERSE_MOCK_API_KEY
-    Falls back to INTERVIEW_API_KEY, get_evaluator_llm_service (if purpose=='evaluator'),
-    or get_question_generator_llm_service.
+    Cascades gracefully across all user-supplied provider keys (OpenAI, Gemini, Groq, NVIDIA)
+    so that if any key fails or rate-limits, the next active key immediately activates.
     """
     norm_mode = (mode or "text").lower().strip()
     mode_keys = {
@@ -2549,9 +2569,20 @@ def get_interview_mode_llm_service(mode: Optional[str] = "text", purpose: str = 
     }
     key = mode_keys.get(norm_mode) or os.getenv("INTERVIEW_API_KEY")
     fallback_factory = get_evaluator_llm_service if purpose == "evaluator" else get_question_generator_llm_service
+
+    chain: List[BaseLLMService] = []
     if key and key.strip():
-        return create_service_for_key(key, default_factory=fallback_factory)
-    return fallback_factory()
+        primary = create_service_for_key(key, default_factory=None)
+        if primary:
+            chain.append(primary)
+
+    # Add multi-provider cascading fallback
+    base_chain = fallback_factory()
+    chain.append(base_chain)
+
+    if len(chain) > 1:
+        return CascadingLLMService(chain[0], chain[1:])
+    return chain[0]
 
 
 def get_skill_gap_llm_service() -> BaseLLMService:
@@ -2605,11 +2636,12 @@ def get_resume_llm_service() -> BaseLLMService:
         except Exception:
             pass
 
-    analyzers.append(LocalGroundedLLMService())
-
-    if len(analyzers) > 1:
-        return CascadingLLMService(analyzers[0], analyzers[1:])
-    return analyzers[0]
+    cloud_analyzers = [s for s in analyzers if not isinstance(s, LocalGroundedLLMService)]
+    if len(cloud_analyzers) == 1:
+        return cloud_analyzers[0]
+    elif len(cloud_analyzers) > 1:
+        return CascadingLLMService(cloud_analyzers[0], cloud_analyzers[1:] + [LocalGroundedLLMService()])
+    return LocalGroundedLLMService()
 
 def get_general_llm_service() -> BaseLLMService:
     """

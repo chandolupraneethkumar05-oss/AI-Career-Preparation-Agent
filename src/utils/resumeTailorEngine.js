@@ -1,8 +1,8 @@
 /**
  * Autonomous Resume Tailoring & Scholarly Document Engine
  *
- * Re-engineers resume bullet points using Google's XYZ formula:
- * "Accomplished [X] as measured by [Y] by doing [Z]"
+ * Optimizes resume bullet points using the Action + Metric Impact Formula:
+ * "Action Verb + Quantifiable Impact Metric + Technical Tool/Workflow"
  * and incorporates missing ATS keywords with contextual clarity.
  *
  * ZERO-FABRICATION GUARANTEE:
@@ -126,7 +126,7 @@ export const resumeTailorEngine = {
       bulletTransformations,
       allOptimizedSkills,
       newlyAddedKeywords,
-      humanReviewNotice: 'All tailored bullets apply Google\'s XYZ formula (Accomplished [X] as measured by [Y] by doing [Z]). Verify that all tools and metrics match your verified professional contributions.',
+      humanReviewNotice: 'All tailored bullets apply the Action + Metric Impact Formula (Action verb + quantifiable metric + verified technical skills). Verify that all tools and metrics match your verified professional contributions.',
       fullTailoredMarkdown: this.generateMarkdownDocument({
         candidateName,
         candidateEmail,
