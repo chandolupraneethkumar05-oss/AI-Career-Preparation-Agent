@@ -995,6 +995,31 @@ class LocalGroundedLLMService(BaseLLMService):
         # 1. Domain Knowledge & Expected Concept Taxonomy
         # -------------------------------------------------------------
         DOMAIN_TAXONOMY = {
+            "react_frontend": {
+                "keywords": ["react", "frontend", "dom", "virtual dom", "component", "hook", "useeffect", "usememo", "usestate", "props", "re-render", "bundle", "css", "jsx", "tsx", "vue", "angular", "ui performance"],
+                "core_concepts": ["reconciliation / Virtual DOM", "component lifecycle & hooks (useEffect/useMemo)", "immutable state management", "re-render optimization & memoization", "bundle splitting / critical render path"],
+                "topic_name": "Frontend & UI Engineering"
+            },
+            "backend_api": {
+                "keywords": ["api", "rest", "graphql", "endpoint", "controller", "middleware", "authentication", "jwt", "status code", "idempotent", "http", "microservice", "fastapi", "express", "django"],
+                "core_concepts": ["RESTful resource modeling & HTTP verbs", "authentication / JWT bearer validation", "idempotent request handling", "database transaction boundaries / ACID", "rate limiting & API error handling"],
+                "topic_name": "Backend & API Architecture"
+            },
+            "dsa_algorithms": {
+                "keywords": ["big-o", "complexity", "array", "binary search", "linked list", "hash map", "tree", "graph", "dynamic programming", "two pointers", "sliding window", "sorting", "bfs", "dfs", "recursion", "dsa"],
+                "core_concepts": ["time & space complexity (Big-O)", "optimal data structure selection", "edge case handling (null, empty, bounds)", "in-place vs auxiliary space trade-offs", "algorithm termination & correctness"],
+                "topic_name": "Data Structures & Algorithms"
+            },
+            "mobile": {
+                "keywords": ["flutter", "android", "ios", "swift", "kotlin", "widget", "activity", "mobile", "lifecycle", "screen", "bloc", "riverpod"],
+                "core_concepts": ["mobile lifecycle & background state preservation", "main UI thread responsiveness & async I/O", "local offline persistence & caching", "state management architecture", "responsive layout adaptation"],
+                "topic_name": "Mobile App Engineering"
+            },
+            "devops_infra": {
+                "keywords": ["kubernetes", "k8s", "terraform", "ci/cd", "pipeline", "helm", "prometheus", "grafana", "slo", "sli", "nginx", "load balancer", "ingress", "aws", "gcp", "azure", "iac"],
+                "core_concepts": ["infrastructure as code (IaC)", "automated CI/CD test & release gating", "container orchestration & rolling updates", "observability (metrics, logs, traces)", "high availability & failover"],
+                "topic_name": "DevOps & Cloud Infrastructure"
+            },
             "overfitting": {
                 "keywords": ["overfit", "bias-variance", "regulariz", "underfit", "generaliz"],
                 "core_concepts": ["training vs test/validation data", "generalization", "regularization (L1/L2)", "cross-validation", "dropout", "model complexity", "memorizing noise"],
@@ -1006,27 +1031,27 @@ class LocalGroundedLLMService(BaseLLMService):
                 "topic_name": "Evaluation Metrics"
             },
             "docker": {
-                "keywords": ["docker", "container", "image", "dockerfile", "kubernetes", "contain"],
+                "keywords": ["docker", "container", "image", "dockerfile", "contain"],
                 "core_concepts": ["containerization", "immutable images", "dependency isolation", "reproducibility", "deployment / microservices", "multi-stage Dockerfile"],
                 "topic_name": "Containerization & Deployment"
             },
             "mlops": {
-                "keywords": ["mlops", "drift", "monitor", "pipeline", "covariate shift", "airflow", "serving"],
+                "keywords": ["mlops", "drift", "covariate shift", "airflow", "serving"],
                 "core_concepts": ["data drift vs concept drift", "statistical monitoring (PSI / KS-test)", "automated retraining", "production pipeline", "model latency"],
                 "topic_name": "MLOps & System Reliability"
             },
             "sql": {
-                "keywords": ["sql", "query", "index", "join", "database", "table", "b-tree", "cte"],
+                "keywords": ["sql", "query", "index", "join", "database", "table", "b-tree", "cte", "postgres", "mysql"],
                 "core_concepts": ["indexing (B-tree)", "explain analyze / execution plan", "join optimization", "partitioning / scanning", "query rewriting"],
                 "topic_name": "Database & Query Optimization"
             },
             "optimization": {
-                "keywords": ["gradient descent", "optimizer", "loss", "backprop", "convergence", "sgd", "adam", "learning rate"],
+                "keywords": ["gradient descent", "loss function", "backprop", "sgd", "adam optimizer", "learning rate schedule"],
                 "core_concepts": ["learning rate", "loss function / gradients", "convergence", "adaptive optimizers (Adam / RMSprop)", "stochastic batches"],
                 "topic_name": "Optimization & Deep Learning"
             },
             "deep_learning": {
-                "keywords": ["deep learning", "neural", "transformer", "attention", "cnn", "layer", "embedding", "bert"],
+                "keywords": ["deep learning", "neural", "transformer", "attention", "cnn", "layer", "embedding", "bert", "llm"],
                 "core_concepts": ["multi-layer representation learning", "attention mechanism / self-attention", "activation functions", "embeddings", "backpropagation"],
                 "topic_name": "Deep Learning Architectures"
             },
@@ -1230,7 +1255,37 @@ class LocalGroundedLLMService(BaseLLMService):
         recommended_difficulty = semantic_res["recommended_follow_up"]["difficulty"]
         follow_up_needed = True
         follow_up_reason = semantic_res["recommended_follow_up"]["reason"]
-        feedback_en = semantic_res["actionable_feedback"]
+        # Dynamic Level-Aware Feedback Synthesis
+        is_beginner = any(k in str(cur_difficulty).lower() for k in ["begin", "junior", "entry", "fresher", "foundational", "easy"])
+        feedback_paragraphs = []
+
+        if hit_concepts:
+            p1 = f"In your response for {cur_role} ({cur_difficulty}), you accurately demonstrated command of: {', '.join(hit_concepts[:3])}. "
+        else:
+            p1 = f"In your response regarding {domain_name}, your explanation established a high-level conceptual baseline for {cur_role}. "
+
+        if overall >= 80:
+            p1 += "Your answer reflects strong engineering depth, articulating both mechanisms and practical application clearly."
+        elif overall >= 60:
+            p1 += "Your answer shows solid foundational comprehension, but needs more concrete technical rigor to stand out in competitive interviews."
+        else:
+            p1 += "The response is currently too shallow or imprecise for a hiring recommendation at this level."
+        feedback_paragraphs.append(p1)
+
+        if missing_concepts:
+            p2 = f"To achieve a top-tier rating, explicitly cover: {', '.join(missing_concepts[:3])}. "
+            if not has_tradeoffs and not is_beginner:
+                p2 += "Always frame your answer around concrete engineering trade-offs (e.g. read latency vs write amplification, memory footprint vs compute overhead). "
+            if not has_metrics and not is_beginner:
+                p2 += "Incorporate real-world scale metrics, latency SLAs (e.g., <20ms p99), or Big-O computational bounds to ground your reasoning. "
+            feedback_paragraphs.append(p2)
+        elif not has_tradeoffs and not is_beginner:
+            feedback_paragraphs.append("Your technical explanation is solid. To push into Staff-level evaluation, explicitly highlight edge-case failure modes and mitigation strategies.")
+
+        p3 = f"Recommended practice: Review production patterns for {skill}. Prepare a 90-second structured drill covering definition, internal mechanics, and one concrete production trade-off."
+        feedback_paragraphs.append(p3)
+
+        feedback_en = "\n\n".join(feedback_paragraphs)
 
         return {
             "overall_score": overall,
@@ -1322,13 +1377,52 @@ class LocalGroundedLLMService(BaseLLMService):
                     "reason": f"Underperformed on {skill} during generative mock interview ({score}/100)."
                 })
 
-        recommendations = [
-            "Structure answers with the STAR framework (Situation, Task, Action, Result) for behavioral and project questions.",
-            "Incorporate quantifiable business or technical metrics (e.g. latency, accuracy, throughput) in project explanations.",
-            "Explicitly evaluate alternative technical options and trade-offs before settling on your chosen solution."
-        ]
+        # Generate concrete, skill-tailored recommendations
+        target_role = session.get("role", "Software Engineer")
+        tested_skills = [q.get("skill", "") for q in questions if q.get("skill")]
+        tested_skills_str = ", ".join(tested_skills[:3]) if tested_skills else target_role
 
-        target_role = session.get("role", "Machine Learning Engineer")
+        dynamic_recs = []
+        if any(k in str(tested_skills).lower() for k in ["react", "frontend", "ui", "dom", "component"]):
+            dynamic_recs.append("Deepen your explanation of React's reconciliation cycle, memoization patterns (React.memo, useMemo), and bundle optimization.")
+        if any(k in str(tested_skills).lower() for k in ["docker", "k8s", "kubernetes", "devops", "cloud", "terraform"]):
+            dynamic_recs.append("Practice detailing multi-stage container builds, rootless container security, and automated CI/CD canary deployment gating.")
+        if any(k in str(tested_skills).lower() for k in ["sql", "database", "postgres", "query", "index"]):
+            dynamic_recs.append("Ground your database answers in EXPLAIN ANALYZE execution mechanics, composite B-tree index rules, and transaction isolation levels.")
+        if any(k in str(tested_skills).lower() for k in ["api", "rest", "backend", "microservice", "http"]):
+            dynamic_recs.append("Always explain idempotency keys, rate limiting strategies (token bucket / leaky bucket), and graceful service degradation under load.")
+        if any(k in str(tested_skills).lower() for k in ["algorithm", "dsa", "tree", "graph", "dp", "big-o"]):
+            dynamic_recs.append("Always state the exact worst-case Big-O time and space complexities upfront before diving into the code implementation.")
+
+        if not dynamic_recs:
+            dynamic_recs = [
+                f"Prepare structured 90-second answers for {target_role} technical interviews focusing on first-principles mechanics.",
+                "Incorporate quantifiable business or engineering metrics (e.g., latency SLAs, p99 percentiles, throughput) to validate impact.",
+                "Explicitly evaluate alternative technical options and trade-offs before settling on your final architecture."
+            ]
+        elif len(dynamic_recs) < 3:
+            dynamic_recs.append("Incorporate quantifiable production metrics (e.g., latency SLAs, p99 percentiles, throughput) to substantiate decisions.")
+            dynamic_recs.append("Structure behavioral and project questions using the STAR framework with measurable business impact.")
+
+        recommendations = dynamic_recs[:3]
+
+        # Hiring Committee Verdict
+        if avg_overall >= 85:
+            verdict = "Strong Hire - Demonstrates exceptional technical depth and clear communication."
+        elif avg_overall >= 75:
+            verdict = "Hire - Solid technical foundation meeting high engineering expectations."
+        elif avg_overall >= 65:
+            verdict = "Leaning Hire - Capable baseline with specific areas needing deeper technical rigor."
+        else:
+            verdict = "Needs Further Preparation - Foundational technical gaps require guided practice."
+
+        feedback_en = (
+            f"Hiring Committee Assessment for {target_role}: {verdict} "
+            f"Overall Readiness Score: {avg_overall}/100 across {count} evaluated technical prompts. "
+            f"Topics Evaluated: {tested_skills_str}. "
+            f"{'You articulated key engineering trade-offs effectively.' if avg_tech >= 75 else 'Focus on articulating explicit trade-offs and production failure modes.'}"
+        )
+
         nba_action = "Practice Daily Conceptual Drills"
         nba_route = "/daily-challenge"
         nba_reason = f"Reinforce your technical knowledge for {target_role} hiring bars."
@@ -1349,12 +1443,6 @@ class LocalGroundedLLMService(BaseLLMService):
             "route": nba_route,
             "reason": nba_reason
         }
-
-        feedback_en = (
-            f"You completed your {target_role} mock interview with an overall score of {avg_overall}/100. "
-            f"{'Strong performance demonstrating competitive job readiness!' if avg_overall >= 75 else 'Good foundational effort with actionable opportunities for deeper trade-off articulation.'} "
-            f"Key focus: {next_best_action['title']}."
-        )
 
         raw_feedback = {
             "overall_score": avg_overall,
@@ -1832,8 +1920,8 @@ class OpenAICompatibleLLMService(BaseLLMService):
         try:
             from openai import OpenAI
             client = self._get_client()
-            role = session_config.get('role') or session_config.get('target_role') or career_context.get('target_role', 'Software Engineer')
-            diff = session_config.get('difficulty', 'Intermediate')
+            role = session_config.get('role') or session_config.get('target_role') or kwargs.get('target_role') or kwargs.get('role') or career_context.get('target_role', 'Software Engineer')
+            diff = session_config.get('difficulty') or kwargs.get('difficulty') or 'Intermediate'
             prompt = (
                 f"You are a technical interviewer hiring for {role} ({diff} level).\n"
                 f"Candidate career context: {json.dumps(career_context)}\n"
@@ -2222,6 +2310,17 @@ class CascadingLLMService(BaseLLMService):
                 logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} generate failed: {e}")
         return self._all_services()[-1].generate(prompt, system_instruction, temperature)
 
+    def generate_grounded_response(self, prompt: str, context: Optional[str] = None, system_instruction: Optional[str] = None) -> Dict[str, Any]:
+        for s in self._all_services():
+            try:
+                res = s.generate_grounded_response(prompt, context, system_instruction)
+                if res and isinstance(res, dict) and res.get("response"):
+                    return res
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} generate_grounded_response failed: {e}")
+        return self._all_services()[-1].generate_grounded_response(prompt, context, system_instruction)
+
     def generate_interview_question(self, *args, **kwargs) -> Dict[str, Any]:
         for s in self._all_services():
             try:
@@ -2273,11 +2372,14 @@ class CascadingLLMService(BaseLLMService):
             try:
                 if hasattr(s, "analyze_resume"):
                     res = s.analyze_resume(*args, **kwargs)
-                    if res and isinstance(res, dict) and res.get("ats_score"):
+                    if res and isinstance(res, dict) and (res.get("ats_score") is not None or res.get("score") is not None):
                         return res
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).warning(f"CascadingLLM: {type(s).__name__} analyze_resume failed: {e}")
+        last = self._all_services()[-1]
+        if hasattr(last, "analyze_resume"):
+            return last.analyze_resume(*args, **kwargs)
         return None
 
 
@@ -2385,7 +2487,7 @@ def create_service_for_key(api_key: Optional[str], default_factory=None) -> Base
             pass
     elif clean_key.startswith("hf_"):
         try:
-            primary = OpenAICompatibleLLMService(api_key=clean_key, base_url="https://api-inference.huggingface.co/v1", model="meta-llama/Llama-3.3-70B-Instruct")
+            primary = OpenAICompatibleLLMService(api_key=clean_key, base_url="https://router.huggingface.co/hf-inference/v1", model="Qwen/Qwen2.5-72B-Instruct")
         except Exception:
             pass
     elif clean_key.startswith("nvapi-"):
@@ -2394,7 +2496,7 @@ def create_service_for_key(api_key: Optional[str], default_factory=None) -> Base
             primary = NvidiaLLMService(api_key=clean_key)
         except Exception:
             pass
-    elif clean_key.startswith("sk-"):
+    elif clean_key.startswith("sk-") or clean_key.startswith("sk_"):
         try:
             primary = OpenAICompatibleLLMService(api_key=clean_key)
         except Exception:

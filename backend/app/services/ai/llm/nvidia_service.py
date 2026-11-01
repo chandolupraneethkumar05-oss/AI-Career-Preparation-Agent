@@ -33,7 +33,7 @@ class NvidiaLLMService:
         model: Optional[str] = None
     ):
         self.api_key = api_key or os.getenv("NVIDIA_API_KEY")
-        self.model = model or os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
+        self.model = model or os.getenv("NVIDIA_MODEL", "nvidia/llama-3.1-nemotron-70b-instruct")
         self._fallback_instance = None
 
     @property
@@ -450,10 +450,12 @@ Return valid JSON with exactly these fields:
             target_role = (
                 session_config.get("target_role")
                 or session_config.get("role")
+                or kwargs.get("target_role")
+                or kwargs.get("role")
                 or career_context.get("target_role")
                 or "Software Engineer"
             )
-            difficulty_raw = session_config.get("difficulty") or "Intermediate"
+            difficulty_raw = session_config.get("difficulty") or kwargs.get("difficulty") or "Intermediate"
             difficulty = normalize_difficulty(difficulty_raw)
             interview_type = session_config.get("interview_type") or session_config.get("category") or "Technical"
             job_description = (

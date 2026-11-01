@@ -249,12 +249,14 @@ Return valid JSON with exactly these fields:
         target_role = (
             session_config.get("target_role")
             or session_config.get("role")
+            or kwargs.get("target_role")
+            or kwargs.get("role")
             or career_context.get("target_role")
-            or "Machine Learning Engineer"
+            or "Software Engineer"
         )
-        difficulty_raw = session_config.get("difficulty") or "Intermediate"
+        difficulty_raw = session_config.get("difficulty") or kwargs.get("difficulty") or "Intermediate"
         difficulty = normalize_difficulty(difficulty_raw)
-        interview_type = session_config.get("interview_type") or session_config.get("category") or "Technical"
+        interview_type = session_config.get("interview_type") or session_config.get("category") or kwargs.get("interview_type") or "Technical"
         company_playbook = session_config.get("company_playbook") or "general"
         job_description = (
             session_config.get("job_description")
@@ -267,9 +269,9 @@ Return valid JSON with exactly these fields:
         all_forbidden = list(set([t for t in (prev_q_texts + past_q_texts) if t]))
         last_eval = previous_evaluations[-1] if previous_evaluations else None
 
-        profile = get_difficulty_profile(difficulty)
+        profile = get_difficulty_profile(difficulty, target_role=target_role)
         topic_seeds = profile.get("topic_seeds", [
-            "core fundamentals, standard libraries, and foundational problem solving"
+            f"core {target_role} engineering mechanisms, real-world trade-offs, and edge cases"
         ])
         focus_seed = topic_seeds[sequence_number % len(topic_seeds)]
         interviewer_persona = profile.get("interviewer_persona", f"a Technical Interviewer ({company_playbook.title()} playbook)")
@@ -285,7 +287,7 @@ Return valid JSON with exactly these fields:
             f"Focus topic inspiration: {focus_seed}. "
             f"Level calibration guidance: {level_guidance} "
             f"{jd_instruction} "
-            "Generate an authentic, high-signal, level-appropriate interview question. "
+            "BREVITY RULE: The question MUST be concise and focused (strictly 2 to 4 sentences maximum). DO NOT output full-page essays or multiple sub-bullet points. "
             "STRICT REQUIREMENT: NEVER repeat or closely rephrase any of the previously asked questions."
         )
 
