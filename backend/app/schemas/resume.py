@@ -33,6 +33,8 @@ class ResumeAnalysisResponse(BaseModel):
     weaknesses: List[str]
     sections_detected: List[str]
     analysis_summary: str
+    score_basis: Optional[str] = None
+    is_role_aligned: Optional[bool] = None
     xp_earned: int = 35
     created_at: datetime
 

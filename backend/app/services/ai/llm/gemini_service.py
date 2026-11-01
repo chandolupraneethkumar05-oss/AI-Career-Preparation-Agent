@@ -288,10 +288,6 @@ Return valid JSON with exactly these fields:
             f"Level calibration guidance: {level_guidance} "
             f"{jd_instruction} "
             "BREVITY RULE: The question MUST be concise and focused (strictly 2 to 4 sentences maximum). DO NOT output full-page essays or multiple sub-bullet points. "
-            "STRICT REQUIREMENT: NEVER repeat or closely rephrase any of the previously asked questions."
-        )
-            f"Level calibration guidance: {level_guidance} "
-            f"{jd_instruction} "
             "Generate an authentic, high-signal, level-appropriate interview question. "
             "STRICT REQUIREMENT: NEVER repeat or closely rephrase any of the previously asked questions."
         )

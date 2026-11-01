@@ -10,7 +10,7 @@ export const resumeApi = {
   /**
    * Upload and analyze a PDF/DOCX resume file or raw text against target role
    */
-  async analyzeResume({ file, rawText, targetRole, jobDescription, userId = 'user-001' }) {
+  async analyzeResume({ file, rawText, targetRole, jobDescription, userId }) {
     const formData = new FormData();
     if (file) {
       formData.append('file', file);
@@ -26,8 +26,10 @@ export const resumeApi = {
       formData.append('job_description', jobDescription);
       formData.append('jobDescription', jobDescription);
     }
-    formData.append('user_id', userId);
-    formData.append('userId', userId);
+    if (userId) {
+      formData.append('user_id', userId);
+      formData.append('userId', userId);
+    }
 
     try {
       const res = await authenticatedFetch(`${BACKEND_BASE_URL}/api/resume/analyze`, {

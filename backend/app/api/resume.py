@@ -41,7 +41,7 @@ async def analyze_resume(
     """
     requested_id = userId or user_id
     effective_user_id = verify_user_ownership(requested_id, current_user)
-    effective_role = targetRole or target_role or current_user.target_role or "Machine Learning Engineer"
+    effective_role = targetRole or target_role or (current_user.target_role if current_user and current_user.target_role else None)
     effective_job_desc = jobDescription or job_description
 
     file_bytes = b""
@@ -137,7 +137,7 @@ def get_resume_analysis_by_id(
 async def parse_resume_legacy(
     file: Optional[UploadFile] = File(None),
     rawText: Optional[str] = Form(None),
-    targetRole: Optional[str] = Form("Machine Learning Engineer"),
+    targetRole: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
