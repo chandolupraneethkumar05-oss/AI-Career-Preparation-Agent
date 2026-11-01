@@ -11,9 +11,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 try:
     from dotenv import load_dotenv
-    # Automatically load environment variables from backend/.env and root .env
+    # Automatically load environment variables from backend/.env, root .env, and Render secret files
     load_dotenv(BASE_DIR / ".env")
     load_dotenv(BASE_DIR.parent / ".env")
+    load_dotenv(Path.cwd() / ".env")
+    load_dotenv(Path("/etc/secrets/.env"))
+    load_dotenv(Path("/etc/secrets/backend.env"))
 except ImportError:
     pass
 
