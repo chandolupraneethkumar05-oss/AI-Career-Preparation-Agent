@@ -3,6 +3,15 @@ FastAPI Main Application Entrypoint
 AI Career Preparation Agent
 """
 
+import os
+# Prevent thread-pool memory explosion in containerized environments (Render 512MB RAM)
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
@@ -72,6 +81,10 @@ async def add_security_headers(request, call_next):
 
 # Mount Unified API Router
 app.include_router(api_router)
+
+# Support root-level WebSocket path /ws/peer-room/{room_id} in addition to /api/ws/peer-room/{room_id}
+from .api.routes.peer_room import peer_room_websocket
+app.add_api_websocket_route("/ws/peer-room/{room_id}", peer_room_websocket)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])

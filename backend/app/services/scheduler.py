@@ -75,7 +75,7 @@ class ProactiveScheduler:
         logger.info(f"Proactive Daily Reminder scheduler loop active (cycle: {self.interval}s)")
         while self.is_running:
             try:
-                self.run_check_cycle()
+                await asyncio.to_thread(self.run_check_cycle)
             except Exception as loop_exc:
                 logger.error(f"Error in scheduler tick: {loop_exc}")
 

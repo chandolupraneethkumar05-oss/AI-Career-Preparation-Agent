@@ -13,6 +13,7 @@ Orchestrates:
 import json
 import logging
 from typing import List, Dict, Any, Optional
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -44,6 +45,28 @@ XP_REWARDS = {
 }
 
 
+def normalize_challenge_mode(mode: Optional[str]) -> Optional[str]:
+    """
+    Normalizes challenge mode parameters from route query arguments or tabs.
+    Returns canonical catalog mode string ('coding', 'debug', 'predict_output', 'mcq')
+    or None if the mode represents an open/all/daily practice filter.
+    """
+    if not mode:
+        return None
+    m = str(mode).strip().lower()
+    if m in ("all", "any", "daily", "featured", "*", ""):
+        return None
+    if m in ("code", "coding"):
+        return "coding"
+    if m in ("debug", "debugging"):
+        return "debug"
+    if m in ("predict", "predict_output"):
+        return "predict_output"
+    if m in ("mcq", "quiz", "multiple_choice"):
+        return "mcq"
+    return m
+
+
 def get_available_challenges(
     db: Session,
     user_id: str,
@@ -62,9 +85,10 @@ def get_available_challenges(
         .all()
     }
 
+    norm_mode = normalize_challenge_mode(mode)
     results = []
     for item in SKILL_ARENA_CATALOG:
-        if mode and item["mode"].lower() != mode.lower():
+        if norm_mode and item["mode"].lower() != norm_mode.lower():
             continue
         if skill and normalize_skill(item["skill"]).lower() != normalize_skill(skill).lower():
             continue
@@ -102,8 +126,17 @@ def get_next_challenge(
     Career-aware selection strictly matching candidate's active target role,
     calibrating difficulty, and rotating challenges to prevent repetition.
     """
+    if not SKILL_ARENA_CATALOG:
+        logger.error("Skill Arena Catalog is empty!")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No practice challenges are currently available in the catalog."
+        )
+
     user = db.query(User).filter(User.id == user_id).first()
     active_role = target_role or (user.target_role if user else "Software Engineer")
+    norm_mode = normalize_challenge_mode(mode)
+    is_daily_drill = bool(mode and str(mode).strip().lower() == "daily")
 
     # 1. Map active role to taxonomy requirements
     matched_role_key = None
@@ -145,12 +178,12 @@ def get_next_challenge(
     completed_ids = {a.challenge_id for a in past_attempts if a.correctness}
     recent_attempt_ids = {a.challenge_id for a in past_attempts[:4]}
 
-    # 3. Filter candidates strictly aligned with the target role
+    # 3. Filter candidates strictly aligned with the target role and normalized mode
     candidates = []
     for c in SKILL_ARENA_CATALOG:
         c_skill = normalize_skill(c["skill"]).lower()
         c_roles = [r.lower() for r in c.get("target_roles", [])]
-        if mode and c["mode"].lower() != mode.lower():
+        if norm_mode and c["mode"].lower() != norm_mode.lower():
             continue
         if (
             c_skill in all_role_skills
@@ -159,11 +192,14 @@ def get_next_challenge(
         ):
             candidates.append(c)
 
-    # Fallback if mode filter was too strict
-    if not candidates and mode:
-        candidates = [c for c in SKILL_ARENA_CATALOG if c["mode"].lower() == mode.lower()]
-    elif not candidates:
-        candidates = SKILL_ARENA_CATALOG
+    # Fallback 1: If role filter was too strict for this mode, match any challenge in the requested mode
+    if not candidates and norm_mode:
+        candidates = [c for c in SKILL_ARENA_CATALOG if c["mode"].lower() == norm_mode.lower()]
+
+    # Fallback 2: If still no candidates, log warning and fall back to full catalog
+    if not candidates:
+        logger.warning(f"No challenges found for role '{active_role}' and mode '{mode}'. Falling back to full catalog.")
+        candidates = list(SKILL_ARENA_CATALOG)
 
     # 4. Anti-repetition selection & Role Specialization Priority
     target_difficulty = "Intermediate"
@@ -206,7 +242,21 @@ def get_next_challenge(
     uncompleted = [c for c in candidates if c["id"] not in completed_ids]
     pool = fresh if fresh else (uncompleted if uncompleted else candidates)
 
-    selected = pool[0]
+    if not pool:
+        pool = list(SKILL_ARENA_CATALOG)
+
+    if not pool:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No practice challenges are currently available."
+        )
+
+    # If daily drill requested, rotate deterministically across pool by calendar day
+    if is_daily_drill:
+        day_offset = utc_now().timetuple().tm_yday
+        selected = pool[day_offset % len(pool)]
+    else:
+        selected = pool[0]
 
     return SkillArenaChallengeResponse(
         id=selected["id"],
@@ -238,8 +288,14 @@ def evaluate_submission(
     """
     challenge = get_challenge_by_id(submission.challenge_id)
     if not challenge:
-        # Fallback dummy challenge if not found
-        challenge = SKILL_ARENA_CATALOG[0]
+        logger.warning(f"Submission received for unknown challenge_id: '{submission.challenge_id}'")
+        if SKILL_ARENA_CATALOG:
+            challenge = SKILL_ARENA_CATALOG[0]
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Challenge '{submission.challenge_id}' not found."
+            )
 
     mode = challenge["mode"]
     raw_answer = submission.user_answer.strip()

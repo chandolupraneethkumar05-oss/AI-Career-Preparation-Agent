@@ -7,6 +7,7 @@ and dense neural embeddings using sentence-transformers (all-MiniLM-L6-v2).
 Provides honest, grounded 5-axis scoring with zero hallucinated arithmetic.
 """
 
+import os
 import re
 import logging
 from typing import Dict, Any, List, Optional, Tuple
@@ -21,7 +22,26 @@ def get_embedding_model():
     """Lazily loads and caches the SentenceTransformer model singleton."""
     global _MODEL_INSTANCE
     if _MODEL_INSTANCE is None:
+        # Check if running in a memory-constrained environment (Render 512MB RAM, or low-memory mode)
+        is_render = os.getenv("RENDER", "").lower() == "true"
+        force_neural = os.getenv("USE_NEURAL_TRANSFORMER", "").lower() in ("true", "1")
+        low_memory = os.getenv("LOW_MEMORY_MODE", "").lower() in ("true", "1")
+
+        if (is_render or low_memory) and not force_neural:
+            logger.info("Using lightweight TF-IDF semantic evaluator (optimized for Render 512MB RAM limit).")
+            _MODEL_INSTANCE = "fallback_tfidf"
+            return _MODEL_INSTANCE
+
         try:
+            # Constrain PyTorch thread-pool allocations on multi-core host
+            try:
+                import torch
+                torch.set_num_threads(1)
+                if hasattr(torch, "set_num_interop_threads"):
+                    torch.set_num_interop_threads(1)
+            except Exception:
+                pass
+
             from sentence_transformers import SentenceTransformer
             logger.info("Initializing SentenceTransformer('all-MiniLM-L6-v2') on CPU...")
             try:
@@ -29,7 +49,7 @@ def get_embedding_model():
             except Exception:
                 _MODEL_INSTANCE = SentenceTransformer("all-MiniLM-L6-v2")
             logger.info("SentenceTransformer loaded successfully.")
-        except Exception as e:
+        except (Exception, MemoryError) as e:
             logger.warning(f"Could not load SentenceTransformer: {e}. Falling back to TF-IDF vectorizer.")
             _MODEL_INSTANCE = "fallback_tfidf"
     return _MODEL_INSTANCE
@@ -90,8 +110,9 @@ class SemanticAnswerEvaluator:
                 embeddings = model.encode([text_a, text_b], convert_to_numpy=True, normalize_embeddings=True)
                 sim = float(np.dot(embeddings[0], embeddings[1]))
                 return max(0.0, min(1.0, sim))
-            except Exception as e:
+            except (Exception, MemoryError) as e:
                 logger.warning(f"Error computing neural similarity: {e}. Using fallback.")
+                _MODEL_INSTANCE = "fallback_tfidf"
 
         # TF-IDF Fallback
         try:

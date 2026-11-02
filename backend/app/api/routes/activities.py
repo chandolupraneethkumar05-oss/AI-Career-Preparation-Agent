@@ -28,7 +28,13 @@ def list_activities(
     """Fetches candidate activity history and verified streak metrics."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+        return ActivityListResponse(
+            activities=[],
+            total_count=0,
+            current_streak=0,
+            longest_streak=0,
+            practiced_today=False
+        )
 
     activities = get_user_activities(db, user_id=user_id, limit=limit)
     current_streak, longest_streak = calculate_streaks(db, user_id)

@@ -148,6 +148,20 @@ class PeerRoomService:
         self._rooms: Dict[str, PeerRoom] = {}
         self._lock = asyncio.Lock()
 
+    def _prune_stale_rooms(self, max_rooms: int = 150):
+        """Evicts stale, concluded, or abandoned rooms to prevent memory leaks."""
+        if len(self._rooms) <= max_rooms:
+            return
+        to_delete = []
+        for rid, r in list(self._rooms.items()):
+            has_sockets = (r.interviewer and r.interviewer.get("ws")) or (r.candidate and r.candidate.get("ws"))
+            if not has_sockets or r.status == "concluded":
+                to_delete.append(rid)
+            if len(self._rooms) - len(to_delete) <= max_rooms:
+                break
+        for rid in to_delete:
+            self._rooms.pop(rid, None)
+
     def generate_room_code(self) -> str:
         """Generates a clean, human-readable 6-character room identifier."""
         raw = uuid.uuid4().hex[:6].upper()
@@ -156,6 +170,7 @@ class PeerRoomService:
     async def create_room(self, role: str = "Software Engineer", difficulty: str = "Intermediate", topic: Optional[str] = None) -> PeerRoom:
         """Creates and registers a new peer interview chamber."""
         async with self._lock:
+            self._prune_stale_rooms()
             room_id = self.generate_room_code()
             room = PeerRoom(room_id=room_id, role=role, difficulty=difficulty, topic=topic)
             self._rooms[room.room_id] = room
