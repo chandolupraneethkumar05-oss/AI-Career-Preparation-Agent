@@ -106,6 +106,53 @@ def get_resume_history(
     return resume_analysis_service.get_analysis_history(db=db, user_id=effective_id, limit=limit)
 
 
+@router.get("/compare")
+def compare_resumes(
+    base_id: str = Query(..., description="Base resume analysis ID"),
+    target_id: str = Query(..., description="Target resume analysis ID"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Compares two ATS resume diagnostic audits for the candidate, computing
+    score progression, newly matched skills, and remaining gaps.
+    """
+    base = db.query(ResumeAnalysis).filter(ResumeAnalysis.id == base_id, ResumeAnalysis.user_id == current_user.id).first()
+    target = db.query(ResumeAnalysis).filter(ResumeAnalysis.id == target_id, ResumeAnalysis.user_id == current_user.id).first()
+
+    if not base or not target:
+        raise HTTPException(status_code=404, detail="One or both resume audits not found or unauthorized")
+
+    base_matched = set(base.matched_skills or [])
+    target_matched = set(target.matched_skills or [])
+
+    newly_matched = list(target_matched - base_matched)
+    lost_skills = list(base_matched - target_matched)
+    score_delta = (target.ats_score or 0) - (base.ats_score or 0)
+
+    return {
+        "success": True,
+        "base_analysis": {
+            "id": base.id,
+            "filename": base.filename,
+            "ats_score": base.ats_score,
+            "target_role": base.target_role,
+            "matched_skills_count": len(base_matched)
+        },
+        "target_analysis": {
+            "id": target.id,
+            "filename": target.filename,
+            "ats_score": target.ats_score,
+            "target_role": target.target_role,
+            "matched_skills_count": len(target_matched)
+        },
+        "score_delta": score_delta,
+        "newly_matched_skills": newly_matched,
+        "regressed_skills": lost_skills,
+        "verdict": f"ATS Score changed by {score_delta:+d} points."
+    }
+
+
 @router.get("/{analysis_id}", response_model=ResumeAnalysisResponse)
 def get_resume_analysis_by_id(
     analysis_id: str,

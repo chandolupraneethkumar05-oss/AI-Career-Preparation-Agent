@@ -5,8 +5,8 @@
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB.svg?logo=react&logoColor=black)](https://react.dev/)
 [![Docker](https://img.shields.io/badge/Deployment-Docker%20Compose-2496ED.svg?logo=docker&logoColor=white)](DEPLOYMENT.md)
-[![Tests](https://img.shields.io/badge/Tests-Passing%20(83%2F83)-brightgreen.svg)]()
-[![Status](https://img.shields.io/badge/Status-Production--Ready%20Platform-success.svg)]()
+[![CI/CD Pipeline](https://github.com/chandolupraneethkumar05-oss/AI-Career-Preparation-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/chandolupraneethkumar05-oss/AI-Career-Preparation-Agent/actions/workflows/ci.yml)
+[![Automated Tests](https://img.shields.io/badge/Test%20Suites-Backend%20(Pytest)%20%2B%20Frontend%20(Vitest)-brightgreen.svg)]()
 
 > **An autonomous, full-stack career preparation agent** that unifies ATS resume parsing, multi-turn adaptive generative mock interviews, competency radar profiling, Retrieval-Augmented Generation (RAG) curriculum grounding, and proactive retention scheduling into a single closed-loop career acceleration platform.
 
@@ -324,18 +324,23 @@ Open your browser and navigate to `http://localhost:5173`.
 |---|---|---|---|
 | `PROJECT_NAME` | String | `AI Career Preparation Agent` | Service name displayed in OpenAPI docs and health probes. |
 | `API_V1_STR` | String | `/api` | Root prefix for all REST API endpoints. |
-| `DATABASE_URL` | String | `sqlite:///./career_agent.db` | SQLAlchemy connection URI. |
-| `CORS_ORIGINS` | Comma-delimited | `http://localhost:5173,...` | Allowed origins for CORS browser security. |
-| `GEMINI_API_KEY` | String | *Optional* | Google Gemini API key. If omitted, uses local heuristic fallback engine. |
-| `GEMINI_MODEL` | String | `gemini-1.5-flash` | Target Gemini model identifier for multi-turn generation. |
+| `SECRET_KEY` | String | *Required* | Minimum 32-character high-entropy secret for HMAC-SHA256 JWT tokens. |
+| `ALGORITHM` | String | `HS256` | Cryptographic algorithm for JWT session tokens. |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Integer | `1440` | JWT expiration duration in minutes (24 hours). |
+| `DATABASE_URL` | String | `sqlite:///./career_agent.db` | SQLAlchemy database connection URI. |
+| `CORS_ORIGINS` | Comma-delimited | `http://localhost:5173,...` | Allowed client origins for CORS browser security. |
+| `GEMINI_API_KEY` | String | *Optional* | Google Gemini API key for question generation & RAG context. |
+| `GROQ_API_KEY` | String | *Optional* | Groq API key for low-latency LPU inference. |
+| `OPENAI_API_KEY` | String | *Optional* | OpenAI API key for evaluation and ATS resume analysis. |
+| `NVIDIA_API_KEY` | String | *Optional* | NVIDIA NIM API key for hiring committee synthesis. |
 | `ENABLE_SCHEDULER` | Boolean | `true` | Enables/disables asyncio background reminder worker. |
 | `SCHEDULER_INTERVAL_SECONDS` | Integer | `60` | Background cycle frequency in seconds. |
-| `EMAIL_MODE` | String | `development` | Toggle between `development` (console preview) and `smtp` (live delivery). |
-| `SMTP_HOST` | String | `smtp.gmail.com` | Outbound mail server hostname. |
+| `EMAIL_MODE` | String | `development` | Toggle between `development` (console preview), `smtp`, or `resend`. |
+| `SMTP_HOST` | String | `smtp.gmail.com` | Outbound mail server hostname (when using SMTP mode). |
 | `SMTP_PORT` | Integer | `587` | Outbound mail server port. |
 | `SMTP_USER` | String | *Optional* | Outbound mail authentication username. |
 | `SMTP_PASSWORD` | String | *Optional* | Outbound mail application password. |
-| `EMAIL_FROM` | String | `noreply@career-agent.dev` | Sender address shown in reminder emails. |
+| `RESEND_API_KEY` | String | *Optional* | Resend REST API key for production transactional delivery. |
 
 ### Frontend Configuration (`.env`)
 
@@ -347,31 +352,53 @@ Open your browser and navigate to `http://localhost:5173`.
 
 ## 🧪 Testing & Quality Assurance
 
-The repository includes a comprehensive automated test suite covering all critical engine logic, security boundaries, and data pipelines.
+The repository includes a comprehensive automated test suite covering all critical engine logic, security boundaries, database migrations, and frontend UI workflows.
 
 ### Run Backend Tests (Pytest)
 ```bash
+# Set PYTHONPATH and execute complete suite:
+$env:PYTHONPATH="."  # Windows PowerShell
 pytest tests/ -v
 ```
-*Expected Output:* **67 passed** across Authentication & tenant isolation, Neural transcription, Multi-tier sandbox code execution, Multilingual localization, Community experiences, Career journey lifecycles, Weekly reports, and Security probes.
+*Current Coverage:* **110+ passing tests** across:
+- `test_auth_and_ownership.py`: JWT auth, generic password reset protection, rate limiting.
+- `test_secure_sandbox.py`: Isolated subprocess execution, timeouts, tenant separation.
+- `test_peer_room_and_reverse_interview.py`: Role enforcement, WebSocket signaling.
+- `test_peer_room_persistence.py`: SQLite persistence and server-reboot hydration.
+- `test_alembic_migrations.py`: Schema versioning, upgrade/downgrade rollback safety.
+- `test_ai_quality_evaluation.py`: RAG relevance, groundedness, and hallucination guard.
+- `test_product_improvements.py`: Session comparison, resume ATS comparison, HTML export.
+- `test_phase16_multilingual.py`: Multilingual feedback and score invariance across languages.
+- `test_phase17_experiences.py`: PII sanitization, moderation, and RAG attribution.
+- `test_phase18_career_journey.py`: 14-milestone lifecycle and readiness bands.
+- `test_generative_interview_engine.py`: Multi-turn generative interview sessions.
 
-### Run Generative Interview Engine Test
+### Run Frontend Tests (Vitest & React Testing Library)
 ```bash
-python tests/test_generative_interview_engine.py
-```
-*Expected Output:* **16/16 PASSED (100% Success Rate)** validating multi-turn sessions, 5-axis evaluations, adaptive difficulty scaling, tenant isolation, and closed-loop XP/gamification sync.
+# Execute frontend unit & regression tests
+npm test
 
-**Total Verified Backend Tests:** **83/83 Passed (100%)**
-
-### Run Frontend Verification
-```bash
-# Type-check and production bundle build
-npm run build
-
-# Run linting verification
+# Run linter
 npm run lint
+
+# Production build verification
+npm run build
 ```
-*Expected Output:* Clean production build transformed with 0 errors.
+*Frontend Results:* **10/10 Vitest tests passing**, 0 lint errors, and production bundle compiled cleanly in < 1 second.
+
+---
+
+## 📋 Production Deployment Checklist
+
+Before deploying to production (Docker, Render, AWS, or DigitalOcean), verify the following:
+
+- [ ] **Secret Key:** Ensure `SECRET_KEY` is a cryptographically strong secret ($\ge 32$ characters) generated via `python -c "import secrets; print(secrets.token_hex(32))"`.
+- [ ] **Database Migrations:** Run `python -m alembic upgrade head` inside the `backend` directory to ensure all tables, foreign keys, and indexes are up to date.
+- [ ] **Foreign Key Enforcement:** SQLite foreign keys are automatically enforced via `PRAGMA foreign_keys=ON` on every connection.
+- [ ] **Rate Limiting:** In-memory rate limiting is active on authentication endpoints (`/api/auth/forgot-password` and `/api/auth/login`).
+- [ ] **Nginx WebSocket Timeouts:** When running behind Nginx, verify `proxy_read_timeout 7200s` and `proxy_send_timeout 7200s` are set on `/api/peer-rooms/.+/ws` to prevent premature disconnection during peer mock interviews.
+- [ ] **Structured Logging & Telemetry:** Verify structured JSON logging is enabled; check `/api/monitoring/metrics` for live system and AI telemetry.
+- [ ] **Frontend Static Assets:** For full-stack single-container deployments, run `npm run build` to generate `dist/` before starting Uvicorn.
 
 ---
 

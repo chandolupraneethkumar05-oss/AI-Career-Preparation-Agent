@@ -16,13 +16,13 @@ class AskAIRequest(BaseModel):
 
 
 class SourceReference(BaseModel):
-    id: str
-    title: str
-    category: str
-    topic: str
-    difficulty: str
-    source: str
-    relevance_score: float
+    id: str = "src-001"
+    title: str = "Curriculum Topic"
+    category: str = "General"
+    topic: str = "General"
+    difficulty: str = "Intermediate"
+    source: str = "curated_knowledge"
+    relevance_score: float = 1.0
 
     model_config = ConfigDict(from_attributes=True)
 

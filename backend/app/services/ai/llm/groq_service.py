@@ -555,8 +555,9 @@ Return valid JSON with exactly:
                         session, questions, answers, evaluations, career_context, language
                     )
                     parsed["target_role"] = target_role
+                    parsed["overall_score"] = fallback_res.get("overall_score", avg_score)
                     parsed["passed"] = bool(parsed.get("passed", parsed["overall_score"] >= 75))
-                    parsed["rubric_scores"] = parsed.get("rubric_scores") or fallback_res.get("rubric_scores", {})
+                    parsed["rubric_scores"] = fallback_res.get("rubric_scores", {})
                     parsed["strengths"] = parsed.get("strengths") or fallback_res.get("strengths", [])
                     parsed["weaknesses"] = parsed.get("weaknesses") or fallback_res.get("weaknesses", [])
                     parsed["recommendations"] = parsed.get("recommendations") or fallback_res.get("recommendations", [])

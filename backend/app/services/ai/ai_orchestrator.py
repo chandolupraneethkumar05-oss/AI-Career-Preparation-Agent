@@ -69,13 +69,13 @@ class AIOrchestrator:
         # 4. Format Pydantic schemas
         sources = [
             SourceReference(
-                id=s["id"],
-                title=s["title"],
-                category=s["category"],
-                topic=s["topic"],
-                difficulty=s["difficulty"],
-                source=s["source"],
-                relevance_score=s["relevance_score"]
+                id=s.get("id") or "src-001",
+                title=s.get("title") or "Curriculum Knowledge",
+                category=s.get("category") or "General",
+                topic=s.get("topic") or "General",
+                difficulty=s.get("difficulty") or "Intermediate",
+                source=s.get("source") or "curated_knowledge",
+                relevance_score=float(s.get("relevance_score") or 1.0)
             )
             for s in raw_output.get("sources", [])
         ]

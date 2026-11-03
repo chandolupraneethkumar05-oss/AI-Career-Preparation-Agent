@@ -174,25 +174,126 @@ class PeerRoomService:
             room_id = self.generate_room_code()
             room = PeerRoom(room_id=room_id, role=role, difficulty=difficulty, topic=topic)
             self._rooms[room.room_id] = room
+            self._persist_room_sync(room)
             return room
+
+    def _persist_room_sync(self, room: PeerRoom):
+        """Persists or updates room state in SQLite for resilience across restarts."""
+        try:
+            from ..db.database import SessionLocal
+            from ..db.models import PeerRoomSession
+            with SessionLocal() as db:
+                sess = db.query(PeerRoomSession).filter(PeerRoomSession.id == room.room_id).first()
+                if not sess:
+                    sess = PeerRoomSession(
+                        id=room.room_id,
+                        role=room.role,
+                        difficulty=room.difficulty,
+                        topic=room.topic,
+                        status=room.status,
+                        interviewer_id=room.interviewer.get("user_id") if room.interviewer else None,
+                        candidate_id=room.candidate.get("user_id") if room.candidate else None,
+                        interviewer_name=room.interviewer.get("user_name") if room.interviewer else None,
+                        candidate_name=room.candidate.get("user_name") if room.candidate else None,
+                        questions_json=json.dumps(room.questions),
+                        current_question_json=json.dumps(room.current_question) if room.current_question else None,
+                        transcript_json=json.dumps(room.transcript),
+                        interviewer_notes_json=json.dumps(room.interviewer_notes),
+                        final_report_json=json.dumps(room.final_report) if room.final_report else None,
+                        shared_code=room.shared_code
+                    )
+                    db.add(sess)
+                else:
+                    sess.status = room.status
+                    sess.role = room.role
+                    sess.difficulty = room.difficulty
+                    sess.topic = room.topic
+                    if room.interviewer:
+                        sess.interviewer_id = room.interviewer.get("user_id")
+                        sess.interviewer_name = room.interviewer.get("user_name")
+                    if room.candidate:
+                        sess.candidate_id = room.candidate.get("user_id")
+                        sess.candidate_name = room.candidate.get("user_name")
+                    sess.questions_json = json.dumps(room.questions)
+                    sess.current_question_json = json.dumps(room.current_question) if room.current_question else None
+                    sess.transcript_json = json.dumps(room.transcript)
+                    sess.interviewer_notes_json = json.dumps(room.interviewer_notes)
+                    sess.final_report_json = json.dumps(room.final_report) if room.final_report else None
+                    sess.shared_code = room.shared_code
+                db.commit()
+        except Exception as exc:
+            import logging
+            logging.getLogger("peer_room").warning(f"Could not persist peer room {room.room_id}: {exc}")
+
+    def _hydrate_room_from_db(self, norm_id: str) -> Optional[PeerRoom]:
+        """Hydrates a PeerRoom from SQLite if evicted or after backend restart."""
+        try:
+            from ..db.database import SessionLocal
+            from ..db.models import PeerRoomSession
+            with SessionLocal() as db:
+                sess = db.query(PeerRoomSession).filter(PeerRoomSession.id == norm_id).first()
+                if not sess:
+                    return None
+                room = PeerRoom(
+                    room_id=sess.id,
+                    role=sess.role,
+                    difficulty=sess.difficulty,
+                    topic=sess.topic
+                )
+                room.status = sess.status
+                room.created_at = sess.created_at.isoformat() if sess.created_at else utc_now_iso()
+                room.questions = json.loads(sess.questions_json) if sess.questions_json else []
+                room.current_question = json.loads(sess.current_question_json) if sess.current_question_json else None
+                room.transcript = json.loads(sess.transcript_json) if sess.transcript_json else []
+                room.interviewer_notes = json.loads(sess.interviewer_notes_json) if sess.interviewer_notes_json else []
+                room.final_report = json.loads(sess.final_report_json) if sess.final_report_json else None
+                room.shared_code = sess.shared_code or room.shared_code
+
+                if sess.interviewer_id or sess.interviewer_name:
+                    room.interviewer = {
+                        "user_id": sess.interviewer_id or "interviewer",
+                        "user_name": sess.interviewer_name or "Interviewer",
+                        "client_id": "persisted",
+                        "ws": None,
+                        "joined_at": room.created_at
+                    }
+                if sess.candidate_id or sess.candidate_name:
+                    room.candidate = {
+                        "user_id": sess.candidate_id or "candidate",
+                        "user_name": sess.candidate_name or "Candidate",
+                        "client_id": "persisted",
+                        "ws": None,
+                        "joined_at": room.created_at
+                    }
+                self._rooms[room.room_id] = room
+                return room
+        except Exception as exc:
+            import logging
+            logging.getLogger("peer_room").warning(f"Could not hydrate room {norm_id} from DB: {exc}")
+            return None
 
     def get_room(self, room_id: str) -> Optional[PeerRoom]:
         if not room_id:
             return None
         norm = room_id.upper().strip()
-        # Direct lookup
+        # Direct lookup in memory
         if norm in self._rooms:
             return self._rooms[norm]
-        # Try prefixes
+        # Try prefixes in memory
         if f"PEER-{norm}" in self._rooms:
             return self._rooms[f"PEER-{norm}"]
         if f"ROOM-{norm}" in self._rooms:
             return self._rooms[f"ROOM-{norm}"]
-        # If passed with prefix, try matching raw suffix
         clean_raw = norm.replace("PEER-", "").replace("ROOM-", "")
         for k in (f"PEER-{clean_raw}", f"ROOM-{clean_raw}", clean_raw):
             if k in self._rooms:
                 return self._rooms[k]
+
+        # Hydrate from database persistence on cache miss / server reboot
+        for candidate_id in (norm, f"PEER-{norm}", f"ROOM-{norm}", f"PEER-{clean_raw}", f"ROOM-{clean_raw}", clean_raw):
+            hydrated = self._hydrate_room_from_db(candidate_id)
+            if hydrated:
+                return hydrated
         return None
 
     async def swap_roles(self, room_id: str) -> Dict[str, Any]:
@@ -286,6 +387,8 @@ class PeerRoomService:
 
         if room.interviewer and room.candidate:
             room.status = "active"
+
+        self._persist_room_sync(room)
 
         return {
             "success": True,
@@ -492,6 +595,7 @@ Return a compact JSON object:
             }
         }
         room.final_report = report
+        self._persist_room_sync(room)
         return report
 
     def generate_360_evaluation(self, room: PeerRoom) -> Dict[str, Any]:
@@ -580,11 +684,15 @@ Return ONLY JSON without conversational preamble.
                     cleaned = cleaned[:-3]
                 report = json.loads(cleaned.strip())
                 room.final_report = report
+                self._persist_room_sync(room)
                 return report
         except Exception:
             pass
 
-        return self.generate_fallback_360_evaluation(room)
+        fallback = self.generate_fallback_360_evaluation(room)
+        room.final_report = fallback
+        self._persist_room_sync(room)
+        return fallback
 
 
 # =============================================================================

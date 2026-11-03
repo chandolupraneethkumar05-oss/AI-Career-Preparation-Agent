@@ -271,6 +271,144 @@ def create_interview(
     )
 
 
+@router.get("/compare/sessions")
+def compare_interview_sessions(
+    base_id: str = Query(..., description="Base interview ID (older round)"),
+    target_id: str = Query(..., description="Target interview ID (newer round)"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Compares two mock interview sessions for the candidate, computing
+    score progression, rubric dimension deltas, and competency trends.
+    """
+    base = db.query(Interview).filter(Interview.id == base_id, Interview.user_id == current_user.id).first()
+    target = db.query(Interview).filter(Interview.id == target_id, Interview.user_id == current_user.id).first()
+
+    if not base or not target:
+        raise HTTPException(status_code=404, detail="One or both interview sessions not found or unauthorized")
+
+    base_rubrics = base.rubric_scores or {}
+    target_rubrics = target.rubric_scores or {}
+
+    rubric_deltas = {}
+    for dim in ["technicalKnowledge", "communicationSTAR", "problemSolving", "systemDesign", "confidenceDelivery"]:
+        b_val = base_rubrics.get(dim, base.overall_score)
+        t_val = target_rubrics.get(dim, target.overall_score)
+        rubric_deltas[dim] = {
+            "base": b_val,
+            "target": t_val,
+            "delta": t_val - b_val
+        }
+
+    score_delta = target.overall_score - base.overall_score
+    if score_delta > 0:
+        verdict = f"Readiness improved by +{score_delta} points across rounds."
+    elif score_delta < 0:
+        verdict = f"Readiness decreased by {score_delta} points. Revisit weak technical dimensions."
+    else:
+        verdict = "Score remained steady across rounds."
+
+    return {
+        "success": True,
+        "base_session": {
+            "id": base.id,
+            "role": base.role,
+            "difficulty": base.difficulty,
+            "overall_score": base.overall_score,
+            "passed": base.passed,
+            "created_at": base.started_at.isoformat() if base.started_at else None
+        },
+        "target_session": {
+            "id": target.id,
+            "role": target.role,
+            "difficulty": target.difficulty,
+            "overall_score": target.overall_score,
+            "passed": target.passed,
+            "created_at": target.started_at.isoformat() if target.started_at else None
+        },
+        "overall_score_delta": score_delta,
+        "rubric_deltas": rubric_deltas,
+        "verdict": verdict
+    }
+
+
+@router.get("/{session_id}/export")
+def export_interview_report(
+    session_id: str,
+    format: str = Query("json", description="Export format: json or html"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generates an exportable performance report for a completed mock interview session.
+    Suitable for PDF printing or external archival.
+    """
+    interview = db.query(Interview).filter(Interview.id == session_id, Interview.user_id == current_user.id).first()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview session not found or unauthorized")
+
+    rubrics = interview.rubric_scores or {}
+    report_data = {
+        "candidate_name": current_user.name,
+        "candidate_email": current_user.email,
+        "session_id": interview.id,
+        "role": interview.role,
+        "difficulty": interview.difficulty,
+        "overall_score": interview.overall_score,
+        "passed": interview.passed,
+        "date": interview.started_at.strftime("%Y-%m-%d %H:%M UTC") if interview.started_at else "N/A",
+        "feedback_summary": interview.feedback_summary,
+        "rubrics": rubrics,
+        "questions_count": interview.questions_count,
+        "status": interview.status
+    }
+
+    if format.lower() == "html":
+        from fastapi.responses import HTMLResponse
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Interview Performance Report - {interview.role}</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 40px; color: #1e293b; line-height: 1.5; }}
+        .header {{ border-bottom: 2px solid #059669; padding-bottom: 15px; margin-bottom: 25px; }}
+        .badge {{ display: inline-block; padding: 4px 10px; border-radius: 9999px; font-weight: bold; font-size: 12px; background: #ecfdf5; color: #047857; }}
+        .score {{ font-size: 36px; font-weight: 800; color: #059669; margin: 10px 0; }}
+        .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin: 20px 0; }}
+        .card {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }}
+        .card h4 {{ margin: 0 0 5px 0; font-size: 13px; color: #64748b; }}
+        .card p {{ margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; }}
+        .summary {{ background: #f1f5f9; padding: 15px; border-radius: 8px; margin-top: 20px; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Interview Performance Audit</h1>
+        <p>Candidate: <strong>{current_user.name}</strong> ({current_user.email}) | Date: {report_data['date']}</p>
+        <p>Target Role: <strong>{interview.role}</strong> ({interview.difficulty})</p>
+    </div>
+    <div class="score">Score: {interview.overall_score}/100 <span class="badge">{'PASSED' if interview.passed else 'NEEDS WORK'}</span></div>
+    <h3>Rubric Dimensions</h3>
+    <div class="grid">
+        <div class="card"><h4>Technical Knowledge</h4><p>{rubrics.get('technicalKnowledge', interview.overall_score)}/100</p></div>
+        <div class="card"><h4>STAR Communication</h4><p>{rubrics.get('communicationSTAR', interview.overall_score)}/100</p></div>
+        <div class="card"><h4>Problem Solving</h4><p>{rubrics.get('problemSolving', interview.overall_score)}/100</p></div>
+        <div class="card"><h4>System Design</h4><p>{rubrics.get('systemDesign', interview.overall_score)}/100</p></div>
+        <div class="card"><h4>Confidence & Delivery</h4><p>{rubrics.get('confidenceDelivery', interview.overall_score)}/100</p></div>
+    </div>
+    <div class="summary">
+        <h3>Executive Assessment</h3>
+        <p>{interview.feedback_summary or 'Session completed successfully.'}</p>
+    </div>
+</body>
+</html>"""
+        return HTMLResponse(content=html_content)
+
+    return {"success": True, "report": report_data}
+
+
 @router.get("/{interview_id}", response_model=InterviewDetailResponse)
 def get_interview(
     interview_id: str,
