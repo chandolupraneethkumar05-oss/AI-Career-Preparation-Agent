@@ -191,8 +191,8 @@ export default function MockInterviewPage() {
 
           let recorder = null;
           const recorderOptions = {
-            videoBitsPerSecond: 2500000, // 2.5 Mbps crystal clear HD video
-            audioBitsPerSecond: 128000   // 128 kbps high fidelity voice
+            videoBitsPerSecond: 1200000, // 1.2 Mbps optimized bitrate (reduces file size by ~55% while maintaining crisp 720p/1080p video)
+            audioBitsPerSecond: 96000    // 96 kbps crystal clear voice audio
           };
           if (selectedMime) {
             recorderOptions.mimeType = selectedMime;

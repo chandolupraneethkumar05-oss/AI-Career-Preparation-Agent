@@ -354,9 +354,24 @@ export default function PeerInterviewRoomPage() {
         const mimeTypes = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
         const selectedMime = mimeTypes.find(m => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m));
 
-        const recorder = selectedMime
-          ? new MediaRecorder(mixedStream, { mimeType: selectedMime })
-          : new MediaRecorder(mixedStream);
+        const recorderOptions = {
+          videoBitsPerSecond: 1200000, // 1.2 Mbps optimized bitrate for multi-peer composite canvas
+          audioBitsPerSecond: 96000    // 96 kbps dual-channel mixed audio
+        };
+        if (selectedMime) {
+          recorderOptions.mimeType = selectedMime;
+        }
+
+        let recorder = null;
+        try {
+          recorder = new MediaRecorder(mixedStream, recorderOptions);
+        } catch (optErr) {
+          try {
+            recorder = selectedMime ? new MediaRecorder(mixedStream, { mimeType: selectedMime }) : new MediaRecorder(mixedStream);
+          } catch (basicErr) {
+            recorder = new MediaRecorder(mixedStream);
+          }
+        }
 
         audioChunksRef.current = [];
         recorder.ondataavailable = (e) => {
