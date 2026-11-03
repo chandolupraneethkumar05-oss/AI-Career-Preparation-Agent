@@ -1784,7 +1784,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
 
     def _get_client(self):
         from openai import OpenAI
-        kwargs = {"api_key": self.api_key}
+        kwargs = {"api_key": self.api_key, "timeout": 16.0}
         if self.base_url:
             kwargs["base_url"] = self.base_url
         return OpenAI(**kwargs)

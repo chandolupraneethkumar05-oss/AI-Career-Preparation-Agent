@@ -453,7 +453,7 @@ Do NOT wrap in markdown fences other than raw JSON.
         system_instruction = "You are a Silicon Valley engineering hiring bar-raiser providing private interview teleprompter guidance."
         
         try:
-            raw_text = get_interview_mode_llm_service('peer_chamber').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.4)
+            raw_text = get_interview_mode_llm_service('peer_chamber', purpose='evaluator').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.4)
             if raw_text and ("{" in raw_text and "}" in raw_text):
                 cleaned = raw_text.strip()
                 if cleaned.startswith("```json"):
@@ -508,7 +508,7 @@ Return a compact JSON object:
 """
         system_instruction = "You are a real-time AI interview co-pilot feeding private coaching hints to the interviewer."
         try:
-            raw_text = get_interview_mode_llm_service('peer_chamber').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.2)
+            raw_text = get_interview_mode_llm_service('peer_chamber', purpose='evaluator').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.2)
             if raw_text and ("{" in raw_text and "}" in raw_text):
                 cleaned = raw_text.strip()
                 if cleaned.startswith("```json"):
@@ -673,7 +673,7 @@ Return ONLY JSON without conversational preamble.
         system_instruction = "You are a Senior Engineering Director performing double-sided calibration on both an interviewer and candidate."
 
         try:
-            raw_text = get_interview_mode_llm_service('peer_chamber').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.3)
+            raw_text = get_interview_mode_llm_service('peer_chamber', purpose='evaluator').generate(prompt=prompt, system_instruction=system_instruction, temperature=0.3)
             if raw_text and ("{" in raw_text and "}" in raw_text):
                 cleaned = raw_text.strip()
                 if cleaned.startswith("```json"):

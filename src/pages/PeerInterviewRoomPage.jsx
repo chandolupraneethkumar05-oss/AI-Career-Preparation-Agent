@@ -133,6 +133,12 @@ export default function PeerInterviewRoomPage() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
+  const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
+  const [isLocalMirrored, setIsLocalMirrored] = useState(true);
+  const recordingCanvasRef = useRef(null);
+  const recordingAnimFrameRef = useRef(null);
+  const audioDestinationRef = useRef(null);
+  const remoteAudioSourceNodeRef = useRef(null);
 
   // Collaborative Room State
   const [activeTab, setActiveTab] = useState('question');
@@ -183,10 +189,30 @@ export default function PeerInterviewRoomPage() {
     return () => clearInterval(timer);
   }, [isSessionActive, sessionStartTime]);
 
-  // Session Audio Mixer (Mixed Local + Remote Streams)
+  // Dynamic Remote Audio Connector (Ensures Remote Peer Voice is Never Missed)
+  const connectRemoteAudioToMixer = useCallback((remoteStream) => {
+    try {
+      if (!audioContextRef.current || !audioDestinationRef.current || !remoteStream) return;
+      if (remoteStream.getAudioTracks().length === 0) return;
+      if (remoteAudioSourceNodeRef.current) {
+        try { remoteAudioSourceNodeRef.current.disconnect(); } catch {}
+      }
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(() => {});
+      }
+      const sourceRemote = audioContextRef.current.createMediaStreamSource(remoteStream);
+      sourceRemote.connect(audioDestinationRef.current);
+      remoteAudioSourceNodeRef.current = sourceRemote;
+    } catch (err) {
+      console.warn('[PeerRoom] Dynamic remote audio attachment notice:', err);
+    }
+  }, []);
+
+  // Dual-Participant Full-Motion Video & Mixed Voice Session Recorder
   const startAudioMixerRecording = useCallback((localStream, remoteStream) => {
     try {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        if (remoteStream) connectRemoteAudioToMixer(remoteStream);
         return;
       }
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -195,18 +221,143 @@ export default function PeerInterviewRoomPage() {
       const ctx = new AudioCtx();
       audioContextRef.current = ctx;
       const destination = ctx.createMediaStreamDestination();
+      audioDestinationRef.current = destination;
 
       if (localStream && localStream.getAudioTracks().length > 0) {
         const sourceLocal = ctx.createMediaStreamSource(localStream);
         sourceLocal.connect(destination);
       }
       if (remoteStream && remoteStream.getAudioTracks().length > 0) {
-        const sourceRemote = ctx.createMediaStreamSource(remoteStream);
-        sourceRemote.connect(destination);
+        connectRemoteAudioToMixer(remoteStream);
       }
 
+      // Build 1280x720 Composite Video Canvas
+      let canvas = recordingCanvasRef.current;
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        recordingCanvasRef.current = canvas;
+      }
+      const ctx2d = canvas.getContext('2d');
+
+      const renderCompositeFrame = () => {
+        if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
+          return;
+        }
+
+        // 1. Draw Chamber Background & Branding Header
+        ctx2d.fillStyle = '#070A12';
+        ctx2d.fillRect(0, 0, 1280, 720);
+
+        // Header Bar
+        ctx2d.fillStyle = '#0F172A';
+        ctx2d.fillRect(0, 0, 1280, 48);
+        ctx2d.strokeStyle = '#1E293B';
+        ctx2d.lineWidth = 1;
+        ctx2d.beginPath();
+        ctx2d.moveTo(0, 48);
+        ctx2d.lineTo(1280, 48);
+        ctx2d.stroke();
+
+        ctx2d.fillStyle = '#10B981';
+        ctx2d.font = 'bold 15px sans-serif';
+        ctx2d.textAlign = 'left';
+        ctx2d.fillText('AI CAREER PREPARATION AGENT • COLLABORATIVE CHAMBER', 24, 30);
+
+        ctx2d.fillStyle = '#94A3B8';
+        ctx2d.font = '13px monospace';
+        ctx2d.textAlign = 'right';
+        ctx2d.fillText(`ROOM: ${roomId} • DURATION: ${formatTime(elapsedSeconds)}`, 1256, 30);
+
+        // 2. Render Left Screen (Local User)
+        const leftX = 16, leftY = 64, splitW = 616, splitH = 636;
+        ctx2d.fillStyle = '#0B0F19';
+        ctx2d.fillRect(leftX, leftY, splitW, splitH);
+
+        const localVid = localVideoRef.current;
+        if (localVid && localVid.readyState >= 2 && isVideoOn) {
+          ctx2d.save();
+          if (isLocalMirrored) {
+            ctx2d.translate(leftX + splitW, leftY);
+            ctx2d.scale(-1, 1);
+            ctx2d.drawImage(localVid, 0, 0, splitW, splitH);
+          } else {
+            ctx2d.drawImage(localVid, leftX, leftY, splitW, splitH);
+          }
+          ctx2d.restore();
+        } else {
+          ctx2d.fillStyle = '#1E293B';
+          ctx2d.beginPath();
+          ctx2d.arc(leftX + splitW / 2, leftY + splitH / 2 - 20, 60, 0, Math.PI * 2);
+          ctx2d.fill();
+          ctx2d.fillStyle = '#F8FAFC';
+          ctx2d.font = 'bold 22px sans-serif';
+          ctx2d.textAlign = 'center';
+          ctx2d.fillText('You (Camera Off)', leftX + splitW / 2, leftY + splitH / 2 + 70);
+        }
+
+        // Left Label Badge
+        ctx2d.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx2d.fillRect(leftX + 14, leftY + 14, 220, 32);
+        ctx2d.strokeStyle = '#334155';
+        ctx2d.strokeRect(leftX + 14, leftY + 14, 220, 32);
+        ctx2d.fillStyle = '#FFFFFF';
+        ctx2d.font = 'bold 13px sans-serif';
+        ctx2d.textAlign = 'left';
+        ctx2d.fillText(You (), leftX + 24, leftY + 35);
+
+        // 3. Render Right Screen (Remote Peer)
+        const rightX = 648, rightY = 64;
+        ctx2d.fillStyle = '#0B0F19';
+        ctx2d.fillRect(rightX, rightY, splitW, splitH);
+
+        const remoteVid = remoteVideoRef.current;
+        if (remoteVid && remoteVid.readyState >= 2 && peerMediaState.video !== false) {
+          ctx2d.drawImage(remoteVid, rightX, rightY, splitW, splitH);
+        } else {
+          ctx2d.fillStyle = '#1E293B';
+          ctx2d.beginPath();
+          ctx2d.arc(rightX + splitW / 2, rightY + splitH / 2 - 20, 60, 0, Math.PI * 2);
+          ctx2d.fill();
+          ctx2d.fillStyle = '#F8FAFC';
+          ctx2d.font = 'bold 22px sans-serif';
+          ctx2d.textAlign = 'center';
+          ctx2d.fillText(peerName || 'Remote Peer', rightX + splitW / 2, rightY + splitH / 2 + 70);
+        }
+
+        // Right Label Badge
+        ctx2d.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx2d.fillRect(rightX + 14, rightY + 14, 240, 32);
+        ctx2d.strokeStyle = '#334155';
+        ctx2d.strokeRect(rightX + 14, rightY + 14, 240, 32);
+        ctx2d.fillStyle = '#FFFFFF';
+        ctx2d.font = 'bold 13px sans-serif';
+        ctx2d.textAlign = 'left';
+        ctx2d.fillText(`${peerName || peerRoleLabel} (${peerRoleLabel})`, rightX + 24, rightY + 35);
+
+        recordingAnimFrameRef.current = requestAnimationFrame(renderCompositeFrame);
+      };
+
+      // Capture mixed Canvas Video + Audio Stream
+      const canvasStream = canvas.captureStream ? canvas.captureStream(25) : null;
+      const combinedTracks = [];
+      if (canvasStream && canvasStream.getVideoTracks().length > 0) {
+        combinedTracks.push(canvasStream.getVideoTracks()[0]);
+      }
       if (destination.stream.getAudioTracks().length > 0) {
-        const recorder = new MediaRecorder(destination.stream);
+        combinedTracks.push(destination.stream.getAudioTracks()[0]);
+      }
+
+      if (combinedTracks.length > 0) {
+        const mixedStream = new MediaStream(combinedTracks);
+        const mimeTypes = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+        const selectedMime = mimeTypes.find(m => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m));
+
+        const recorder = selectedMime
+          ? new MediaRecorder(mixedStream, { mimeType: selectedMime })
+          : new MediaRecorder(mixedStream);
+
         audioChunksRef.current = [];
         recorder.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) {
@@ -214,17 +365,23 @@ export default function PeerInterviewRoomPage() {
           }
         };
         recorder.onstop = () => {
-          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          if (recordingAnimFrameRef.current) {
+            cancelAnimationFrame(recordingAnimFrameRef.current);
+          }
+          const chunkMime = recorder.mimeType || 'video/webm';
+          const blob = new Blob(audioChunksRef.current, { type: chunkMime });
           const url = URL.createObjectURL(blob);
+          setRecordedVideoUrl(url);
           setRecordedAudioUrl(url);
         };
         recorder.start(1000);
         mediaRecorderRef.current = recorder;
+        recordingAnimFrameRef.current = requestAnimationFrame(renderCompositeFrame);
       }
     } catch (err) {
-      console.warn('[PeerRoom] Audio mixer recording initialization notice:', err);
+      console.warn('[PeerRoom] Composite video/audio recording initialization notice:', err);
     }
-  }, []);
+  }, [roomId, myRoleLabel, peerRoleLabel, peerName, isVideoOn, isLocalMirrored, elapsedSeconds, peerMediaState.video, connectRemoteAudioToMixer]);
 
   // Web Speech API Dual-Channel Transcription & Closed-Captions
   const setupSpeechRecognition = useCallback(() => {
@@ -823,7 +980,7 @@ export default function PeerInterviewRoomPage() {
     // 1. Send WebSocket event
     peerRoomService.concludeSession();
 
-    // 2. Fast active polling (every 600ms, up to 4 attempts = 2.4s)
+    // 2. Natural AI Evaluation Polling (up to 15 attempts @ 1200ms = 18s)
     let attempts = 0;
     const pollReport = async () => {
       attempts++;
@@ -841,7 +998,7 @@ export default function PeerInterviewRoomPage() {
         }
       } catch (err) {}
 
-      if (attempts >= 4) {
+      if (attempts >= 15) {
         if (concludeIntervalRef.current) {
           clearInterval(concludeIntervalRef.current);
           concludeIntervalRef.current = null;
@@ -898,7 +1055,7 @@ export default function PeerInterviewRoomPage() {
 
     pollReport();
     if (concludeIntervalRef.current) clearInterval(concludeIntervalRef.current);
-    concludeIntervalRef.current = setInterval(pollReport, 600);
+    concludeIntervalRef.current = setInterval(pollReport, 1200);
   };
 
   return (
@@ -1084,11 +1241,20 @@ export default function PeerInterviewRoomPage() {
 
               {/* Local Mirror Box */}
               <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => setIsLocalMirrored((prev) => !prev)}
+                  title="Toggle Camera Mirroring"
+                  className="absolute top-3 right-3 z-10 px-2 py-1 rounded bg-slate-950/80 hover:bg-slate-800 text-[10px] text-slate-300 border border-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span>🔄 {isLocalMirrored ? 'Mirrored' : 'Normal'}</span>
+                </button>
                 <video
                   ref={setLocalVideoRef}
                   autoPlay
                   playsInline
                   muted
+                  style={{ transform: isLocalMirrored ? 'scaleX(-1)' : 'none' }}
                   className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
                 />
                 {!isVideoOn && (
@@ -1368,11 +1534,20 @@ export default function PeerInterviewRoomPage() {
 
               {/* Local Video Container */}
               <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => setIsLocalMirrored((prev) => !prev)}
+                  title="Toggle Camera Mirroring"
+                  className="absolute top-3 right-3 z-10 px-2 py-1 rounded bg-slate-950/80 hover:bg-slate-800 text-[10px] text-slate-300 border border-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span>🔄 {isLocalMirrored ? 'Mirrored' : 'Normal'}</span>
+                </button>
                 <video
                   ref={setLocalVideoRef}
                   autoPlay
                   playsInline
                   muted
+                  style={{ transform: isLocalMirrored ? 'scaleX(-1)' : 'none' }}
                   className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
                 />
 
@@ -1858,6 +2033,29 @@ export default function PeerInterviewRoomPage() {
       )}
 
       {/* ───────────────────────────────────────────────────────────── */}
+      {/* 2B. CONCLUDING AI CALIBRATION MODAL                           */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {isConcluding && !finalReport && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto animate-pulse">
+              <Brain className="w-6 h-6 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Synthesizing Natural AI 360° Evaluation</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Evaluating your collaborative verbal dialogue, probing questions, and coding observations against real engineering rubrics.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-xs text-emerald-400 font-mono">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Analyzing full session transcript...</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
       {/* 3. JOINT 360° EVALUATION MODAL                                */}
       {/* ───────────────────────────────────────────────────────────── */}
       {finalReport && (
@@ -1931,19 +2129,23 @@ export default function PeerInterviewRoomPage() {
               </div>
             </div>
 
-            {/* Audio Download Link if Captured */}
-            {recordedAudioUrl && (
+            {/* Video & Audio Download Link if Captured */}
+            {(recordedVideoUrl || recordedAudioUrl) && (
               <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs text-slate-300">
                   <Download className="w-4 h-4 text-emerald-400" />
-                  <span>Session Audio Recording (Live WebRTC Dialogue)</span>
+                  <div>
+                    <span className="block font-semibold text-white">Complete Session Video Recording</span>
+                    <span className="text-[10px] text-slate-400">Side-by-side HD video with mixed dual-channel audio from both participants</span>
+                  </div>
                 </div>
                 <a
-                  href={recordedAudioUrl}
+                  href={recordedVideoUrl || recordedAudioUrl}
                   download={`peer_interview_${roomId}.webm`}
-                  className="py-1 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors cursor-pointer"
+                  className="py-1.5 px-3 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
-                  Download Audio (.webm)
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Video (.webm)</span>
                 </a>
               </div>
             )}

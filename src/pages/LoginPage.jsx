@@ -136,8 +136,11 @@ export default function LoginPage() {
 
   const handleCompleteReset = async (e) => {
     e.preventDefault();
-    if (!resetToken || !newPassword) return;
-    if (newPassword.length < 6) {
+    if (!resetToken) {
+      setResetError('Reset token is required. Please check your email or enter the verification token.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
       setResetError('Password must be at least 6 characters.');
       return;
     }
@@ -184,7 +187,7 @@ export default function LoginPage() {
               <span className="text-sm font-bold tracking-wider">TP</span>
             </div>
             <div>
-              <span className="text-lg font-bold tracking-tight text-white block">TalentPath</span>
+              <span className="text-lg font-bold tracking-tight text-white block">AI Career Preparation Agent</span>
               <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-semibold flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 AI Calibration Active
@@ -312,7 +315,7 @@ export default function LoginPage() {
             “Interviews are not tests of memory. They are conversations about your craft.”
           </blockquote>
           <cite className="block text-[11px] text-slate-500 not-italic uppercase tracking-widest mt-1 font-semibold">
-            — Candidate Growth Journal
+            — Candidate Growth Journal • AI Career Preparation Agent
           </cite>
         </div>
 
@@ -413,7 +416,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Email Address
@@ -424,6 +427,7 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="email"
+                  autoComplete="off"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="praneeth@example.com"
@@ -454,6 +458,7 @@ export default function LoginPage() {
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
@@ -535,7 +540,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900 tracking-tight">Reset Password</h3>
-                <p className="text-xs text-slate-500">Restore your TalentPath candidate account access.</p>
+                <p className="text-xs text-slate-500">Restore your AI Career Preparation Agent candidate account access.</p>
               </div>
             </div>
 
@@ -569,6 +574,21 @@ export default function LoginPage() {
                 </div>
 
                 <form onSubmit={handleCompleteReset} className="space-y-3">
+                  {!resetToken && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Reset Token / Verification Code
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={resetToken}
+                        onChange={(e) => setResetToken(e.target.value.trim())}
+                        placeholder="Paste verification token from email"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       New Password (min. 6 characters)

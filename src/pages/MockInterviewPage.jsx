@@ -742,8 +742,9 @@ export default function MockInterviewPage() {
   };
 
   // Final processing pipeline executed inside InterviewProcessingModal
-  const handleProcessRecordingPipeline = async () => {
-    // 0. Flush in-flight MediaRecorder data and finalize the single continuous container
+  const handleProcessRecordingPipeline = async (onStepUpdate) => {
+    // Stage 0: Saving interview recording (flush recorder & assemble container)
+    onStepUpdate?.(0);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         if (mediaRecorderRef.current.state === 'recording') {
@@ -751,7 +752,7 @@ export default function MockInterviewPage() {
         }
         mediaRecorderRef.current.stop();
         // Allow time for ondataavailable event to fire
-        await new Promise(res => setTimeout(res, 300));
+        await new Promise(res => setTimeout(res, 250));
       } catch (recStopErr) {
         console.warn('Recorder flush error:', recStopErr);
       }
@@ -776,7 +777,12 @@ export default function MockInterviewPage() {
       }
     }
 
-    // 2. Perform communication analysis
+    // Stage 1: Transcribing verbal responses (verify transcripts)
+    onStepUpdate?.(1);
+    await new Promise(res => setTimeout(res, 400));
+
+    // Stage 2: Analyzing communication metrics
+    onStepUpdate?.(2);
     let commMetrics = null;
     try {
       commMetrics = await interviewApi.analyzeCommunication({
@@ -792,7 +798,7 @@ export default function MockInterviewPage() {
       console.warn('Communication analysis notice:', commErr);
     }
 
-    // 3. Save recording metadata and physical file
+    // Save recording metadata and physical file
     try {
       const recResp = await interviewApi.saveRecording({
         sessionId,
@@ -810,8 +816,13 @@ export default function MockInterviewPage() {
       console.warn('Save recording notice:', saveErr);
     }
 
-    // 4. Complete session and calculate final aggregates
+    // Stage 3: Evaluating technical content (runs backend Evaluator LLM)
+    onStepUpdate?.(3);
     await completeInterview();
+
+    // Stage 4: Compiling comprehensive feedback
+    onStepUpdate?.(4);
+    await new Promise(res => setTimeout(res, 400));
   };
 
   // Reverse Mock Interview Mode (Candidate as Interviewer)
