@@ -197,18 +197,52 @@ def login_as_demo(
     )
 
 
+import time
+import os
+
+_FORGOT_PW_RATE_LIMITS = {}
+MAX_FORGOT_PW_REQUESTS = 5
+FORGOT_PW_WINDOW_SECONDS = 900
+
+
+def _check_forgot_password_rate_limit(key: str) -> bool:
+    now = time.time()
+    cutoff = now - FORGOT_PW_WINDOW_SECONDS
+    history = [t for t in _FORGOT_PW_RATE_LIMITS.get(key, []) if t > cutoff]
+    if len(history) >= MAX_FORGOT_PW_REQUESTS:
+        return False
+    history.append(now)
+    _FORGOT_PW_RATE_LIMITS[key] = history
+    return True
+
+
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 def forgot_password(
     request: ForgotPasswordRequest,
+    req: Request,
     db: Session = Depends(get_db)
 ):
     """
     Initiates candidate password recovery.
     Validates candidate presence, creates signed 30-minute JWT token,
-    dispatches recovery email, and returns direct reset fallback for local/sandbox ease.
+    dispatches recovery email, and protects against token leakage and user enumeration.
     """
     clean_email = request.email.strip().lower()
+
+    # Rate limiting by client IP and email
+    client_ip = req.client.host if req.client else "unknown"
+    rate_key = f"{client_ip}:{clean_email}"
+    if not _check_forgot_password_rate_limit(rate_key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many password reset requests. Please wait a few minutes before trying again."
+        )
+
     user = db.query(User).filter(User.email == clean_email).first()
+
+    is_production = os.getenv("ENVIRONMENT", os.getenv("APP_ENV", "development")).strip().lower() == "production"
+    allow_dev_token = os.getenv("ALLOW_DEV_PASSWORD_RESET_TOKEN", "").strip().lower() in ("true", "1")
+    expose_token = (not is_production) and allow_dev_token
 
     if not user:
         return ForgotPasswordResponse(
@@ -246,11 +280,11 @@ def forgot_password(
 
     return ForgotPasswordResponse(
         success=True,
-        message="Password recovery instructions have been dispatched. Use your reset token or link to set a new password.",
-        email=user.email,
-        reset_token=reset_token,
-        reset_link=reset_link,
-        delivered_via=email_result.get("mode", "email")
+        message="If an account with this email exists, password recovery instructions have been sent.",
+        email=clean_email,
+        reset_token=reset_token if expose_token else None,
+        reset_link=reset_link if expose_token else None,
+        delivered_via="email"
     )
 
 

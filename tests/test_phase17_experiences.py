@@ -203,7 +203,7 @@ class TestPhase17InterviewExperiences(unittest.TestCase):
 
         # Approve it first
         moderate_experience(self.db, exp_id, ExperienceModerateRequest(status="APPROVED"))
-        self.assertEqual(self.db.query(InterviewExperience).get(exp_id).moderation_status, "APPROVED")
+        self.assertEqual(self.db.get(InterviewExperience, exp_id).moderation_status, "APPROVED")
 
         # User-002 attempts to edit User-001's experience -> PermissionError
         with self.assertRaises(PermissionError):

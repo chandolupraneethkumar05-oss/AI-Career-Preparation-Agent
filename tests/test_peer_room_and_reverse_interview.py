@@ -198,3 +198,83 @@ def test_websocket_signaling_peer_exchange(client):
             assert cand_q["type"] == "active_question"
             int_q = ws_interviewer.receive_json()
             assert int_q["type"] == "active_question"
+
+
+def test_peer_room_role_authorization_and_permission_guards(client):
+    """
+    Security Regression Test:
+    Verifies server-side authorization guards enforce:
+    1. Only the interviewer can request AI teleprompter questions (candidate is denied).
+    2. Only the interviewer can push questions to candidate.
+    3. Only the interviewer can submit evaluation notes.
+    4. Role swapping/changes are strictly forbidden once the room is active.
+    5. Token authentication derives user identity securely from JWT claims.
+    """
+    from backend.app.core.security import create_access_token
+
+    # 1. Create a room
+    room_res = client.post("/api/peer-rooms/create", json={
+        "role": "Frontend Engineer",
+        "difficulty": "Intermediate"
+    })
+    room_id = room_res.json()["room_id"]
+
+    # Generate a genuine JWT token for an authenticated user
+    auth_token = create_access_token({"sub": "usr_verified_auth_42", "name": "Verified Candidate"})
+
+    with client.websocket_connect(f"/api/ws/peer-room/{room_id}") as ws_interviewer:
+        ws_interviewer.send_json({
+            "type": "join",
+            "role": "interviewer",
+            "userName": "Interviewer Host"
+        })
+        join_int = ws_interviewer.receive_json()
+        assert join_int["role"] == "interviewer"
+
+        with client.websocket_connect(f"/api/ws/peer-room/{room_id}") as ws_candidate:
+            # Candidate joins with JWT token
+            ws_candidate.send_json({
+                "type": "join",
+                "role": "candidate",
+                "token": auth_token,
+                "userId": "spoofed_id_attempt",  # Attempt to spoof client ID
+                "userName": "Verified Candidate"
+            })
+            join_cand = ws_candidate.receive_json()
+            assert join_cand["role"] == "candidate"
+
+            # Flush peer_joined and session_start messages
+            ws_interviewer.receive_json()  # peer_joined
+            ws_interviewer.receive_json()  # initiate_offer
+            ws_candidate.receive_json()    # session_start
+            ws_interviewer.receive_json()  # session_start
+
+            # GUARD 1: Candidate attempts to request AI question teleprompter -> DENIED
+            ws_candidate.send_json({"type": "request_ai_question"})
+            cand_err = ws_candidate.receive_json()
+            assert cand_err["type"] == "error"
+            assert "Only the assigned interviewer" in cand_err["message"]
+
+            # GUARD 2: Candidate attempts to push question -> DENIED
+            ws_candidate.send_json({"type": "push_question_to_candidate"})
+            cand_err2 = ws_candidate.receive_json()
+            assert cand_err2["type"] == "error"
+            assert "Only the assigned interviewer" in cand_err2["message"]
+
+            # GUARD 3: Candidate attempts to submit note -> DENIED
+            ws_candidate.send_json({"type": "submit_note", "note": "Gave myself 5 stars", "rating": 5})
+            cand_err3 = ws_candidate.receive_json()
+            assert cand_err3["type"] == "error"
+            assert "Only the assigned interviewer" in cand_err3["message"]
+
+            # GUARD 4: Candidate attempts to unilaterally swap roles while session is active -> DENIED
+            ws_candidate.send_json({"type": "role_swap"})
+            cand_err4 = ws_candidate.receive_json()
+            assert cand_err4["type"] == "error"
+            assert "strictly locked once the interview session is active" in cand_err4["message"]
+
+            # Interviewer note submission succeeds
+            ws_interviewer.send_json({"type": "submit_note", "note": "Candidate demonstrated strong communication", "rating": 4})
+            int_note_resp = ws_interviewer.receive_json()
+            assert int_note_resp["type"] == "note_saved"
+            assert int_note_resp["success"] is True

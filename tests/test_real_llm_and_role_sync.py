@@ -122,6 +122,12 @@ class TestRealLLMAndRoleSync(unittest.TestCase):
         from backend.app.schemas.interview import InterviewStartRequest
         import uuid
 
+        # Ensure referenced test users exist for SQLite FK integrity
+        for uid, uemail in [("usr_author_123", "author123@test.com"), ("usr_candidate_vault_test", "candidate_vault@test.com")]:
+            if not self.db.query(User).filter(User.id == uid).first():
+                self.db.add(User(id=uid, email=uemail, name="Test User", hashed_password="hashed_pass_test"))
+        self.db.flush()
+
         exp_id = f"exp_test_{uuid.uuid4().hex[:8]}"
         q_id = f"q_vault_{uuid.uuid4().hex[:8]}"
 

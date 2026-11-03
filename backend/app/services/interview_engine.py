@@ -59,6 +59,13 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _safe_text_focus(data: dict) -> str:
+    raw = data.get("rubric_guidance") or data.get("rationale") or ""
+    if isinstance(raw, (dict, list)):
+        return json.dumps(raw)
+    return str(raw) if raw is not None else ""
+
+
 def get_vault_questions_for_role(db: Session, target_role: str, limit: int = 3) -> List[Dict[str, Any]]:
     """
     Retrieves approved interview questions contributed by users/community to the Question Vault,
@@ -245,7 +252,7 @@ class InterviewEngine:
             difficulty=q1_data["difficulty"],
             question_type=q1_data["question_type"],
             generated_source="Question Vault (Community Company Question)" if vault_chunks and ("vault" in str(q1_data).lower() or q1_data.get("source_type") == "rag_grounded") else q1_data["source_type"],
-            expected_focus=q1_data.get("rubric_guidance") or q1_data.get("rationale") or "",
+            expected_focus=_safe_text_focus(q1_data),
             rag_chunk_id=rag_chunks[0].get("id") if rag_chunks else None,
             is_follow_up=False,
             created_at=now
@@ -705,7 +712,7 @@ class InterviewEngine:
                 difficulty=next_q_data["difficulty"],
                 question_type=next_q_data["question_type"],
                 generated_source=next_source,
-                expected_focus=next_q_data.get("rubric_guidance") or next_q_data.get("rationale") or "",
+                expected_focus=_safe_text_focus(next_q_data),
                 rag_chunk_id=rag_chunks[0].get("id") if rag_chunks else None,
                 is_follow_up=is_follow_up,
                 created_at=utc_now()

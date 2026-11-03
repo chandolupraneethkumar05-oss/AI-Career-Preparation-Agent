@@ -4,11 +4,13 @@ AI Career Preparation Agent
 """
 
 from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class SkillArenaChallengeResponse(BaseModel):
     """Structured challenge metadata presented to candidate."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     title: str
     mode: str = Field(..., description="coding, debug, mcq, predict_output")
@@ -23,9 +25,6 @@ class SkillArenaChallengeResponse(BaseModel):
     career_relevance: str = ""
     xp_reward: int = 40
     already_completed: bool = False
-
-    class Config:
-        from_attributes = True
 
 
 class SkillArenaSubmitRequest(BaseModel):
@@ -67,6 +66,8 @@ class SkillArenaEvaluationResponse(BaseModel):
 
 class SkillArenaAttemptResponse(BaseModel):
     """Individual historical attempt record."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: Union[str, int]
     challenge_id: str
     mode: str
@@ -78,9 +79,6 @@ class SkillArenaAttemptResponse(BaseModel):
     xp_earned: int
     time_spent_seconds: int
     created_at: str
-
-    class Config:
-        from_attributes = True
 
 
 class SkillArenaStatsResponse(BaseModel):
