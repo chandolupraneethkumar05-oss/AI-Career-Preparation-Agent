@@ -6,6 +6,7 @@ AI Career Preparation Agent
 import os
 import unittest
 from unittest.mock import patch
+from sqlalchemy import text
 from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.db.database import SessionLocal, init_db
@@ -303,6 +304,67 @@ class TestAuthAndTenantIsolation(unittest.TestCase):
         stream_res = self.client.get(f"/api/interviews/{sess_id}/recording/stream?ticket=invalid_ticket_xyz")
         self.assertEqual(stream_res.status_code, 401)
         self.assertIn("Invalid or expired media playback ticket", stream_res.json()["detail"])
+
+    def test_13_password_reset_token_not_exposed_in_response(self):
+        """Test forgot-password never leaks reset_token or reset_link in production/default mode."""
+        # Register a candidate
+        email = "secure_reset@testauth.com"
+        self.client.post("/api/auth/register", json={
+            "name": "Reset Candidate",
+            "email": email,
+            "password": "Password12345!"
+        })
+
+        with patch.dict(os.environ, {
+            "ENVIRONMENT": "production",
+            "SECRET_KEY": "prod_super_secure_key_12345678901234567890"
+        }):
+            res = self.client.post("/api/auth/forgot-password", json={"email": email})
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertTrue(data["success"])
+            self.assertIsNone(data["reset_token"], "reset_token must not be exposed in production API responses")
+            self.assertIsNone(data["reset_link"], "reset_link must not be exposed in production API responses")
+            self.assertEqual(data["delivered_via"], "email")
+
+    def test_14_user_enumeration_prevention_on_forgot_password(self):
+        """Test forgot-password returns identical generic messaging for registered and unregistered emails."""
+        registered_email = "registered_target@testauth.com"
+        unregistered_email = "non_existent_ghost_99999@testauth.com"
+
+        self.client.post("/api/auth/register", json={
+            "name": "Registered User",
+            "email": registered_email,
+            "password": "Password12345!"
+        })
+
+        res_reg = self.client.post("/api/auth/forgot-password", json={"email": registered_email})
+        res_unreg = self.client.post("/api/auth/forgot-password", json={"email": unregistered_email})
+
+        self.assertEqual(res_reg.status_code, 200)
+        self.assertEqual(res_unreg.status_code, 200)
+        # Verify messages are identical to prevent user enumeration
+        self.assertEqual(res_reg.json()["message"], res_unreg.json()["message"])
+        self.assertIn("If an account with this email exists", res_reg.json()["message"])
+        self.assertIsNone(res_reg.json()["reset_token"])
+        self.assertIsNone(res_unreg.json()["reset_token"])
+
+    def test_15_forgot_password_rate_limiting(self):
+        """Test that excessive forgot-password calls trigger HTTP 429 Too Many Requests."""
+        email = "spam_test@testauth.com"
+        # Send 5 requests (the limit)
+        for _ in range(5):
+            self.client.post("/api/auth/forgot-password", json={"email": email})
+
+        # 6th request must trigger rate limit
+        res_limit = self.client.post("/api/auth/forgot-password", json={"email": email})
+        self.assertEqual(res_limit.status_code, 429)
+        self.assertIn("Too many password reset requests", res_limit.json()["detail"])
+
+    def test_16_sqlite_foreign_key_enforcement(self):
+        """Test that SQLite connections enforce foreign key integrity via PRAGMA foreign_keys=ON."""
+        fk_status = self.db.execute(text("PRAGMA foreign_keys")).scalar()
+        self.assertEqual(fk_status, 1, "SQLite PRAGMA foreign_keys must be active (value 1)")
 
 
 if __name__ == "__main__":

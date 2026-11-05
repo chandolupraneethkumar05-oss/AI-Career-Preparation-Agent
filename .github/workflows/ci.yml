@@ -39,6 +39,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
           ENVIRONMENT: development
+          SECRET_KEY: "ci-secret-key-minimum-32-characters-for-jwt-security"
           DATABASE_URL: sqlite:///./test_ci.db
         run: |
           pytest -v tests/
@@ -72,6 +73,9 @@ jobs:
 
       - name: Lint Frontend Code
         run: npm run lint
+
+      - name: Run Frontend Vitest Suite
+        run: npm test
 
       - name: Verify Vite Production Build
         run: npm run build

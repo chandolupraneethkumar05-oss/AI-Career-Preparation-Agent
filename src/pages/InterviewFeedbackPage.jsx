@@ -63,16 +63,18 @@ export default function InterviewFeedbackPage() {
   const activePlaybookId = session.summaryResult?.companyPlaybook || setup.companyPlaybook || 'general';
   const activePlaybook = getCompanyPlaybook(activePlaybookId);
   const rubricMatrix = session.summaryResult?.rubricMatrix || session.rubricMatrix || {};
-  const overallScoreVal = session.summaryResult?.scores?.overall !== undefined
-    ? session.summaryResult.scores.overall
-    : (result.overallScore !== undefined ? result.overallScore : 0);
+const answersCount = (session.answers || []).filter(a => a.answer && a.answer.trim().length > 0 && !a.isSkipped).length;
+  const isUnattempted = answersCount === 0 || session.summaryResult?.scores?.overall === 0 || !session.answers || session.answers.length === 0;
+  const overallScoreVal = isUnattempted ? 0 : (session.summaryResult?.scores?.overall ?? session.summaryResult?.score ?? result.overallScore ?? 75);
 
   const topStrength = (result.strengths && result.strengths[0]) || 'core engineering fundamentals';
   const topImprovement = (result.improvements && result.improvements[0]) || 'high-scale architecture trade-offs';
   const activeRoleName = setup.targetRole || session.summaryResult?.target_role || 'Software Engineer';
 
   const dynamicReasoning = session.summaryResult?.hiringCommittee?.reasoning ||
-    (overallScoreVal >= 88
+    (isUnattempted
+      ? 'Candidate completed the session with 0 evaluated responses. No responses were available to calibrate hiring decisions.'
+      : overallScoreVal >= 88
       ? `Exceptional consensus: Candidate demonstrated mastery in ${topStrength}. Recommended as a strong benchmark hire for ${activeRoleName} with immediate production readiness.`
       : overallScoreVal >= 78
       ? `Hire consensus: Candidate cleared the technical bar in ${topStrength}. Demonstrates solid engineering execution with focus recommended on ${topImprovement}.`
@@ -81,57 +83,59 @@ export default function InterviewFeedbackPage() {
       : `No Hire consensus: Candidate showed foundational gaps in ${topImprovement}. Further structured revision required before meeting the ${activeRoleName} benchmark.`);
 
   const dynamicSeniorityScope = session.summaryResult?.seniorityBenchmark?.scope ||
-    (overallScoreVal >= 80
+    (isUnattempted
+      ? 'No candidate responses were submitted during this interview session.'
+      : overallScoreVal >= 80
       ? `Demonstrated independent architectural formulation and trade-off depth in ${topStrength}. Exhibits senior-level technical ownership.`
       : `Demonstrated competent execution on fundamental questions, with opportunity to deepen scale analysis and failure recovery in ${topImprovement}.`);
 
   const hiringCommittee = session.summaryResult?.hiringCommittee || {
-    verdict: overallScoreVal === 0 ? 'No Hire' : overallScoreVal >= 88 ? 'Strong Hire' : overallScoreVal >= 78 ? 'Hire' : overallScoreVal >= 68 ? 'Lean Hire' : overallScoreVal >= 55 ? 'Lean No Hire' : 'No Hire',
-    reasoning: overallScoreVal === 0
+verdict: isUnattempted || overallScoreVal === 0 ? 'No Hire' : overallScoreVal >= 88 ? 'Strong Hire' : overallScoreVal >= 78 ? 'Hire' : overallScoreVal >= 68 ? 'Lean Hire' : overallScoreVal >= 55 ? 'Lean No Hire' : 'No Hire',
+    reasoning: isUnattempted || overallScoreVal === 0
       ? `No Hire consensus: Candidate skipped technical inquiries. Structured revision and complete interview practice required before meeting the ${activeRoleName} benchmark.`
       : dynamicReasoning,
-    rubricCoveragePct: overallScoreVal === 0 ? 0 : 75,
-    verifiedCount: overallScoreVal === 0 ? 0 : 3,
+    rubricCoveragePct: isUnattempted || overallScoreVal === 0 ? 0 : 75,
+    verifiedCount: isUnattempted || overallScoreVal === 0 ? 0 : 3,
     totalCompetencies: 4,
-    seniorityLevel: overallScoreVal === 0 ? 'Practice Required / Incomplete' : overallScoreVal >= 90 ? 'L6 — Staff / Principal Architect' : overallScoreVal >= 80 ? 'L5 — Senior Engineer / Tech Lead' : overallScoreVal >= 65 ? 'L4 — Mid-Level / SDE II' : 'L3 — Junior / Associate Engineer',
-    autonomyTier: (session.summaryResult?.totalHintsUsed || 0) === 0 ? 'Full Autonomy (0 Nudges)' : 'High Autonomy (Coachability Verified)'
+    seniorityLevel: isUnattempted || overallScoreVal === 0 ? 'Practice Required / Incomplete' : overallScoreVal >= 90 ? 'L6 — Staff / Principal Architect' : overallScoreVal >= 80 ? 'L5 — Senior Engineer / Tech Lead' : overallScoreVal >= 65 ? 'L4 — Mid-Level / SDE II' : 'L3 — Junior / Associate Engineer',
+    autonomyTier: isUnattempted || overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.totalHintsUsed || 0) === 0 ? 'Full Autonomy (0 Nudges)' : 'High Autonomy (Coachability Verified)'
   };
 
   const seniorityBenchmark = session.summaryResult?.seniorityBenchmark || {
-    level: overallScoreVal === 0 ? 'Practice Required / Incomplete' : (hiringCommittee.seniorityLevel || 'L4 — Mid-Level / SDE II'),
-    title: overallScoreVal === 0 ? 'Candidate Practice Required' : overallScoreVal >= 80 ? 'Senior Technical Lead / SDE III' : 'Mid-Level Software Engineer / SDE II',
-    scope: overallScoreVal === 0 ? 'Candidate did not complete any interview questions. Full practice loop required to calibrate performance.' : dynamicSeniorityScope,
-    targetYears: overallScoreVal === 0 ? 'N/A — Incomplete Session' : overallScoreVal >= 80 ? '5–7 Years Industry Equivalent' : '2–4 Years Industry Equivalent',
-    status: overallScoreVal === 0 ? 'Remediation Required' : overallScoreVal >= 80 ? 'Senior Bar Exceeded' : 'Target Seniority Met'
+    level: isUnattempted || overallScoreVal === 0 ? 'Practice Required / Incomplete' : (hiringCommittee.seniorityLevel || 'L4 — Mid-Level / SDE II'),
+    title: isUnattempted || overallScoreVal === 0 ? 'Candidate Practice Required' : overallScoreVal >= 80 ? 'Senior Technical Lead / SDE III' : 'Mid-Level Software Engineer / SDE II',
+    scope: isUnattempted || overallScoreVal === 0 ? 'Candidate did not complete any interview questions. Full practice loop required to calibrate performance.' : dynamicSeniorityScope,
+    targetYears: isUnattempted || overallScoreVal === 0 ? 'N/A — Incomplete Session' : overallScoreVal >= 80 ? '5–7 Years Industry Equivalent' : '2–4 Years Industry Equivalent',
+    status: isUnattempted || overallScoreVal === 0 ? 'Remediation Required' : overallScoreVal >= 80 ? 'Senior Bar Exceeded' : 'Target Seniority Met'
   };
 
   const industryPillars = session.summaryResult?.industryPillars || {
     algorithmicDepth: {
       name: 'Algorithmic & Technical Depth',
-      score: overallScoreVal === 0 ? 0 : Math.min(100, Math.max(0, session.summaryResult?.scores?.technicalKnowledge ?? overallScoreVal)),
-      criteria: 'Correctness, optimal time/space complexity (Big-O), and edge-case enumeration',
-      status: overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.scores?.technicalKnowledge ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
+score: isUnattempted || overallScoreVal === 0 ? 0 : Math.min(100, Math.max(0, session.summaryResult?.scores?.technicalKnowledge ?? overallScoreVal)),
+      criteria: isUnattempted || overallScoreVal === 0 ? 'No candidate response submitted for algorithmic depth evaluation.' : 'Correctness, optimal time/space complexity (Big-O), and edge-case enumeration',
+      status: isUnattempted || overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.scores?.technicalKnowledge ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
     },
     architectureQuality: {
       name: 'Architecture & Code Quality',
-      score: overallScoreVal === 0 ? 0 : Math.min(100, Math.max(0, session.summaryResult?.scores?.structure ?? overallScoreVal)),
-      criteria: 'Modular design, fault tolerance, scalability bottlenecks, and trade-off justification',
-      status: overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.scores?.structure ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
+      score: isUnattempted || overallScoreVal === 0 ? 0 : Math.min(100, Math.max(0, session.summaryResult?.scores?.structure ?? overallScoreVal)),
+      criteria: isUnattempted || overallScoreVal === 0 ? 'No candidate response submitted for architecture evaluation.' : 'Modular design, fault tolerance, scalability bottlenecks, and trade-off justification',
+      status: isUnattempted || overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.scores?.structure ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
     },
     communicationPacing: {
       name: 'Communication & Thought Process',
-      score: overallScoreVal === 0 ? 0 : Math.min(100, Math.max(0, session.summaryResult?.scores?.clarity ?? overallScoreVal)),
-      criteria: 'Structured narrative (STAR / Top-Down), verbal cadence, and proactive clarification',
-      status: overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.scores?.clarity ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
+      score: isUnattempted || overallScoreVal === 0 ? 0 : Math.min(100, Math.max(0, session.summaryResult?.scores?.clarity ?? overallScoreVal)),
+      criteria: isUnattempted || overallScoreVal === 0 ? 'No candidate response submitted for communication evaluation.' : 'Structured narrative (STAR / Top-Down), verbal cadence, and proactive clarification',
+      status: isUnattempted || overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.scores?.clarity ?? overallScoreVal) >= 80 ? 'Exceptional' : 'Proficient'
     },
     autonomyCoachability: {
       name: 'Autonomy vs. Coaching Receptivity',
-      score: overallScoreVal === 0 ? 0 : Math.min(100, Math.max(0, session.summaryResult?.scores?.confidence ?? overallScoreVal)),
-      criteria: overallScoreVal === 0 ? 'No answers submitted to evaluate autonomy' : (session.summaryResult?.totalHintsUsed || 0) === 0
+      score: isUnattempted || overallScoreVal === 0 ? 0 : Math.min(100, Math.max(0, session.summaryResult?.scores?.confidence ?? overallScoreVal)),
+      criteria: isUnattempted || overallScoreVal === 0 ? 'No answers submitted to evaluate autonomy' : (session.summaryResult?.totalHintsUsed || 0) === 0
         ? 'Formulated and validated all answers fully independently without hints (0 hints used)'
         : `Utilized ${session.summaryResult?.totalHintsUsed || 1} coach hints; showed good receptivity to guidance during the interview`,
       hintsUsed: session.summaryResult?.totalHintsUsed || 0,
-      status: overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.totalHintsUsed || 0) <= 1 ? 'Exceptional' : 'Proficient'
+      status: isUnattempted || overallScoreVal === 0 ? 'Practice Required' : (session.summaryResult?.totalHintsUsed || 0) <= 1 ? 'Exceptional' : 'Proficient'
     }
   };
 

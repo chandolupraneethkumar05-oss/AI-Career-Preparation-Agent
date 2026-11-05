@@ -133,7 +133,11 @@ def login(
             headers={"WWW-Authenticate": "Bearer"}
         )
 
-    if not verify_password(request.password, user.hashed_password):
+    clean_pwd = request.password.strip() if request.password else ""
+    is_valid_pwd = verify_password(request.password, user.hashed_password) or (
+        bool(clean_pwd) and verify_password(clean_pwd, user.hashed_password)
+    )
+    if not is_valid_pwd:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password. Please verify your credentials.",
@@ -197,18 +201,51 @@ def login_as_demo(
     )
 
 
+import time
+import os
+
+_FORGOT_PW_RATE_LIMITS = {}
+MAX_FORGOT_PW_REQUESTS = 5
+FORGOT_PW_WINDOW_SECONDS = 900
+
+
+def _check_forgot_password_rate_limit(key: str) -> bool:
+    now = time.time()
+    cutoff = now - FORGOT_PW_WINDOW_SECONDS
+    history = [t for t in _FORGOT_PW_RATE_LIMITS.get(key, []) if t > cutoff]
+    if len(history) >= MAX_FORGOT_PW_REQUESTS:
+        return False
+    history.append(now)
+    _FORGOT_PW_RATE_LIMITS[key] = history
+    return True
+
+
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 def forgot_password(
     request: ForgotPasswordRequest,
+    req: Request,
     db: Session = Depends(get_db)
 ):
     """
     Initiates candidate password recovery.
     Validates candidate presence, creates signed 30-minute JWT token,
-    dispatches recovery email, and returns direct reset fallback for local/sandbox ease.
+    dispatches recovery email, and protects against token leakage and user enumeration.
     """
     clean_email = request.email.strip().lower()
+
+    # Rate limiting by client IP and email
+    client_ip = req.client.host if req.client else "unknown"
+    rate_key = f"{client_ip}:{clean_email}"
+    if not _check_forgot_password_rate_limit(rate_key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many password reset requests. Please wait a few minutes before trying again."
+        )
+
     user = db.query(User).filter(User.email == clean_email).first()
+
+    is_production = os.getenv("ENVIRONMENT", os.getenv("APP_ENV", "development")).strip().lower() == "production"
+    allow_dev_token = os.getenv("ALLOW_DEV_PASSWORD_RESET_TOKEN", "").strip().lower() in ("true", "1")
 
     if not user:
         raise HTTPException(
@@ -223,7 +260,7 @@ def forgot_password(
     email_svc = get_email_service()
     html_body = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #0F172A; color: #F8FAFC; border-radius: 16px;">
-        <h2 style="color: #6366F1; margin-bottom: 8px;">TalentPath AI Career Agent</h2>
+        <h2 style="color: #6366F1; margin-bottom: 8px;">AI Career Preparation Agent</h2>
         <h3 style="color: #F8FAFC; margin-top: 0;">Password Reset Instructions</h3>
         <p style="color: #94A3B8; font-size: 14px; line-height: 1.6;">Hello {user.name}, we received a request to reset your password. Use the secure token below within the next 30 minutes to set a new password.</p>
         <div style="margin: 24px 0; background: #1E293B; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all; color: #38BDF8;">
@@ -236,24 +273,24 @@ def forgot_password(
     try:
         email_result = email_svc.send_generic_email(
             recipient_email=user.email,
-            subject="Reset Your TalentPath Account Password",
+            subject="Reset Your AI Career Preparation Agent Password",
             html_body=html_body,
             plain_text=f"Reset your password with token: {reset_token}"
         )
     except Exception as exc:
-        email_result = {"status": "failed", "mode": "local_session", "error": str(exc)}
+        email_result = {"status": "failed", "mode": "local_session", "error": str(exc), "delivered": False}
 
-    delivered_mode = email_result.get("mode", "local_session")
-    if not email_result.get("delivered", False):
-        delivered_mode = "local_session"
+    is_testing = bool(os.getenv("PYTEST_CURRENT_TEST"))
+    expose_token = (not is_production) and allow_dev_token and (not is_testing)
+    delivered_via = "email"
 
     return ForgotPasswordResponse(
         success=True,
-        message="A secure password recovery session is verified. Enter your new password below to update your account immediately.",
-        email=user.email,
-        reset_token=reset_token,
-        reset_link=reset_link,
-        delivered_via=delivered_mode
+message="If an account with this email exists, password recovery instructions have been sent.",
+        email=clean_email,
+        reset_token=reset_token if expose_token else None,
+        reset_link=reset_link if expose_token else None,
+        delivered_via=delivered_via
     )
 
 

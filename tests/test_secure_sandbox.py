@@ -16,6 +16,12 @@ SandboxTestCase.__test__ = False
 class TestSecureSandbox(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
+        # Authenticate test client to acquire genuine bearer token
+        demo_res = self.client.post("/api/auth/demo-login")
+        self.assertEqual(demo_res.status_code, 200)
+        self.auth_token = demo_res.json()["access_token"]
+        self.auth_headers = {"Authorization": f"Bearer {self.auth_token}"}
+        self.user_id = demo_res.json()["user"]["id"]
 
     def test_capabilities_endpoint(self):
         response = self.client.get('/api/execution/capabilities')
@@ -27,12 +33,48 @@ class TestSecureSandbox(unittest.TestCase):
         self.assertTrue(data['process']['available'])
         self.assertEqual(data['default_executor'], 'process')
 
+    def test_unauthenticated_execution_rejected_with_401(self):
+        """Unauthenticated code execution job submission is strictly rejected."""
+        req_payload = {
+            'code': 'print("Unauthorized attempt")',
+            'language': 'python'
+        }
+        response = self.client.post('/api/execution/jobs', json=req_payload)
+        self.assertEqual(response.status_code, 401)
+
+    def test_cross_user_job_access_forbidden_with_403(self):
+        """Users cannot access execution jobs created by another candidate."""
+        # Submit job as candidate A
+        req_payload = {'code': 'print("Candidate A job")', 'language': 'python'}
+        job_res = self.client.post('/api/execution/jobs', json=req_payload, headers=self.auth_headers)
+        self.assertEqual(job_res.status_code, 200)
+        job_id = job_res.json()['job_id']
+
+        # Register and log in as candidate B
+        cand_b_email = "candidate_b_exec@testauth.com"
+        self.client.post("/api/auth/register", json={
+            "name": "Candidate B",
+            "email": cand_b_email,
+            "password": "Password12345!"
+        })
+        login_b = self.client.post("/api/auth/login", json={
+            "email": cand_b_email,
+            "password": "Password12345!"
+        })
+        token_b = login_b.json()["access_token"]
+        headers_b = {"Authorization": f"Bearer {token_b}"}
+
+        # Candidate B attempts to view Candidate A's job status and stdout
+        cross_res = self.client.get(f"/api/execution/jobs/{job_id}", headers=headers_b)
+        self.assertEqual(cross_res.status_code, 403)
+        self.assertIn("Unauthorized access to another candidate's execution job", cross_res.json()["detail"])
+
     def test_normal_python_execution(self):
         req_payload = {
             'code': 'print("Result: Sandbox OK")',
             'language': 'python'
         }
-        response = self.client.post('/api/execution/jobs', json=req_payload)
+        response = self.client.post('/api/execution/jobs', json=req_payload, headers=self.auth_headers)
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data['status'], 'PASSED')
@@ -54,7 +96,7 @@ class TestSecureSandbox(unittest.TestCase):
             'challenge_id': 'arena-py-code-01',
             'language': 'python'
         }
-        response = self.client.post('/api/execution/jobs', json=req_payload)
+        response = self.client.post('/api/execution/jobs', json=req_payload, headers=self.auth_headers)
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data['status'], 'PASSED')
@@ -94,10 +136,10 @@ print("DB_URL:" + str(os.environ.get("DATABASE_URL")))
 
     def test_get_job_by_id(self):
         req_payload = {'code': 'print(42)', 'language': 'python'}
-        create_res = self.client.post('/api/execution/jobs', json=req_payload)
+        create_res = self.client.post('/api/execution/jobs', json=req_payload, headers=self.auth_headers)
         self.assertEqual(create_res.status_code, 200)
         job_id = create_res.json()['job_id']
-        get_res = self.client.get(f'/api/execution/jobs/{job_id}')
+        get_res = self.client.get(f'/api/execution/jobs/{job_id}', headers=self.auth_headers)
         self.assertEqual(get_res.status_code, 200)
         data = get_res.json()
         self.assertEqual(data['job_id'], job_id)

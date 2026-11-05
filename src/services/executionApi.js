@@ -9,7 +9,7 @@
  */
 
 import { fetchWithTimeout, DEFAULT_TIMEOUT_MS } from '../utils/fetchWithTimeout';
-import { BACKEND_BASE_URL } from './apiConfig';
+import { BACKEND_BASE_URL, authenticatedFetch } from './apiConfig';
 
 export const executionApi = {
   /**
@@ -51,7 +51,7 @@ export const executionApi = {
     test_cases = null
   }) {
     try {
-      const response = await fetchWithTimeout(
+      const response = await authenticatedFetch(
         `${BACKEND_BASE_URL}/api/execution/jobs`,
         {
           method: 'POST',
@@ -67,8 +67,7 @@ export const executionApi = {
             preferred_executor,
             test_cases
           })
-        },
-        DEFAULT_TIMEOUT_MS
+        }
       );
       if (!response.ok) {
         throw new Error(`Execution submission error: ${response.status}`);
@@ -85,10 +84,9 @@ export const executionApi = {
    */
   async getJob(jobId) {
     try {
-      const response = await fetchWithTimeout(
+      const response = await authenticatedFetch(
         `${BACKEND_BASE_URL}/api/execution/jobs/${encodeURIComponent(jobId)}`,
-        { headers: { Accept: 'application/json' } },
-        DEFAULT_TIMEOUT_MS
+        { headers: { Accept: 'application/json' } }
       );
       if (!response.ok) {
         throw new Error(`Get job error: ${response.status}`);

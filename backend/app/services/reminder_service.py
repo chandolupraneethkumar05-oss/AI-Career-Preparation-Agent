@@ -310,51 +310,95 @@ class ProactiveReminderService:
             name = user.name
             streak = user.streak
 
-        # Call Email Service
-        email_svc = get_email_service()
-        result = email_svc.send_email(
-            recipient_email=recipient,
-            candidate_name=name,
-            target_role=role,
-            current_streak=streak,
-            drill_title=drill_info["drill_title"],
-            drill_prompt=drill_info["drill_prompt"],
-            primary_skill=drill_info["primary_skill"],
-            subject=drill_info["subject"]
-        )
+        # Atomic pre-reservation to prevent concurrent multi-worker dispatch races
+        log_entry = None
+        if not is_test:
+            existing_log = db.query(ReminderLog).filter(
+                ReminderLog.user_id == user_id,
+                ReminderLog.reminder_date == today_date_str
+            ).first()
+            if existing_log and existing_log.status in ["sent", "development", "pending"]:
+                logger.info(f"Reminder already claimed/dispatched today for {user_id}")
+                return {"status": "skipped", "reason": "Already dispatched or claimed today", "delivered": False, "email_sent": False}
 
-        # Log into reminder_logs table in SQLite with concurrency duplicate protection
-        existing_log = db.query(ReminderLog).filter(
-            ReminderLog.user_id == user_id,
-            ReminderLog.reminder_date == today_date_str
-        ).first()
+            # Atomically insert pending record before external email call
+            if not existing_log:
+                log_entry = ReminderLog(
+                    user_id=user_id,
+                    reminder_date=today_date_str,
+                    reminder_type=drill_info["reminder_type"],
+                    subject=drill_info["subject"],
+                    message="Dispatching...",
+                    status="pending",
+                    sent_at=utc_now(),
+                    created_at=utc_now()
+                )
+                try:
+                    db.add(log_entry)
+                    db.commit()
+                    db.refresh(log_entry)
+                except Exception as insert_exc:
+                    db.rollback()
+                    logger.warning(f"Concurrent multi-worker reminder race prevented: {insert_exc}")
+                    return {"status": "skipped", "reason": "Concurrent worker already claimed reminder", "delivered": False, "email_sent": False}
+            else:
+                log_entry = existing_log
 
-        if existing_log:
-            existing_log.status = result["status"]
-            existing_log.subject = result["subject"]
-            existing_log.message = drill_info["drill_prompt"]
-            existing_log.sent_at = utc_now()
-            db.commit()
-        else:
-            log_entry = ReminderLog(
-                user_id=user_id,
-                reminder_date=today_date_str,
-                reminder_type=drill_info["reminder_type"],
-                subject=result["subject"],
-                message=drill_info["drill_prompt"],
-                status=result["status"],
-                sent_at=utc_now(),
-                created_at=utc_now()
+        # Call Email Service with strict error handling and audit tracking
+        try:
+            email_svc = get_email_service()
+            result = email_svc.send_email(
+                recipient_email=recipient,
+                candidate_name=name,
+                target_role=role,
+                current_streak=streak,
+                drill_title=drill_info["drill_title"],
+                drill_prompt=drill_info["drill_prompt"],
+                primary_skill=drill_info["primary_skill"],
+                subject=drill_info["subject"]
             )
-            try:
-                db.add(log_entry)
-                db.commit()
-                db.refresh(log_entry)
-            except Exception as insert_exc:
-                db.rollback()
-                logger.warning(f"Concurrent reminder dispatch duplicate caught: {insert_exc}")
 
-        return result
+            if log_entry:
+                log_entry.status = result.get("status", "sent")
+                log_entry.subject = result.get("subject", drill_info["subject"])
+                log_entry.message = drill_info["drill_prompt"]
+                log_entry.sent_at = utc_now()
+                db.commit()
+            elif is_test:
+                existing_log = db.query(ReminderLog).filter(
+                    ReminderLog.user_id == user_id,
+                    ReminderLog.reminder_date == today_date_str
+                ).first()
+                if existing_log:
+                    existing_log.status = result.get("status", "development")
+                    existing_log.subject = result.get("subject", drill_info["subject"])
+                    existing_log.message = drill_info["drill_prompt"]
+                    existing_log.sent_at = utc_now()
+                    db.commit()
+                else:
+                    test_log = ReminderLog(
+                        user_id=user_id,
+                        reminder_date=today_date_str,
+                        reminder_type="test_reminder",
+                        subject=result.get("subject", drill_info["subject"]),
+                        message=drill_info["drill_prompt"],
+                        status=result.get("status", "development"),
+                        sent_at=utc_now(),
+                        created_at=utc_now()
+                    )
+                    db.add(test_log)
+                    db.commit()
+
+            return result
+        except Exception as send_err:
+            if log_entry:
+                try:
+                    log_entry.status = "failed"
+                    log_entry.message = f"Delivery failed: {str(send_err)}"
+                    db.commit()
+                except Exception:
+                    db.rollback()
+            raise
 
     def get_reminder_status(self, user_id: str, db: Session) -> ReminderStatusResponse:
         """Computes comprehensive reminder status for candidate settings."""

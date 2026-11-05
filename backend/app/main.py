@@ -13,19 +13,23 @@ os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 import logging
+import time
+import uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import settings
+from .core.logging_config import setup_structured_logging, correlation_id_ctx, ai_metrics_tracker
 from .db.database import init_db
 from .api.router import api_router
 from .services.scheduler import proactive_scheduler
 from .models.schemas import HealthResponse
 
+# Initialize production-grade structured JSON logging
+setup_structured_logging()
 logger = logging.getLogger("main")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 
 @asynccontextmanager
@@ -66,6 +70,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def correlation_and_timing_middleware(request, call_next):
+    """Assigns unique correlation ID and monitors request duration."""
+    cid = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    token = correlation_id_ctx.set(cid)
+    start_time = time.perf_counter()
+    try:
+        response = await call_next(request)
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        response.headers["X-Request-ID"] = cid
+        response.headers["X-Response-Time-MS"] = str(duration_ms)
+        logger.info(
+            f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms}ms)",
+            extra={
+                "event": "http_request",
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "duration_ms": duration_ms
+            }
+        )
+        return response
+    finally:
+        correlation_id_ctx.reset(token)
 
 
 @app.middleware("http")
@@ -123,6 +153,18 @@ def readiness_check():
                 "error": str(exc)
             }
         )
+
+
+@app.get("/api/monitoring/metrics", tags=["System"])
+def telemetry_metrics():
+    """Telemetry metrics endpoint for observability, latency, and AI provider reliability."""
+    return {
+        "status": "healthy",
+        "service": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "scheduler": proactive_scheduler.get_status(),
+        "ai_metrics": ai_metrics_tracker.get_metrics()
+    }
 
 
 # -------------------------------------------------------------------------

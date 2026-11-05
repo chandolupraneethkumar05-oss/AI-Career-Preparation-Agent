@@ -15,6 +15,36 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
   const feedbackLang = sessionSummary?.feedbackLanguage || setup?.feedbackLanguage || 'en';
 
   const scores = sessionSummary?.scores || {};
+  const answersCount = (sessionAnswers || []).filter(a => a.answer && a.answer.trim().length > 0 && !a.isSkipped).length;
+  const isUnattempted = answersCount === 0 && (scores.overall === 0 || !sessionAnswers || sessionAnswers.length === 0);
+
+  if (isUnattempted) {
+    return {
+      overallScore: 0,
+      targetRole,
+      interviewType,
+      feedbackLanguage: feedbackLang,
+      rubricScores: {
+        technicalKnowledge: 0,
+        problemSolving: 0,
+        communicationSTAR: 0,
+        promptRelevance: 0,
+        confidenceDelivery: 0
+      },
+      dimensions: [
+        { name: 'Technical Depth', score: 0, status: 'Not Evaluated', feedback: 'No responses submitted for evaluation.' },
+        { name: 'Problem Solving', score: 0, status: 'Not Evaluated', feedback: 'No responses submitted for evaluation.' },
+        { name: 'Communication (STAR)', score: 0, status: 'Not Evaluated', feedback: 'No responses submitted for evaluation.' },
+        { name: 'Prompt Relevance', score: 0, status: 'Not Evaluated', feedback: 'No responses submitted for evaluation.' },
+        { name: 'Confidence & Delivery', score: 0, status: 'Not Evaluated', feedback: 'No responses submitted for evaluation.' }
+      ],
+      strengths: [],
+      improvements: ['Submit answers to interview questions to evaluate technical and architectural depth.'],
+      recommendations: ['Complete interview questions to receive calibrated hiring committee feedback.'],
+      summary: 'Session concluded with 0 answered questions.',
+      fallbackNotice: null
+    };
+  }
 
   // Extract or dynamically calculate the 5 core rubric dimension scores (0 - 100 scale)
   let techScore = scores.technicalKnowledge;

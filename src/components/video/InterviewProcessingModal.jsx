@@ -54,39 +54,23 @@ export default function InterviewProcessingModal({
     let isMounted = true;
 
     const runProcessing = async () => {
-      // Step 1: Saving recording
-      setCurrentStepIndex(0);
-      await new Promise(r => setTimeout(r, 600));
-
-      // Step 2: Transcribing
-      if (!isMounted) return;
-      setCurrentStepIndex(1);
-      await new Promise(r => setTimeout(r, 700));
-
-      // Step 3: Analyzing communication
-      if (!isMounted) return;
-      setCurrentStepIndex(2);
-
-      // Execute actual processing action if passed
       if (processAction) {
         try {
-          await processAction();
+          // Pass a dynamic step updater so active pipeline stages drive UI smoothly
+          await processAction((stepIdx) => {
+            if (isMounted) setCurrentStepIndex(stepIdx);
+          });
         } catch (e) {
           console.warn('[InterviewProcessingModal] processing action error:', e);
         }
       } else {
-        await new Promise(r => setTimeout(r, 700));
+        // Fallback simulation when no custom processor passed
+        for (let i = 0; i < 5; i++) {
+          if (!isMounted) return;
+          setCurrentStepIndex(i);
+          await new Promise(r => setTimeout(r, 600));
+        }
       }
-
-      // Step 4: Evaluating
-      if (!isMounted) return;
-      setCurrentStepIndex(3);
-      await new Promise(r => setTimeout(r, 600));
-
-      // Step 5: Compiling feedback
-      if (!isMounted) return;
-      setCurrentStepIndex(4);
-      await new Promise(r => setTimeout(r, 600));
 
       if (isMounted) {
         setCurrentStepIndex(5);

@@ -5,7 +5,7 @@ AI Career Preparation Agent
 
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ExperienceQuestionCreate(BaseModel):
@@ -16,6 +16,8 @@ class ExperienceQuestionCreate(BaseModel):
 
 
 class ExperienceQuestionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     experience_id: Optional[str] = None
     question_text: str
@@ -23,9 +25,6 @@ class ExperienceQuestionResponse(BaseModel):
     topic: str
     difficulty: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class InterviewExperienceCreate(BaseModel):
@@ -69,6 +68,8 @@ class InterviewExperienceUpdate(BaseModel):
 
 
 class InterviewExperienceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     role: str
@@ -92,9 +93,6 @@ class InterviewExperienceResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     is_owner: bool = False
-
-    class Config:
-        from_attributes = True
 
 
 class ExperienceFilterParams(BaseModel):

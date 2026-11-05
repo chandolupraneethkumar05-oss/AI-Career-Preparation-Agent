@@ -486,13 +486,23 @@ export function InterviewProvider({ children }) {
     });
 
     const count = answers.length;
-    let finalScores = {
-      overall: count > 0 ? Math.round((totalOverall / count) * 10) : 0,
-      technicalKnowledge: count > 0 ? Math.round((totalTech / count) * 10) : 0,
-      relevance: count > 0 ? Math.round((totalRel / count) * 10) : 0,
-      clarity: count > 0 ? Math.round((totalClarity / count) * 10) : 0,
-      structure: count > 0 ? Math.round((totalStruct / count) * 10) : 0,
-      confidence: count > 0 ? Math.round((totalConf / count) * 10) : 0
+const isUnattempted = count === 0 || nonSkippedCount === 0;
+
+    let finalScores = isUnattempted ? {
+      overall: 0,
+      technicalKnowledge: 0,
+      relevance: 0,
+      clarity: 0,
+      structure: 0,
+      confidence: 0
+    } : {
+      overall: Math.round((totalOverall / count) * 10),
+      technicalKnowledge: Math.round((totalTech / count) * 10),
+      relevance: Math.round((totalRel / count) * 10),
+      clarity: Math.round((totalClarity / count) * 10),
+      structure: Math.round((totalStruct / count) * 10),
+      confidence: Math.round((totalConf / count) * 10)
+    };
     };
     if (nonSkippedCount === 0) {
       finalScores = {
@@ -505,14 +515,20 @@ export function InterviewProvider({ children }) {
       };
     }
 
-    let allStrengths = Array.from(new Set(answers.flatMap(a => a.evaluation.strengths))).slice(0, 4);
-    let allImprovements = Array.from(new Set(answers.flatMap(a => a.evaluation.areasToImprove))).slice(0, 3);
-    let finalRecommendation = 'Focus on structuring your answers using real-world metrics, and deepen your explanation of system failure modes.';
+    let allStrengths = isUnattempted ? [] : Array.from(new Set(answers.flatMap(a => a.evaluation.strengths))).slice(0, 4);
+    let allImprovements = isUnattempted
+      ? ['Submit answers to interview questions to evaluate technical and architectural depth.']
+      : Array.from(new Set(answers.flatMap(a => a.evaluation.areasToImprove))).slice(0, 3);
+    let finalRecommendation = isUnattempted
+      ? 'No responses were submitted for evaluation. Complete interview questions to receive calibrated hiring committee feedback.'
+      : 'Focus on structuring your answers using real-world metrics, and deepen your explanation of system failure modes.';
 
-    if (finalScores.overall >= 85) {
-      finalRecommendation = 'Outstanding performance! You are performing at a senior candidate level. Focus next on executive communication and high-scale architecture tradeoffs.';
-    } else if (finalScores.overall < 70) {
-      finalRecommendation = 'Recommend revisiting foundational concepts and preparing structured project stories using the STAR method.';
+    if (!isUnattempted) {
+      if (finalScores.overall >= 85) {
+        finalRecommendation = 'Outstanding performance! You are performing at a senior candidate level. Focus next on executive communication and high-scale architecture tradeoffs.';
+      } else if (finalScores.overall < 70) {
+        finalRecommendation = 'Recommend revisiting foundational concepts and preparing structured project stories using the STAR method.';
+      }
     }
 
     let backendReport = null;
@@ -522,12 +538,12 @@ export function InterviewProvider({ children }) {
 
         if (backendReport) {
           finalScores = {
-            overall: backendReport.overall_score,
-            technicalKnowledge: backendReport.rubric_scores?.technicalKnowledge || finalScores.technicalKnowledge,
-            relevance: backendReport.rubric_scores?.problemSolving || finalScores.relevance,
-            clarity: backendReport.rubric_scores?.communicationSTAR || finalScores.clarity,
-            structure: backendReport.rubric_scores?.systemDesign || finalScores.structure,
-            confidence: backendReport.rubric_scores?.confidenceDelivery || finalScores.confidence
+            overall: backendReport.overall_score ?? finalScores.overall,
+            technicalKnowledge: backendReport.rubric_scores?.technicalKnowledge ?? finalScores.technicalKnowledge,
+            relevance: backendReport.rubric_scores?.problemSolving ?? finalScores.relevance,
+            clarity: backendReport.rubric_scores?.communicationSTAR ?? finalScores.clarity,
+            structure: backendReport.rubric_scores?.systemDesign ?? finalScores.structure,
+            confidence: backendReport.rubric_scores?.confidenceDelivery ?? finalScores.confidence
           };
           if (backendReport.strengths?.length) allStrengths = backendReport.strengths;
           if (backendReport.weaknesses?.length) allImprovements = backendReport.weaknesses;
@@ -549,7 +565,7 @@ export function InterviewProvider({ children }) {
     let committeeVerdict = 'Lean Hire';
     let committeeReasoning = 'Candidate demonstrated solid baseline competence with areas for growth.';
 
-    if (nonSkippedCount === 0 || finalScores.overall === 0) {
+if (isUnattempted || finalScores.overall === 0) {
       committeeVerdict = 'No Hire';
       committeeReasoning = 'Candidate did not provide verbal or written defenses for the questions. Complete focused drills before re-evaluating.';
     } else if (finalScores.overall >= 88 && rubricCoveragePct >= 75 && weakCount === 0) {
@@ -578,7 +594,15 @@ export function InterviewProvider({ children }) {
       status: 'Target Met'
     };
 
-    if (finalScores.overall >= 90) {
+    if (isUnattempted) {
+      seniorityBenchmark = {
+        level: 'Not Evaluated',
+        title: 'Session Incomplete',
+        scope: 'No responses provided during this interview session.',
+        targetYears: 'N/A',
+        status: 'Unattempted'
+      };
+    } else if (finalScores.overall >= 90) {
       seniorityBenchmark = {
         level: 'L6 — Staff / Principal Architect',
         title: 'Staff Engineer / Principal Systems Architect',
@@ -605,8 +629,8 @@ export function InterviewProvider({ children }) {
     }
 
     // Canonical 4-Pillar Industry Rubric
-    const baseAutonomy = finalScores.confidence || 80;
-    const autonomyScore = Math.min(100, Math.max(45,
+    const baseAutonomy = finalScores.confidence || (isUnattempted ? 0 : 80);
+    const autonomyScore = isUnattempted ? 0 : Math.min(100, Math.max(0,
       totalHintsUsed === 0 ? Math.min(100, baseAutonomy + 8) :
       totalHintsUsed === 1 ? Math.min(95, baseAutonomy + 2) :
       totalHintsUsed === 2 ? Math.max(60, baseAutonomy - 8) :
@@ -616,32 +640,34 @@ export function InterviewProvider({ children }) {
     const industryPillars = {
       algorithmicDepth: {
         name: 'Algorithmic & Technical Depth',
-        score: Math.min(100, Math.max(45, finalScores.technicalKnowledge ?? finalScores.overall)),
-        criteria: 'Correctness, optimal time/space complexity (Big-O), and edge-case handling',
-        status: (finalScores.technicalKnowledge ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.technicalKnowledge ?? finalScores.overall) >= 65 ? 'Proficient' : 'Developing'
+        score: isUnattempted ? 0 : Math.min(100, Math.max(0, finalScores.technicalKnowledge ?? finalScores.overall)),
+        criteria: isUnattempted ? 'No candidate response submitted for algorithmic depth evaluation.' : 'Correctness, optimal time/space complexity (Big-O), and edge-case handling',
+        status: isUnattempted ? 'Not Evaluated' : (finalScores.technicalKnowledge ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.technicalKnowledge ?? finalScores.overall) >= 65 ? 'Proficient' : (finalScores.technicalKnowledge ?? finalScores.overall) > 0 ? 'Developing' : 'Not Evaluated'
       },
       architectureQuality: {
         name: 'Architecture & Code Quality',
-        score: Math.min(100, Math.max(45, finalScores.structure ?? finalScores.overall)),
-        criteria: 'Modular design, fault tolerance, scalability, and trade-off justification',
-        status: (finalScores.structure ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.structure ?? finalScores.overall) >= 65 ? 'Proficient' : 'Developing'
+        score: isUnattempted ? 0 : Math.min(100, Math.max(0, finalScores.structure ?? finalScores.overall)),
+        criteria: isUnattempted ? 'No candidate response submitted for architecture evaluation.' : 'Modular design, fault tolerance, scalability, and trade-off justification',
+        status: isUnattempted ? 'Not Evaluated' : (finalScores.structure ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.structure ?? finalScores.overall) >= 65 ? 'Proficient' : (finalScores.structure ?? finalScores.overall) > 0 ? 'Developing' : 'Not Evaluated'
       },
       communicationPacing: {
         name: 'Communication & Thought Process',
-        score: Math.min(100, Math.max(45, finalScores.clarity ?? finalScores.overall)),
-        criteria: 'Structured answers (STAR / Top-Down), speaking clarity, and proactive clarification',
-        status: (finalScores.clarity ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.clarity ?? finalScores.overall) >= 65 ? 'Proficient' : 'Developing'
+        score: isUnattempted ? 0 : Math.min(100, Math.max(0, finalScores.clarity ?? finalScores.overall)),
+        criteria: isUnattempted ? 'No candidate response submitted for communication evaluation.' : 'Structured answers (STAR / Top-Down), speaking clarity, and proactive clarification',
+        status: isUnattempted ? 'Not Evaluated' : (finalScores.clarity ?? finalScores.overall) >= 80 ? 'Exceptional' : (finalScores.clarity ?? finalScores.overall) >= 65 ? 'Proficient' : (finalScores.clarity ?? finalScores.overall) > 0 ? 'Developing' : 'Not Evaluated'
       },
       autonomyCoachability: {
         name: 'Autonomy & Coachability',
-        score: autonomyScore,
-        criteria: totalHintsUsed === 0
+        score: isUnattempted ? 0 : autonomyScore,
+        criteria: isUnattempted
+          ? 'No candidate response submitted for autonomy evaluation.'
+          : totalHintsUsed === 0
           ? 'Answered all interview questions independently without needing hints (0 hints used)'
           : totalHintsUsed === 1
           ? 'High independence; used 1 coach hint and applied it immediately'
           : `Used ${totalHintsUsed} coach hints; showed good coachability with guided problem solving`,
         hintsUsed: totalHintsUsed,
-        status: autonomyScore >= 85 ? 'Exceptional' : autonomyScore >= 70 ? 'Proficient' : 'Developing'
+        status: isUnattempted ? 'Not Evaluated' : autonomyScore >= 85 ? 'Exceptional' : autonomyScore >= 70 ? 'Proficient' : autonomyScore > 0 ? 'Developing' : 'Not Evaluated'
       }
     };
 

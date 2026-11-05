@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from ...db.database import get_db
 from ...db.models import User, Interview
 from ..deps import get_optional_current_user, get_current_user
+from ...core.security import decode_access_token
 from ...services.peer_room_service import (
     default_peer_room_service,
     default_reverse_interview_service,
@@ -108,7 +109,7 @@ async def get_or_generate_peer_report(room_id: str):
     try:
         report = await asyncio.wait_for(
             loop.run_in_executor(None, default_peer_room_service.generate_360_evaluation, room),
-            timeout=2.5
+            timeout=25.0
         )
     except Exception as exc:
         logger.warning(f"Peer report generation fell back to instant grounded evaluation: {exc}")
@@ -251,11 +252,20 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
             # 1. Join / Role Assignment
             # -------------------------------------------------------------
             if msg_type == "join":
+                token = data.get("token") or websocket.query_params.get("token")
                 client_role = data.get("role", "candidate")
                 client_id = data.get("clientId") or f"client_{id(websocket)}"
                 user_id = data.get("userId") or f"user_{id(websocket)}"
                 user_name = data.get("userName") or ("Interviewer" if client_role == "interviewer" else "Candidate")
                 user_avatar = data.get("userAvatar") or data.get("avatar")
+
+                # If a token is provided, cryptographically verify candidate identity
+                if token:
+                    token_claims = decode_access_token(token)
+                    if token_claims and "sub" in token_claims:
+                        user_id = token_claims["sub"]
+                        if token_claims.get("name"):
+                            user_name = token_claims["name"]
 
                 res = await default_peer_room_service.register_participant(
                     room_id=norm_room_id,
@@ -312,6 +322,13 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
             # 2. Role Selection in Lobby & Dynamic Role Swapping
             # -------------------------------------------------------------
             elif msg_type == "set_role":
+                if room.status != "waiting":
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Access Denied: Role modifications are strictly locked once the interview session is active."
+                    })
+                    continue
+
                 target_role = data.get("role")
                 if target_role in ("interviewer", "candidate"):
                     await default_peer_room_service.set_participant_role(norm_room_id, websocket, target_role)
@@ -330,6 +347,13 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
                         })
 
             elif msg_type == "role_swap":
+                if room.status != "waiting":
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Access Denied: Role swapping is strictly locked once the interview session is active."
+                    })
+                    continue
+
                 res = await default_peer_room_service.swap_roles(norm_room_id)
                 if res["success"]:
                     assigned_role = "candidate" if assigned_role == "interviewer" else "interviewer"
@@ -392,6 +416,13 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
             # 5. AI Proctor: Request Calibrated Question (Teleprompter)
             # -------------------------------------------------------------
             elif msg_type == "request_ai_question":
+                if assigned_role != "interviewer":
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Access Denied: Only the assigned interviewer may request AI teleprompter questions."
+                    })
+                    continue
+
                 q_num = len(room.questions) + 1
                 loop = asyncio.get_running_loop()
                 try:
@@ -437,6 +468,13 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
             # 6. Push Question to Candidate Screen
             # -------------------------------------------------------------
             elif msg_type == "push_question_to_candidate":
+                if assigned_role != "interviewer":
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Access Denied: Only the assigned interviewer can push questions to candidate."
+                    })
+                    continue
+
                 if room.current_question:
                     payload = {
                         "type": "active_question",
@@ -517,6 +555,13 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
             # 8. Interviewer Private Notes & Rating
             # -------------------------------------------------------------
             elif msg_type == "submit_note":
+                if assigned_role != "interviewer":
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Access Denied: Only the assigned interviewer can record interviewer evaluation notes."
+                    })
+                    continue
+
                 note_text = data.get("note", "")
                 rating = data.get("rating", 4)
                 room.interviewer_notes.append({
@@ -530,6 +575,13 @@ async def peer_room_websocket(websocket: WebSocket, room_id: str):
             # 9. Conclude Session & Broadcast 360° Joint Report
             # -------------------------------------------------------------
             elif msg_type == "conclude_session":
+                if assigned_role not in ("interviewer", "candidate"):
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Access Denied: Only active room participants can conclude the session."
+                    })
+                    continue
+
                 room.status = "concluded"
                 loop = asyncio.get_running_loop()
                 try:

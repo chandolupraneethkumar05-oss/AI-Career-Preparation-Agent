@@ -65,7 +65,8 @@ class ProactiveScheduler:
                     else:
                         logger.debug(f"User {pref.user_id} skipped: {reason}")
                 except Exception as user_exc:
-                    logger.error(f"Error processing reminder for user {pref.user_id}: {user_exc}")
+                    db.rollback()
+                    logger.error(f"Error processing reminder for user {pref.user_id}: {user_exc}", exc_info=True)
         finally:
             db.close()
 

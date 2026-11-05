@@ -128,17 +128,36 @@ export default function ATSScannerPage() {
     }
 
     setIsScanning(true);
-    setScanProgress(25);
-    setScanStage('Ingesting and parsing document structure...');
+    setScanProgress(3);
+    setScanStage('Ingesting document and parsing section hierarchy...');
     setErrorMessage(null);
+
+    // Continuous, smooth 1% - 100% multi-stage progression (no freezing at 55%)
+    let currentPct = 3;
+    const progressTimer = setInterval(() => {
+      if (currentPct < 92) {
+        // Natural gradual acceleration & micro-increments
+        const step = currentPct < 25 ? 1.8 : currentPct < 55 ? 1.2 : currentPct < 80 ? 0.9 : 0.4;
+        currentPct = Math.min(92, Math.round((currentPct + step) * 10) / 10);
+        setScanProgress(Math.floor(currentPct));
+
+        if (currentPct >= 18 && currentPct < 45) {
+          setScanStage('Extracting verified technical stack, tools, and experience metrics...');
+        } else if (currentPct >= 45 && currentPct < 70) {
+          setScanStage(`Benchmarking syntax and keywords for ${user?.targetRole || 'Target Role'}...`);
+        } else if (currentPct >= 70 && currentPct < 85) {
+          setScanStage('Evaluating action verb conviction & quantifiable achievement metrics...');
+        } else if (currentPct >= 85) {
+          setScanStage('Calibrating multi-dimensional ATS rubric and tailored action items...');
+        }
+      }
+    }, 85);
 
     try {
       const targetRole = user?.targetRole || 'Machine Learning Engineer';
       const userId = user?.id || 'user-001';
 
       let analysisResult = null;
-      setScanProgress(55);
-      setScanStage(`Analyzing competencies, keywords, and relevance for ${targetRole}...`);
 
       try {
         if (inputMode === 'file' && uploadedFile) {
@@ -158,7 +177,7 @@ export default function ATSScannerPage() {
         }
       } catch (backendErr) {
         if (import.meta.env.DEV) console.debug('[ATSScanner] Backend offline or returned error, utilizing local parser fallback:', backendErr);
-        // Resilient fallback using client-side engine
+        // Resilient fallback using client-side engine (preserving exact scoring algorithm)
         const rawText = inputMode === 'file' && uploadedFile ? await extractTextFromFile(uploadedFile) : textToAnalyze;
         if (!rawText) {
           throw new Error('Unable to extract text from the uploaded file. Please switch to the "Paste Text" tab.');
@@ -172,20 +191,29 @@ export default function ATSScannerPage() {
         storageService.setATSResult(analysisResult);
       }
 
-      setScanProgress(90);
-      setScanStage('Synthesizing ATS match scores and tailored remediation...');
+      clearInterval(progressTimer);
+
+      // Smooth rapid ascent from currentPct -> 100% upon analysis completion
+      setScanProgress(96);
+      setScanStage('Synthesizing final diagnostic report and ATS benchmarks...');
 
       setTimeout(() => {
         setScanProgress(100);
-        setIsScanning(false);
-        setResults(analysisResult);
-        addXP(35);
-        analyzeSkillGaps();
-        achievementService.evaluateAchievements();
-      }, 250);
+        setScanStage('Audit Complete! Rendering verified scorecard...');
+
+        setTimeout(() => {
+          setIsScanning(false);
+          setResults(analysisResult);
+          addXP(35);
+          analyzeSkillGaps();
+          achievementService.evaluateAchievements();
+        }, 320);
+      }, 240);
     } catch (err) {
+      clearInterval(progressTimer);
       if (import.meta.env.DEV) console.debug('[ATSScanner] Analysis error:', err);
       setIsScanning(false);
+      setScanProgress(0);
       setErrorMessage(
         err.message || 'Failed to analyze resume. Please ensure you uploaded a valid, text-based PDF or DOCX file, or paste your text directly.'
       );
@@ -380,117 +408,124 @@ export default function ATSScannerPage() {
 
       </div>
 
-      {/* Scanning Active Progress State with High-Tech Emerald Document Scanner */}
+      {/* Enhanced Active ATS Progress State with Smooth 0-100% Progression */}
       {isScanning && (
-        <GlassCard className="relative p-6 sm:p-8 border-emerald-300 bg-white shadow-md overflow-hidden text-center">
+        <GlassCard className="relative p-6 sm:p-8 border-emerald-400/80 bg-gradient-to-b from-white to-[#F9FBFA] shadow-xl overflow-hidden text-center rounded-2xl">
           {/* Animated Laser Scanning Beam */}
-          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 shadow-[0_0_14px_#059669] animate-pulse" />
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 shadow-[0_0_16px_#10B981] animate-pulse" />
 
-          <div className="max-w-md mx-auto space-y-5">
+          <div className="max-w-lg mx-auto space-y-5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-left">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-2xs">
-                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/90 flex items-center justify-center text-emerald-600 shadow-xs">
+                  <RefreshCw className="w-5 h-5 animate-spin text-emerald-600" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 tracking-tight">ATS Audit Engine Scanning</h4>
-                  <p className="text-xs text-slate-500">Benchmarking syntax &amp; keywords against {targetRole}</p>
+                  <h4 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>ATS Audit Engine Active</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  </h4>
+                  <p className="text-xs text-slate-500">Benchmarking syntax, formatting &amp; keywords against {targetRole}</p>
                 </div>
               </div>
-              <span className="text-sm font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                {scanProgress}%
-              </span>
+              <div className="flex flex-col items-end">
+                <span className="text-base font-mono font-bold text-emerald-700 bg-emerald-50/80 px-3 py-1 rounded-lg border border-emerald-300 shadow-2xs">
+                  {scanProgress}%
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5 font-mono">Progress (0 - 100%)</span>
+              </div>
             </div>
 
-            {/* Interactive Laser Document Scanner Animation */}
-            <div className="relative p-5 rounded-xl bg-slate-950 border border-emerald-500/30 overflow-hidden text-left shadow-lg">
-              {/* Animated Laser Scanning Beam */}
+            {/* Interactive Laser Document Scanner Simulation */}
+            <div className="relative p-5 rounded-xl bg-slate-950 border border-emerald-500/40 overflow-hidden text-left shadow-2xl">
+              {/* Dynamic Laser Beam */}
               <div 
-                className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_rgba(52,211,153,1)] z-10 pointer-events-none transition-all duration-300 ease-out"
+                className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_18px_rgba(52,211,153,1)] z-10 pointer-events-none transition-all duration-150 ease-linear"
                 style={{ top: `${Math.min(95, Math.max(5, scanProgress))}%` }}
               />
               <div 
-                className="absolute inset-x-0 h-16 bg-gradient-to-b from-emerald-500/10 to-transparent pointer-events-none transition-all duration-300 ease-out"
-                style={{ top: `${Math.max(0, Math.min(85, scanProgress - 10))}%` }}
+                className="absolute inset-x-0 h-20 bg-gradient-to-b from-emerald-500/15 to-transparent pointer-events-none transition-all duration-150 ease-linear"
+                style={{ top: `${Math.max(0, Math.min(80, scanProgress - 12))}%` }}
               />
 
-              {/* Document Header & Structure Tokens */}
+              {/* Document Header & Active Stage Pill */}
               <div className="space-y-3 relative z-0">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-emerald-400" />
                     <span className="text-xs font-mono font-bold text-slate-200">
-                      {fileName || 'Document_Payload.pdf'}
+                      {fileName || (inputMode === 'text' ? 'Pasted_Resume_Text.txt' : 'Document_Payload.pdf')}
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800">
-                    {scanStage}
+                  <span className="px-2.5 py-0.5 rounded text-[10px] font-mono bg-emerald-950/90 text-emerald-400 border border-emerald-700 flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{scanStage}</span>
                   </span>
                 </div>
 
-                {/* Simulated Document Sections with Active Scanning Token Highlighting */}
+                {/* Simulated Document Sections with Dynamic Token Highlighting */}
                 <div className="space-y-2 font-mono text-[11px]">
                   <div className="flex items-center gap-2">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scanProgress >= 20 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${scanProgress >= 15 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-2xs' : 'bg-slate-900 text-slate-500'}`}>
                       SECTION: HEADER &amp; CONTACT
                     </span>
-                    <div className="h-1.5 bg-slate-800 rounded flex-1" />
+                    <div className="h-1.5 bg-slate-800/80 rounded flex-1" />
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scanProgress >= 45 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
-                      SKILLS MATRIX
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${scanProgress >= 40 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-2xs' : 'bg-slate-900 text-slate-500'}`}>
+                      SKILLS TAXONOMY
                     </span>
                     <div className="flex gap-1.5 flex-1">
-                      <span className={`px-2 py-0.5 rounded text-[10px] ${scanProgress >= 50 ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/60' : 'bg-slate-900 text-slate-600'}`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] transition-colors ${scanProgress >= 45 ? 'bg-emerald-900/70 text-emerald-300 border border-emerald-700/70 shadow-2xs' : 'bg-slate-900 text-slate-600'}`}>
                         Core Stack Match
                       </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] ${scanProgress >= 65 ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/60' : 'bg-slate-900 text-slate-600'}`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] transition-colors ${scanProgress >= 65 ? 'bg-emerald-900/70 text-emerald-300 border border-emerald-700/70 shadow-2xs' : 'bg-slate-900 text-slate-600'}`}>
                         Role Taxonomy: {targetRole}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scanProgress >= 70 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
-                      EXPERIENCE QUANTIFIERS
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${scanProgress >= 65 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-2xs' : 'bg-slate-900 text-slate-500'}`}>
+                      ACTION VERBS &amp; METRICS
                     </span>
-                    <div className="h-1.5 bg-slate-800 rounded flex-1" />
+                    <div className="h-1.5 bg-slate-800/80 rounded flex-1" />
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${scanProgress >= 90 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${scanProgress >= 85 ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-2xs' : 'bg-slate-900 text-slate-500'}`}>
                       ATS RUBRIC SYNTHESIS
                     </span>
                     <span className="text-[10px] text-emerald-400 animate-pulse font-mono">
-                      Calculating 100-pt rubric score...
+                      {scanProgress >= 95 ? 'Scorecard ready!' : 'Computing objective rubric match...'}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Progressive Diagnostic Checklist */}
-            <div className="space-y-1.5 text-xs text-left">
-              <div className={`flex items-center gap-2 ${scanProgress >= 20 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${scanProgress >= 20 ? 'text-emerald-600' : 'text-slate-300'}`} />
-                <span>1. Parsing document structure, sections, and layout fidelity</span>
+            {/* Progressive Diagnostic Real-Time Checklist */}
+            <div className="space-y-2 text-xs text-left p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 shadow-2xs">
+              <div className={`flex items-center gap-2.5 transition-colors ${scanProgress >= 15 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 transition-colors ${scanProgress >= 15 ? 'text-emerald-600' : 'text-slate-300'}`} />
+                <span>1. Parsing document sections, contact headers, and layout fidelity</span>
               </div>
-              <div className={`flex items-center gap-2 ${scanProgress >= 50 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${scanProgress >= 50 ? 'text-emerald-600' : 'text-slate-300'}`} />
+              <div className={`flex items-center gap-2.5 transition-colors ${scanProgress >= 45 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 transition-colors ${scanProgress >= 45 ? 'text-emerald-600' : 'text-slate-300'}`} />
                 <span>2. Cross-referencing verified skills with target {targetRole} requirements</span>
               </div>
-              <div className={`flex items-center gap-2 ${scanProgress >= 75 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${scanProgress >= 75 ? 'text-emerald-600' : 'text-slate-300'}`} />
+              <div className={`flex items-center gap-2.5 transition-colors ${scanProgress >= 70 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 transition-colors ${scanProgress >= 70 ? 'text-emerald-600' : 'text-slate-300'}`} />
                 <span>3. Evaluating quantifiable business metrics &amp; active verb conviction</span>
               </div>
-              <div className={`flex items-center gap-2 ${scanProgress >= 95 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${scanProgress >= 95 ? 'text-emerald-600' : 'text-slate-300'}`} />
+              <div className={`flex items-center gap-2.5 transition-colors ${scanProgress >= 90 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 transition-colors ${scanProgress >= 90 ? 'text-emerald-600' : 'text-slate-300'}`} />
                 <span>4. Generating ATS score calibration and tailored improvements</span>
               </div>
             </div>
 
-            <ProgressBar value={scanProgress} height="h-2" />
+            <ProgressBar value={scanProgress} height="h-2.5" />
           </div>
         </GlassCard>
       )}

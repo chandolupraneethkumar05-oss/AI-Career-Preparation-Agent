@@ -59,6 +59,13 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _safe_text_focus(data: dict) -> str:
+    raw = data.get("rubric_guidance") or data.get("rationale") or ""
+    if isinstance(raw, (dict, list)):
+        return json.dumps(raw)
+    return str(raw) if raw is not None else ""
+
+
 def get_vault_questions_for_role(db: Session, target_role: str, limit: int = 3) -> List[Dict[str, Any]]:
     """
     Retrieves approved interview questions contributed by users/community to the Question Vault,
@@ -245,7 +252,7 @@ class InterviewEngine:
             difficulty=q1_data["difficulty"],
             question_type=q1_data["question_type"],
             generated_source="Question Vault (Community Company Question)" if vault_chunks and ("vault" in str(q1_data).lower() or q1_data.get("source_type") == "rag_grounded") else q1_data["source_type"],
-            expected_focus=q1_data.get("rubric_guidance") or q1_data.get("rationale") or "",
+            expected_focus=_safe_text_focus(q1_data),
             rag_chunk_id=rag_chunks[0].get("id") if rag_chunks else None,
             is_follow_up=False,
             created_at=now
@@ -705,7 +712,7 @@ class InterviewEngine:
                 difficulty=next_q_data["difficulty"],
                 question_type=next_q_data["question_type"],
                 generated_source=next_source,
-                expected_focus=next_q_data.get("rubric_guidance") or next_q_data.get("rationale") or "",
+                expected_focus=_safe_text_focus(next_q_data),
                 rag_chunk_id=rag_chunks[0].get("id") if rag_chunks else None,
                 is_follow_up=is_follow_up,
                 created_at=utc_now()
@@ -855,52 +862,66 @@ class InterviewEngine:
 
         career_context = build_user_career_context(user_id, db)
 
-        # Synthesize final hiring committee report via dedicated Evaluator LLM
-        current_mode = getattr(interview, "interview_mode", "text") or "text"
-        final_data = get_interview_mode_llm_service(mode=current_mode, purpose="evaluator").generate_final_interview_feedback(
-            session=interview.as_dict(),
-            questions=q_dicts,
-            answers=a_dicts,
-            evaluations=e_dicts,
-            career_context=career_context,
-            language=interview.feedback_language or "en"
-        )
+        has_substantive_evals = any((e.overall_score or 0) > 0 for e in evaluations)
+        if not answers or not has_substantive_evals:
+            final_ov = 0
+            final_passed = False
+            final_rubrics = {
+                "technicalKnowledge": 0,
+                "problemSolving": 0,
+                "communicationSTAR": 0,
+                "systemDesign": 0,
+                "confidenceDelivery": 0
+            }
+            final_summary = "Interview concluded with 0 answered questions. No candidate responses were submitted for technical evaluation."
+            final_strengths = []
+            final_weaknesses = ["Submit responses to interview questions to evaluate technical and architectural depth."]
+            final_recs = ["Re-take the interview and provide verbal or written solutions to each question to generate calibrated metrics."]
+            final_data = {
+                "overall_score": 0,
+                "passed": False,
+                "rubric_scores": final_rubrics,
+                "feedback_summary": final_summary,
+                "strengths": final_strengths,
+                "weaknesses": final_weaknesses,
+                "recommendations": final_recs,
+                "next_best_action": {
+                    "title": "Start Practice Session",
+                    "action": "Answer Practice Questions",
+                    "route": "/mock-interview",
+                    "action_type": "practice",
+                    "reason": "Complete interview prompts to calibrate competency metrics."
+                },
+                "skill_gap_updates": []
+            }
+        else:
+            # Synthesize final hiring committee report via dedicated Evaluator LLM
+            current_mode = getattr(interview, "interview_mode", "text") or "text"
+            final_data = get_interview_mode_llm_service(mode=current_mode, purpose="evaluator").generate_final_interview_feedback(
+                session=interview.as_dict(),
+                questions=q_dicts,
+                answers=a_dicts,
+                evaluations=e_dicts,
+                career_context=career_context,
+                language=interview.feedback_language or "en"
+            )
+            final_ov = int(final_data.get("overall_score", 75))
+            final_passed = bool(final_data.get("passed", final_ov >= 75))
+            final_rubrics = final_data.get("rubric_scores") or {
+                "technicalKnowledge": final_ov,
+                "problemSolving": max(0, final_ov - 2),
+                "communicationSTAR": min(98, final_ov + 2),
+                "systemDesign": final_ov,
+                "confidenceDelivery": min(98, final_ov + 1)
+            }
+            final_summary = final_data.get("feedback_summary") or "Interview completed. Candidate demonstrated solid technical baseline."
+            final_strengths = final_data.get("strengths") or ["Core engineering fundamentals demonstrated"]
+            final_weaknesses = final_data.get("weaknesses") or ["Recommended deeper exploration of high-scale trade-offs"]
+            final_recs = final_data.get("recommendations") or ["Practice multi-tier system scalability drills"]
 
         now = utc_now()
         interview.status = "completed"
         interview.completed_at = now
-        all_evals = [e for e in evaluations if e is not None]
-        all_skipped = len(all_evals) > 0 and all(getattr(e, 'overall_score', 0) == 0 for e in all_evals)
-        raw_ov = final_data.get('overall_score')
-
-        if all_skipped:
-            final_ov = 0
-            final_passed = False
-            final_rubrics = {
-                'technicalKnowledge': 0,
-                'problemSolving': 0,
-                'communicationSTAR': 0,
-                'systemDesign': 0,
-                'confidenceDelivery': 0
-            }
-            final_summary = 'All inquiries were skipped in this interview session. No evaluable responses were submitted. Practice drills required to calibrate performance.'
-            final_strengths = []
-            final_weaknesses = ['All interview questions were skipped by candidate']
-            final_recs = ['Complete a full practice session with recorded verbal or written defenses']
-        else:
-            final_ov = int(raw_ov if raw_ov is not None else 75)
-            final_passed = bool(final_data.get('passed', final_ov >= 75))
-            final_rubrics = final_data.get('rubric_scores', {
-                'technicalKnowledge': final_ov,
-                'problemSolving': max(40, final_ov - 2),
-                'communicationSTAR': min(98, final_ov + 2),
-                'systemDesign': final_ov,
-                'confidenceDelivery': min(98, final_ov + 1)
-            })
-            final_summary = final_data.get('feedback_summary') or 'Interview completed. Candidate demonstrated solid technical baseline.'
-            final_strengths = final_data.get('strengths') or ['Core engineering fundamentals demonstrated']
-            final_weaknesses = final_data.get('weaknesses') or ['Recommended deeper exploration of high-scale trade-offs']
-            final_recs = final_data.get('recommendations') or ['Practice multi-tier system scalability drills']
 
         interview.overall_score = final_ov
         interview.passed = final_passed
@@ -925,8 +946,8 @@ class InterviewEngine:
         observed_skills_dict = {}
         for q in questions:
             ev = next((e for e in evaluations if e.question_id == q.id), None)
-            score = ev.overall_score if ev else 70
-            status = "Strong" if score >= 80 else ("Needs Practice" if score >= 65 else "Priority Focus")
+            score = ev.overall_score if ev else 0
+            status = "Strong" if score >= 80 else ("Needs Practice" if score >= 65 else ("Priority Focus" if score > 0 else "Not Evaluated"))
             missing = ev.missing_concepts if ev else []
             observed_skills_dict[q.skill] = {
                 "skill_name": q.skill,
@@ -939,7 +960,7 @@ class InterviewEngine:
 
         # Record session-level evidence for rubrics
         rubric_scores = final_data.get("rubric_scores", {})
-        if "communicationSTAR" in rubric_scores:
+        if has_substantive_evals and "communicationSTAR" in rubric_scores:
             try:
                 record_skill_evidence(
                     db=db,

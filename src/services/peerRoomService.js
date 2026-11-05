@@ -68,6 +68,7 @@ function createVirtualVideoStream(userName = 'Candidate') {
  */
 
 import { getWebSocketUrl } from './apiConfig';
+import { storageService } from '../utils/storage/storageService';
 
 const ICE_SERVERS = {
   iceServers: [
@@ -142,13 +143,15 @@ export class PeerRoomService {
 
         this.ws.onopen = () => {
           this._emit('status', { state: 'ws_connected', message: 'Connected to signaling hub' });
+          const token = storageService.getToken();
           this.ws.send(JSON.stringify({
             type: 'join',
             role: this.role,
             userName: this.userName,
             userId: this.userId,
             userAvatar: this.userAvatar,
-            clientId: this.clientId
+            clientId: this.clientId,
+            token: token || undefined
           }));
           resolve(true);
         };

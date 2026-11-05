@@ -341,10 +341,15 @@ class SMTPEmailService(BaseEmailService):
             msg.attach(part1)
             msg.attach(part2)
 
-            with smtplib.SMTP(self.host, self.port, timeout=10) as server:
+            if self.use_tls:
+                server = smtplib.SMTP(self.host, self.port, timeout=12)
                 server.starttls()
+            else:
+                server = smtplib.SMTP_SSL(self.host, self.port, timeout=12)
+            if self.user and self.password:
                 server.login(self.user, self.password)
-                server.sendmail(self.sender, [recipient_email], msg.as_string())
+            server.sendmail(self.sender, [recipient_email], msg.as_string())
+            server.quit()
 
             logger.info(f"Successfully sent live SMTP email to {recipient_email}")
             return {
@@ -546,17 +551,70 @@ class ResendEmailService(BaseEmailService):
         return {"status": "failed", "delivered": False, "email_sent": False, "mode": "resend"}
 
 
+class CascadingEmailService(BaseEmailService):
+    """
+    High-availability email dispatcher that tries primary provider (e.g. Resend),
+    automatically falling back to secondary (e.g. SMTP) or safe Development logger
+    if delivery encounters authentication, unverified domain, or network issues.
+    """
+
+    def __init__(self, services):
+        self.services = [s for s in services if s is not None]
+
+    def send_email(self, *args, **kwargs) -> Dict[str, Any]:
+        last_res = None
+        for s in self.services:
+            try:
+                res = s.send_email(*args, **kwargs)
+                if res and (res.get("email_sent") or res.get("delivered")):
+                    return res
+                last_res = res
+            except Exception as exc:
+                logger.warning(f"CascadingEmailService: {type(s).__name__} send_email failed: {exc}")
+        return last_res or self.services[-1].send_email(*args, **kwargs)
+
+    def send_generic_email(self, *args, **kwargs) -> Dict[str, Any]:
+        last_res = None
+        for s in self.services:
+            try:
+                res = s.send_generic_email(*args, **kwargs)
+                if res and (res.get("email_sent") or res.get("delivered")):
+                    return res
+                last_res = res
+            except Exception as exc:
+                logger.warning(f"CascadingEmailService: {type(s).__name__} send_generic_email failed: {exc}")
+        return last_res or self.services[-1].send_generic_email(*args, **kwargs)
+
+
 def get_email_service() -> BaseEmailService:
-    """Factory selecting EmailService implementation based on environment configuration."""
+    """
+    Factory selecting high-availability EmailService with automatic fallback:
+    1. Resend API (if RESEND_API_KEY is configured)
+    2. SMTP Service (if SMTP_HOST, SMTP_USER, SMTP_PASSWORD are configured)
+    3. Development Email Service (safe console logging & database auditing)
+    """
     mode = os.getenv("EMAIL_MODE", "").strip().lower()
     has_resend = bool(os.getenv("RESEND_API_KEY"))
-    has_smtp = bool(os.getenv("SMTP_HOST") and os.getenv("SMTP_USER") and os.getenv("SMTP_PASSWORD"))
+    has_smtp = bool(os.getenv("SMTP_HOST") and (os.getenv("SMTP_USER") or os.getenv("SMTP_PORT")))
 
-    if mode == "resend" or (not mode and has_resend):
+    if mode == "resend" and has_resend:
         return ResendEmailService()
-    if (mode == "smtp" or not mode) and has_smtp:
+    if mode == "smtp" and has_smtp:
         return SMTPEmailService()
-    return DevelopmentEmailService()
+    if mode == "development":
+        return DevelopmentEmailService()
+
+    # Multi-provider cascade
+    providers = []
+    if has_resend:
+        providers.append(ResendEmailService())
+    if has_smtp:
+        providers.append(SMTPEmailService())
+    providers.append(DevelopmentEmailService())
+
+    if len(providers) == 1:
+        return providers[0]
+    return CascadingEmailService(providers)
 
 
 # Global default email service instance

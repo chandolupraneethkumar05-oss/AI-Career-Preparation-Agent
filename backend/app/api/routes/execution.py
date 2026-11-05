@@ -4,7 +4,7 @@ AI Career Preparation Agent
 """
 
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from ...services.sandbox import (
@@ -15,6 +15,8 @@ from ...services.sandbox import (
     TestCase
 )
 from ...services.skill_arena_catalog import get_challenge_by_id
+from ...db.models import User
+from ..deps import get_current_user
 
 router = APIRouter(prefix="/execution", tags=["Secure Code Execution"])
 
@@ -39,10 +41,11 @@ def get_execution_capabilities():
 @router.post("/jobs", response_model=ExecutionResult)
 def submit_execution_job(
     request: ExecutionSubmitRequest,
-    user_id: str = Query("user-001", description="Candidate User ID")
+    current_user: User = Depends(get_current_user)
 ):
     """
     Submits untrusted candidate code for isolated execution.
+    Requires authenticated user; user ID is derived strictly from authentication context.
     Code is never executed inside the FastAPI server process (strictly no exec/eval).
     Loads server-side hidden test cases if a challenge_id is provided.
     """
@@ -66,7 +69,7 @@ def submit_execution_job(
 
     # Create and run job via sandbox manager
     job = default_sandbox_manager.create_job(
-        user_id=user_id,
+        user_id=current_user.id,
         code=request.code,
         challenge_id=request.challenge_id,
         language=request.language
@@ -84,14 +87,14 @@ def submit_execution_job(
 @router.get("/jobs/{job_id}", response_model=ExecutionResult)
 def get_job_status(
     job_id: str,
-    user_id: str = Query("user-001", description="Candidate User ID")
+    current_user: User = Depends(get_current_user)
 ):
-    """Retrieves status and outputs for an execution job with tenant authorization check."""
+    """Retrieves status and outputs for an execution job with strict tenant ownership check."""
     job = default_sandbox_manager.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Execution job '{job_id}' not found.")
 
-    if job.user_id != user_id:
+    if job.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Unauthorized access to another candidate's execution job.")
 
     result = default_sandbox_manager.get_result(job_id)
