@@ -503,17 +503,6 @@ const isUnattempted = count === 0 || nonSkippedCount === 0;
       structure: Math.round((totalStruct / count) * 10),
       confidence: Math.round((totalConf / count) * 10)
     };
-    };
-    if (nonSkippedCount === 0) {
-      finalScores = {
-        overall: 0,
-        technicalKnowledge: 0,
-        relevance: 0,
-        clarity: 0,
-        structure: 0,
-        confidence: 0
-      };
-    }
 
     let allStrengths = isUnattempted ? [] : Array.from(new Set(answers.flatMap(a => a.evaluation.strengths))).slice(0, 4);
     let allImprovements = isUnattempted
