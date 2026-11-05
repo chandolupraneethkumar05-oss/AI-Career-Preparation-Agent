@@ -5,7 +5,7 @@ AI Career Preparation Agent
 
 import logging
 from typing import Generator
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 from ..core.config import settings
@@ -17,14 +17,6 @@ engine = create_engine(
     settings.DATABASE_URL,
     connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {}
 )
-
-# Enforce foreign key constraints in SQLite
-@event.listens_for(engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    if "sqlite" in settings.DATABASE_URL:
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -97,6 +89,10 @@ def init_db() -> None:
                     conn.exec_driver_sql("ALTER TABLE interviews ADD COLUMN interview_mode VARCHAR(16) DEFAULT 'text'")
                 if "job_description" not in int_cols:
                     conn.exec_driver_sql("ALTER TABLE interviews ADD COLUMN job_description TEXT DEFAULT ''")
+                if "technologies_json" not in int_cols:
+                    conn.exec_driver_sql("ALTER TABLE interviews ADD COLUMN technologies_json TEXT DEFAULT '[]'")
+                if "strict_tech_focus" not in int_cols:
+                    conn.exec_driver_sql("ALTER TABLE interviews ADD COLUMN strict_tech_focus BOOLEAN DEFAULT 0")
                 conn.commit()
 
             cursor = conn.exec_driver_sql("PRAGMA table_info(interview_answers)")

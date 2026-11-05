@@ -109,3 +109,36 @@ class SkillProfileResponse(BaseModel):
 
 class UnifiedSkillProfileResponse(SkillProfileResponse):
     pass
+
+
+class PrimerQuizQuestion(BaseModel):
+    id: int
+    question: str
+    options: List[str]
+    correct_option_index: int
+    explanation: str
+
+
+class SkillPrimerResponse(BaseModel):
+    skill_name: str
+    concept_title: str
+    plain_english_definition: str
+    why_role_needs_it: str
+    core_mental_models: List[str]
+    interview_golden_qa: Dict[str, str]
+    verification_quiz: List[PrimerQuizQuestion]
+    estimated_read_time: str = "3 mins"
+
+
+class SkillPrimerVerifyRequest(BaseModel):
+    user_id: Optional[str] = "user-001"
+    answers: Dict[int, int]  # question_id -> selected_option_index
+
+
+class SkillPrimerVerifyResponse(BaseModel):
+    passed: bool
+    score: int
+    awarded_xp: int
+    message: str
+    next_action_title: str
+    next_action_route: str

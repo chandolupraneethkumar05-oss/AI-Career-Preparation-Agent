@@ -27,7 +27,9 @@ export function InterviewProvider({ children }) {
     feedbackLanguage: savedSetup?.feedbackLanguage || initialUser?.feedbackLanguage || 'en',
     interviewMode: savedSetup?.interviewMode || 'text', // 'text' | 'video' | 'face_to_face'
     interviewerPersona: savedSetup?.interviewerPersona || 'julian',
-    totalQuestions: savedSetup?.totalQuestions || 5
+    totalQuestions: savedSetup?.totalQuestions || 5,
+    technologies: savedSetup?.technologies || [],
+    strictTechFocus: savedSetup?.strictTechFocus || false
   }));
 
 
@@ -132,7 +134,9 @@ export function InterviewProvider({ children }) {
         interviewLanguage: config.interviewLanguage || 'en',
         feedbackLanguage: config.feedbackLanguage || 'en',
         interviewMode: mode,
-        jobDescription: config.jobDescription || setup.jobDescription || ''
+        jobDescription: config.jobDescription || setup.jobDescription || '',
+        technologies: config.technologies || setup.technologies || [],
+        strictTechFocus: config.strictTechFocus || setup.strictTechFocus || false
       });
 
 

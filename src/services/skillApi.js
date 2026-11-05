@@ -98,5 +98,57 @@ export const skillApi = {
       if (import.meta.env.DEV) console.debug('[skillApi] getTaxonomy failed:', err.message);
       return [];
     }
+  },
+
+  /**
+   * Retrieves a 3-minute Just-In-Time concept primer and 2-question verification quiz.
+   */
+  async getSkillPrimer(skillName, targetRole = 'Software Engineer', difficulty = 'Beginner') {
+    try {
+      const response = await fetchWithTimeout(
+        `${BACKEND_BASE_URL}/api/skills/primer/${encodeURIComponent(skillName)}?target_role=${encodeURIComponent(targetRole)}&difficulty=${encodeURIComponent(difficulty)}`,
+        { headers: { Accept: 'application/json' } },
+        DEFAULT_TIMEOUT_MS
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (err) {
+      if (import.meta.env.DEV) console.debug('[skillApi] getSkillPrimer failed:', err.message);
+      return null;
+    }
+  },
+
+  /**
+   * Submits answers to the 2-question verification quiz to record baseline evidence.
+   */
+  async verifyPrimer(skillName, answers, userId = null) {
+    const effectiveId = resolveUserId(userId);
+    try {
+      const response = await fetchWithTimeout(
+        `${BACKEND_BASE_URL}/api/skills/primer/${encodeURIComponent(skillName)}/verify`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify({
+            user_id: effectiveId,
+            answers
+          })
+        },
+        DEFAULT_TIMEOUT_MS
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (err) {
+      if (import.meta.env.DEV) console.debug('[skillApi] verifyPrimer failed:', err.message);
+      return {
+        passed: false,
+        score: 0,
+        awarded_xp: 0,
+        message: err.message || 'Verification submission failed.'
+      };
+    }
   }
 };

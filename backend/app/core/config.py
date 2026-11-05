@@ -71,9 +71,13 @@ class Settings(BaseModel):
     INTERVIEW_FACE_TO_FACE_API_KEY: str = os.getenv("INTERVIEW_FACE_TO_FACE_API_KEY", "").strip()
     INTERVIEW_PEER_CHAMBER_API_KEY: str = os.getenv("INTERVIEW_PEER_CHAMBER_API_KEY", "").strip()
     INTERVIEW_REVERSE_MOCK_API_KEY: str = os.getenv("INTERVIEW_REVERSE_MOCK_API_KEY", "").strip()
+    INTERVIEW_TECH_FOCUS_API_KEY: str = os.getenv("INTERVIEW_TECH_FOCUS_API_KEY", os.getenv("TECH_INTERVIEW_API_KEY", "")).strip()
 
     # Dedicated Skill Gap Assessment AI API Key
     SKILL_GAP_API_KEY: str = os.getenv("SKILL_GAP_API_KEY", "").strip()
+
+    # Dedicated JIT Skill Primer AI API Key
+    SKILL_PRIMER_API_KEY: str = os.getenv("SKILL_PRIMER_API_KEY", os.getenv("JIT_PRIMER_API_KEY", "")).strip()
 
     # Dedicated Resume ATS Score AI API Key
     RESUME_ATS_API_KEY: str = os.getenv("RESUME_ATS_API_KEY", os.getenv("ATS_SCORE_API_KEY", "")).strip()

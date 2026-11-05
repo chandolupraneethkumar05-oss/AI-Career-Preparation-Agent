@@ -4,13 +4,22 @@ Skills & Competency Gap Routes
 AI Career Preparation Agent
 """
 
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from ...db.database import get_db
-from ...schemas.skill import SkillResponse, SkillGapCreate, SkillGapResponse, SkillProfileResponse
+from ...schemas.skill import (
+    SkillResponse,
+    SkillGapCreate,
+    SkillGapResponse,
+    SkillProfileResponse,
+    SkillPrimerResponse,
+    SkillPrimerVerifyRequest,
+    SkillPrimerVerifyResponse,
+)
 from ...services.skill_service import get_all_skills, get_user_skill_profile, upsert_skill_gap
+from ...services.primer_service import get_skill_primer, verify_primer_quiz
 
 router = APIRouter(prefix="/skills", tags=["Skills & Radar Analysis"])
 
@@ -144,3 +153,34 @@ Provide an executive skill gap analysis and remediation plan. Return STRICTLY JS
         "ai_analysis": fallback_analysis,
         "gaps": gaps_summary,
     }
+
+
+@router.get("/primer/{skill_name}", response_model=SkillPrimerResponse)
+def get_primer_endpoint(
+    skill_name: str,
+    target_role: Optional[str] = Query("Software Engineer"),
+    difficulty: Optional[str] = Query("Beginner")
+):
+    """
+    Returns a grounded 3-minute JIT concept primer and 2 verification questions
+    for a foundational skill deficit.
+    """
+    return get_skill_primer(skill_name, target_role=target_role, difficulty=difficulty)
+
+
+@router.post("/primer/{skill_name}/verify", response_model=SkillPrimerVerifyResponse)
+def verify_primer_endpoint(
+    skill_name: str,
+    request: SkillPrimerVerifyRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Evaluates the 2-question primer quiz.
+    Upon passing, creates verified skill evidence, awards +35 XP, and updates closed-loop Next-Best-Action.
+    """
+    return verify_primer_quiz(
+        db=db,
+        user_id=request.user_id or "user-001",
+        skill_name=skill_name,
+        answers=request.answers
+    )

@@ -36,6 +36,8 @@ import { activityService } from '../utils/activityService';
 import { agentDecisionEngine } from '../utils/agentDecisionEngine';
 import { skillApi } from '../services/skillApi';
 import { recommendationApi } from '../services/recommendationApi';
+import OnboardingTourModal from '../components/OnboardingTourModal';
+import ConceptPrimerModal from '../components/ConceptPrimerModal';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -45,6 +47,8 @@ export default function DashboardPage() {
   // Dialog states
   const [showRationale, setShowRationale] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [activePrimerSkill, setActivePrimerSkill] = useState(null);
 
   // Edit Profile Form State
   const [profileName, setProfileName] = useState(user?.name || '');
@@ -308,6 +312,17 @@ export default function DashboardPage() {
                 <Pencil className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Edit Profile</span>
               </button>
+
+              {/* Platform Onboarding Tour */}
+              <button
+                type="button"
+                onClick={() => setTourOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-xs font-semibold text-amber-800 transition-colors w-fit cursor-pointer shadow-xs"
+                title="View platform architecture & capabilities tour"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>Platform Tour</span>
+              </button>
             </div>
 
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -411,14 +426,25 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => navigate('/skill-arena')}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 self-start sm:self-auto shadow-xs"
-                >
-                  <span>Practice Drill</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setActivePrimerSkill(item.name)}
+                    className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
+                    title="Read 3-Minute Concept Primer & take a quick verification quiz"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>3-Min Primer</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/skill-arena')}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                  >
+                    <span>Practice Drill</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -568,7 +594,13 @@ export default function DashboardPage() {
 
         <div className="pt-2 space-y-2.5">
           <button
-            onClick={() => navigate(nextRoute)}
+            onClick={() => {
+              if (activeNextAction?.action_type === 'learn_concept') {
+                setActivePrimerSkill(activeNextAction.target_skill || activeNextAction.primary_skill || nextPrimarySkill);
+              } else {
+                navigate(nextRoute);
+              }
+            }}
             className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md shadow-emerald-600/20"
           >
             <span>{nextActionBtn.includes('→') ? nextActionBtn : `${nextActionBtn} →`}</span>
@@ -928,6 +960,25 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Onboarding Tour Modal */}
+      <OnboardingTourModal
+        isOpen={tourOpen}
+        onClose={() => setTourOpen(false)}
+      />
+
+      {/* JIT Concept Primer & Verification Quiz Modal */}
+      <ConceptPrimerModal
+        isOpen={Boolean(activePrimerSkill)}
+        onClose={() => setActivePrimerSkill(null)}
+        skillName={activePrimerSkill}
+        targetRole={userRole}
+        onPrimerCompleted={() => {
+          const currentUserId = user?.id || 'usr_candidate';
+          recommendationApi.getNextBestAction(currentUserId).then((data) => data && setLiveNextAction(data));
+          skillApi.getSkillProfile(currentUserId).then((data) => data && setLiveSkillProfile(data));
+        }}
+      />
 
     </div>
   );

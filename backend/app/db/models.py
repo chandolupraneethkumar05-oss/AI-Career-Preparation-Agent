@@ -152,6 +152,8 @@ class Interview(Base):
     weaknesses_json = Column(Text, default="[]")
     interview_mode = Column(String(16), default="text")  # text, video
     job_description = Column(Text, default="", nullable=True)
+    technologies_json = Column(Text, default="[]", nullable=True)  # Target technologies, e.g. ["Java", "Spring Boot"]
+    strict_tech_focus = Column(Boolean, default=False, nullable=True)  # Restrict 100% to selected technologies
     created_at = Column(DateTime, default=utc_now, nullable=False, index=True)
 
     user = relationship("User", back_populates="interviews")
@@ -224,6 +226,17 @@ class Interview(Base):
         except Exception:
             return []
 
+    @property
+    def technologies(self):
+        try:
+            return json.loads(self.technologies_json) if self.technologies_json else []
+        except Exception:
+            return []
+
+    @technologies.setter
+    def technologies(self, value):
+        self.technologies_json = json.dumps(value) if value else "[]"
+
     def as_dict(self):
         return {
             "id": self.id,
@@ -242,6 +255,8 @@ class Interview(Base):
             "interview_language": self.interview_language,
             "feedback_language": self.feedback_language,
             "interview_mode": getattr(self, "interview_mode", "text") or "text",
+            "technologies": self.technologies,
+            "strict_tech_focus": bool(self.strict_tech_focus),
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -901,36 +916,6 @@ class ProductFeedback(Base):
     created_at = Column(DateTime, default=utc_now, nullable=False)
 
     user = relationship("User", back_populates="product_feedbacks")
-
-
-class PeerRoomSession(Base):
-    """
-    Persisted peer-to-peer collaborative mock interview rooms and 360 evaluations.
-    Preserves interview transcripts, interviewer notes, shared code, questions,
-    and final evaluation reports across server restarts and worker lifecycles.
-    """
-    __tablename__ = "peer_room_sessions"
-
-    id = Column(String(64), primary_key=True, index=True)
-    role = Column(String(64), nullable=False, default="Software Engineer")
-    difficulty = Column(String(32), nullable=False, default="Intermediate")
-    topic = Column(String(256), nullable=True)
-    status = Column(String(32), nullable=False, default="waiting")  # waiting, active, concluded
-
-    interviewer_id = Column(String(64), nullable=True, index=True)
-    candidate_id = Column(String(64), nullable=True, index=True)
-    interviewer_name = Column(String(128), nullable=True)
-    candidate_name = Column(String(128), nullable=True)
-
-    questions_json = Column(Text, default="[]")
-    current_question_json = Column(Text, nullable=True)
-    transcript_json = Column(Text, default="[]")
-    interviewer_notes_json = Column(Text, default="[]")
-    final_report_json = Column(Text, nullable=True)
-    shared_code = Column(Text, default="# Collaborative Sandbox\n# Both participants can type and review code here in real-time.\n\ndef solution():\n    pass\n")
-
-    created_at = Column(DateTime, default=utc_now, nullable=False)
-    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
 
 def seed_initial_data(db):

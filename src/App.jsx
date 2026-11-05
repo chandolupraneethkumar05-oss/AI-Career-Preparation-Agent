@@ -23,6 +23,7 @@ const SkillArenaPage = lazy(() => import('./pages/SkillArenaPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PeerInterviewRoomPage = lazy(() => import('./pages/PeerInterviewRoomPage'));
+const HelpGuidePage = lazy(() => import('./pages/HelpGuidePage'));
 
 export default function App() {
   return (
@@ -73,6 +74,7 @@ export default function App() {
                   <Route path="/skill-gap" element={<SkillGapPage />} />
                   <Route path="/progress" element={<ProgressPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/help" element={<HelpGuidePage />} />
 
                   {/* Clean consolidations for streamlined 6-hub navigation */}
                   <Route path="/daily-challenge" element={<Navigate to="/skill-arena?tab=daily" replace />} />

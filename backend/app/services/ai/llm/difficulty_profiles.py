@@ -331,12 +331,192 @@ def _detect_role_category(role: str) -> str:
     return "backend"
 
 
-def get_role_turn_facets(target_role: str, category: str = "Technical", difficulty: str = "Intermediate") -> List[str]:
+TECH_TOPIC_SEEDS: Dict[str, Dict[str, List[str]]] = {
+    "java": {
+        "Beginner": [
+            "Java OOP principles (Encapsulation, Polymorphism, Inheritance, Abstraction) and method overriding vs overloading",
+            "String immutability, String pool memory, StringBuilder vs StringBuffer performance",
+            "Core Collections framework: ArrayList vs LinkedList, HashSet vs TreeSet, equals() and hashCode() contract",
+            "Exception handling hierarchy: Checked vs Unchecked exceptions, try-with-resources and AutoCloseable",
+            "Java access modifiers (public, protected, package-private, private) and static vs instance variables"
+        ],
+        "Intermediate": [
+            "Java Memory Model: Heap, Stack, Metaspace, Object creation lifecycle, and memory allocation",
+            "Garbage collection mechanisms (G1, ZGC, Parallel GC) and generational hypotheses (Eden, Survivor, Tenured)",
+            "Java Concurrency: ExecutorService thread pools, volatile visibility guarantees, synchronized blocks vs ReentrantLock",
+            "ConcurrentHashMap internal bucket striping and compare-and-swap (CAS) lock-free reads",
+            "Java 8+ functional features: Streams API lazy evaluation, intermediate vs terminal operations, and Optional best practices"
+        ],
+        "Senior": [
+            "JVM performance tuning: GC pause time vs throughput tuning, JVM heap profiling, diagnosing memory leaks and thread starvation",
+            "JMM happens-before relations, memory barriers (load/store fences), and double-checked locking idiom correctness",
+            "Project Loom Virtual Threads vs platform threads: carrier thread scheduling, pinning hazards, and high-concurrency scaling",
+            "Lock-free and wait-free algorithms using VarHandle, AtomicReference, and ring buffers (Disruptor pattern)",
+            "JVM classloading delegation model, custom ClassLoaders, bytecode instrumentations, and Metaspace leak triage"
+        ]
+    },
+    "python": {
+        "Beginner": [
+            "Python data types and mutability (lists, tuples, dicts, sets) and shallow vs deep copy",
+            "Functions, *args, **kwargs, list/dict comprehensions, and scope rules (LEGB)",
+            "Exception handling with try/except/finally and custom Exception classes",
+            "Working with files using context managers ('with' statement) and basic string formatting",
+            "Basic OOP in Python: classes, __init__, self, and method types (instance, classmethod, staticmethod)"
+        ],
+        "Intermediate": [
+            "Generators, iterators, the yield keyword, and memory-efficient stream processing",
+            "Decorators with arguments and preserving function metadata using functools.wraps",
+            "Global Interpreter Lock (GIL) implications on CPU-bound vs I/O-bound concurrency",
+            "Asynchronous programming with asyncio: event loop, async/await, coroutines, and task cancellation",
+            "Python memory management: reference counting, cyclic garbage collection, and __slots__ optimization"
+        ],
+        "Senior": [
+            "Metaprogramming, metaclasses, __new__ vs __init__, and class decorators for dynamic runtime schema enforcement",
+            "Designing high-throughput multiprocessing architectures: IPC queues, shared memory, and preventing fork deadlocks",
+            "C-extension interfacing with Cython, ctypes, and PyO3 (Rust) for performance critical kernels",
+            "Descriptor protocol (__get__, __set__, __delete__) powering Python properties, ORM fields, and methods",
+            "Profiling Python CPU and memory bottlenecks using cProfile, tracemalloc, and py-spy in production"
+        ]
+    },
+    "c": {
+        "Beginner": [
+            "Primitive data types, variable scopes, pointer syntax, and pointer arithmetic",
+            "Stack memory vs Heap memory: dynamic memory allocation using malloc, calloc, realloc, and free",
+            "Array and pointer equivalences, string manipulation with null-terminators (\\0)",
+            "Structures, unions, and typedef declarations for representing composite data",
+            "Preprocessor directives (#define, #include, header guards) and the compilation pipeline (preprocessor, compiler, assembler, linker)"
+        ],
+        "Intermediate": [
+            "Function pointers, callback tables, and implementing polymorphism/state machines in pure C",
+            "Structure padding, struct alignment, compiler packing pragmas, and cache line implications",
+            "Debugging memory leaks, use-after-free, buffer overflows, and dangling pointers using Valgrind and AddressSanitizer (ASan)",
+            "Bitwise operations, bitmasks, bitfields, and low-level hardware register manipulation",
+            "File descriptors, standard I/O streams buffering, and POSIX system calls (open, read, write, close)"
+        ],
+        "Senior": [
+            "Linux kernel and POSIX systems programming: fork, exec, signals, reentrancy, and thread safety (pthread)",
+            "Inter-process communication (IPC): shared memory (shmget/mmap), named pipes, and domain sockets",
+            "Hardware cache coherency, volatile keyword semantics, memory-mapped I/O, and atomic operations",
+            "Writing defensive systems software: stack-smashing protection, ASLR compatibility, and secure string boundaries",
+            "Embedded/OS architecture: writing a custom memory allocator (slab / buddy allocator) from raw OS pages"
+        ]
+    },
+    "cpp": {
+        "Beginner": [
+            "C++ classes, access specifiers, constructors/destructors, and initialization lists",
+            "References vs pointers, pass-by-value vs pass-by-reference, and const correctness",
+            "Core STL containers: std::vector, std::map, std::unordered_map, and basic iterators",
+            "Inheritance, method overriding, and runtime polymorphism via the virtual keyword",
+            "Basic namespaces, operator overloading, and standard stream I/O"
+        ],
+        "Intermediate": [
+            "Resource Acquisition Is Initialization (RAII) and smart pointers (std::unique_ptr, std::shared_ptr, std::weak_ptr)",
+            "Move semantics, rvalue references (&&), std::move, std::forward, and eliminating deep copies",
+            "Virtual method tables (vtables), dynamic dispatch mechanics, and object memory layouts with multiple inheritance",
+            "Templates and generic programming: function and class templates, template specialization",
+            "Exception safety guarantees (basic, strong, nothrow) and noexcept specifications"
+        ],
+        "Senior": [
+            "Modern C++20/23 features: Concepts, Ranges, Coroutines, and Modules architecture",
+            "Template Metaprogramming (TMP), SFINAE, std::enable_if, and compile-time evaluation with constexpr / consteval",
+            "C++ Memory Model: std::atomic, memory orders (relaxed, acquire-release, sequentially consistent), and lock-free data structures",
+            "Custom STL allocators, arena/monotonic memory pools, and zero-cost abstraction profiling",
+            "High-performance low-latency architecture: avoiding cache misses, false sharing, branch mispredictions, and SIMD vectorization"
+        ]
+    },
+    "sql": {
+        "Beginner": [
+            "Core SQL queries: SELECT, WHERE filters, ORDER BY, LIMIT, and DISTINCT",
+            "Table relationships, primary keys, foreign keys, and relational schema normalization (1NF, 2NF, 3NF)",
+            "JOIN semantics: INNER JOIN, LEFT/RIGHT OUTER JOIN, FULL OUTER JOIN, and CROSS JOIN",
+            "Aggregations: GROUP BY, HAVING clause, COUNT, SUM, AVG, MIN, and MAX",
+            "Data modification: INSERT, UPDATE, DELETE, and transactions with COMMIT/ROLLBACK"
+        ],
+        "Intermediate": [
+            "B-Tree index structure, composite index column ordering (leftmost prefix rule), and index coverage",
+            "Reading and optimizing EXPLAIN / EXPLAIN ANALYZE query plans to eliminate sequential table scans",
+            "Transaction ACID properties, isolation levels (Read Committed, Repeatable Read, Serializable), and concurrency anomalies",
+            "Advanced SQL window functions: ROW_NUMBER(), RANK(), DENSE_RANK(), LEAD(), LAG(), and PARTITION BY",
+            "Database constraints, foreign key ON DELETE cascades, CTEs (WITH clause), and recursive queries"
+        ],
+        "Senior": [
+            "Multi-Version Concurrency Control (MVCC) internals, vacuuming, and write-ahead logging (WAL) durability guarantees",
+            "Distributed database architectures: horizontal sharding strategies, consistent hashing, and read-replica replication lag",
+            "Deadlock detection algorithms, lock escalation (row vs page vs table locks), and optimistic vs pessimistic locking",
+            "Partitioning strategies (Range, Hash, List) and partition pruning for terabyte-scale analytical querying",
+            "Designing zero-downtime schema migrations (blue-green / expand-contract pattern) under high write throughput"
+        ]
+    },
+    "docker": {
+        "Beginner": [
+            "Fundamental differences between Docker containers, virtualization, and host processes",
+            "Core Docker CLI commands: docker run, ps, stop, rm, rmi, logs, and exec",
+            "Basic Dockerfile instructions: FROM, WORKDIR, COPY, RUN, CMD, and EXPOSE",
+            "Port mapping (-p) and exposing containerized services to host localhost",
+            "Docker images vs running containers: registry pull, tag, and container lifecycle"
+        ],
+        "Intermediate": [
+            "Writing production multi-stage Dockerfiles to minimize final image attack surface and artifact size",
+            "Docker build cache optimization: layer ordering, .dockerignore hygiene, and avoiding cache invalidations",
+            "Container storage: bind mounts vs named volumes, persistent data lifecycles, and volume permissions",
+            "Docker Compose multi-container networking: service discovery, custom bridge networks, and environment variables",
+            "Container security hygiene: running non-root users (USER directive), read-only root filesystems, and minimal base images (Alpine/Distroless)"
+        ],
+        "Senior": [
+            "Linux kernel container primitives: namespaces (PID, NET, MNT, IPC, UTS) and cgroups v2 resource quotas",
+            "Container runtime architecture: OCI specifications, containerd, runc, and rootless Docker execution",
+            "Automated image vulnerability scanning (Trivy / Clair), software bill of materials (SBOM), and signed images with Cosign",
+            "Container health checks, graceful SIGTERM handling, PID 1 zombie reaping, and zero-downtime container rotations",
+            "Container network virtualization: overlay networks, iptables routing, packet encapsulation, and DNS resolution under high load"
+        ]
+    }
+}
+
+
+def _detect_technology_key(tech_name: str) -> Optional[str]:
+    """Resolves arbitrary technology names to canonical keys."""
+    if not tech_name:
+        return None
+    t = tech_name.strip().lower()
+    if "java" in t and "script" not in t:
+        return "java"
+    if "python" in t or "py" == t:
+        return "python"
+    if t in ["c", "c-lang", "c programming", "c-language"]:
+        return "c"
+    if "c++" in t or "cpp" in t:
+        return "cpp"
+    if "sql" in t or "postgres" in t or "mysql" in t or "database" in t:
+        return "sql"
+    if "docker" in t or "container" in t:
+        return "docker"
+    return None
+
+
+def get_role_turn_facets(
+    target_role: str,
+    category: str = "Technical",
+    difficulty: str = "Intermediate",
+    technologies: Optional[List[str]] = None
+) -> List[str]:
     """
     Dynamically generates 5 distinct, role-calibrated query seeds for RAG syllabus retrieval across interview turns.
-    Guarantees that candidates interviewing for Frontend, QA, DevOps, Mobile, Security, Product, or Backend
-    receive authentic, domain-appropriate questions instead of unrelated topics.
+    When technologies are provided, generates technology-grounded facets to enforce strict syllabus retrieval.
     """
+    # 1. Technology-specific facets if technologies are requested
+    if technologies:
+        for tech in technologies:
+            tech_key = _detect_technology_key(tech)
+            if tech_key:
+                tech_label = tech.capitalize()
+                return [
+                    f"{tech_label} core fundamentals syntax execution runtime and basic constructs",
+                    f"{tech_label} memory management allocation garbage collection or pointers",
+                    f"{tech_label} concurrency multithreading async synchronization and data structures",
+                    f"{tech_label} performance optimization practical architectural trade-offs and error handling",
+                    f"{tech_label} production design patterns real-world debugging and interview problem solving"
+                ]
+
     cat = _detect_role_category(target_role)
     facets_by_cat = {
         "frontend": [
@@ -432,17 +612,35 @@ def normalize_difficulty(difficulty: str) -> str:
     return "Intermediate"
 
 
-def get_difficulty_profile(difficulty: str, target_role: Optional[str] = None) -> Dict[str, Any]:
-    """Retrieves the calibrated profile for the specified difficulty with role-aware topic seeds."""
+def get_difficulty_profile(
+    difficulty: str,
+    target_role: Optional[str] = None,
+    technologies: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """Retrieves the calibrated profile for the specified difficulty with role- or tech-aware topic seeds."""
     normalized = normalize_difficulty(difficulty)
     prof = dict(DIFFICULTY_PROFILES[normalized])
     
-    # Retrieve role-specific topic seeds
-    cat = _detect_role_category(target_role or "backend")
-    role_seeds = ROLE_TOPIC_SEEDS.get(cat, ROLE_TOPIC_SEEDS["backend"]).get(normalized, [])
-    
-    prof["focus_seeds"] = role_seeds
-    prof["topic_seeds"] = role_seeds
-    prof["interviewer_persona"] = prof.get("persona", "")
-    prof["rubric_expectations"] = prof.get("rubric_expectation", "")
+    # Check if specific technologies are requested
+    tech_seeds = []
+    if technologies:
+        for tech in technologies:
+            tech_key = _detect_technology_key(tech)
+            if tech_key and tech_key in TECH_TOPIC_SEEDS:
+                tech_seeds.extend(TECH_TOPIC_SEEDS[tech_key].get(normalized, []))
+
+    if tech_seeds:
+        prof["focus_seeds"] = tech_seeds
+        prof["topic_seeds"] = tech_seeds
+        primary_tech = technologies[0].capitalize() if technologies else "Technology"
+        prof["interviewer_persona"] = f"a specialized {primary_tech} Technical Interviewer conducting a rigorous {primary_tech} deep-dive"
+        prof["rubric_expectations"] = f"Candidate must demonstrate idiomatically sound, production-grade {primary_tech} expertise, syntax accuracy, and architectural awareness at {normalized} level."
+    else:
+        # Retrieve role-specific topic seeds
+        cat = _detect_role_category(target_role or "backend")
+        role_seeds = ROLE_TOPIC_SEEDS.get(cat, ROLE_TOPIC_SEEDS["backend"]).get(normalized, [])
+        prof["focus_seeds"] = role_seeds
+        prof["topic_seeds"] = role_seeds
+        prof["interviewer_persona"] = prof.get("persona", "")
+        prof["rubric_expectations"] = prof.get("rubric_expectation", "")
     return prof

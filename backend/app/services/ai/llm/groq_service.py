@@ -269,7 +269,10 @@ Return valid JSON with exactly these fields:
         all_forbidden = list(set([t for t in (prev_q_texts + past_q_texts) if t]))
         last_eval = previous_evaluations[-1] if previous_evaluations else None
 
-        profile = get_difficulty_profile(difficulty, target_role=target_role)
+        technologies = session_config.get("technologies") or kwargs.get("technologies") or career_context.get("detected_resume_languages") or []
+        strict_tech_focus = session_config.get("strict_tech_focus") or kwargs.get("strict_tech_focus") or bool(technologies)
+
+        profile = get_difficulty_profile(difficulty, target_role=target_role, technologies=technologies)
         topic_seeds = profile.get("topic_seeds", [
             f"core {target_role} engineering mechanisms, real-world trade-offs, and edge cases"
         ])
@@ -283,12 +286,22 @@ Return valid JSON with exactly these fields:
         if job_description:
             jd_instruction = f"\nTarget Job Description excerpt: {job_description[:400]}\nGround the question in the specific requirements and tech stack of this job description."
 
+        tech_constraint = ""
+        if technologies:
+            tech_str = ", ".join(technologies)
+            tech_constraint = (
+                f"\nSTRICT TECHNOLOGY CONSTRAINT: The candidate is testing EXCLUSIVELY on: {tech_str}. "
+                f"Every question, code example, and technical scenario MUST directly assess {tech_str}. "
+                f"NEGATIVE CONSTRAINT: DO NOT ask questions about any other programming language or technology stack."
+            )
+
         system_prompt = (
             f"You are {interviewer_persona}. "
             f"You are conducting an authentic {difficulty}-level {interview_type} mock interview for the role of {target_role}. "
             f"Focus topic inspiration: {focus_seed}. "
             f"Level calibration guidance: {level_guidance} "
             f"{jd_instruction} "
+            f"{tech_constraint} "
             "BREVITY RULE: The question MUST be concise and focused (strictly 2 to 4 sentences maximum). DO NOT output full-page essays or multiple sub-bullet points. "
             "STRICT REQUIREMENT: NEVER repeat or closely rephrase any of the previously asked questions."
         )
@@ -300,6 +313,8 @@ Difficulty Level: {difficulty}
 Level Persona & Rules: {level_guidance}
 Interview Type: {interview_type}
 Topic Seed: {focus_seed}
+Target Technologies: {technologies if technologies else "General Role Stack"}
+Strict Technology Enforcement: {strict_tech_focus}
 Job Description Excerpt: {job_description[:300] if job_description else "None provided"}
 Strictly Do NOT Duplicate Any of These Questions: {json.dumps(all_forbidden[:15])}
 Previous Evaluation Gaps: {json.dumps(last_eval.get('weaknesses', []) if last_eval else [])}
@@ -555,9 +570,8 @@ Return valid JSON with exactly:
                         session, questions, answers, evaluations, career_context, language
                     )
                     parsed["target_role"] = target_role
-                    parsed["overall_score"] = fallback_res.get("overall_score", avg_score)
                     parsed["passed"] = bool(parsed.get("passed", parsed["overall_score"] >= 75))
-                    parsed["rubric_scores"] = fallback_res.get("rubric_scores", {})
+                    parsed["rubric_scores"] = parsed.get("rubric_scores") or fallback_res.get("rubric_scores", {})
                     parsed["strengths"] = parsed.get("strengths") or fallback_res.get("strengths", [])
                     parsed["weaknesses"] = parsed.get("weaknesses") or fallback_res.get("weaknesses", [])
                     parsed["recommendations"] = parsed.get("recommendations") or fallback_res.get("recommendations", [])

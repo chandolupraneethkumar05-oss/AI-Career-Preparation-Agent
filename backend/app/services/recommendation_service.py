@@ -181,31 +181,60 @@ def evaluate_next_best_action(db: Session, user_id: str) -> NextBestActionRespon
                 gap_diff = candidate_gap.gap
                 p_level = candidate_gap.priority if candidate_gap.priority in ["high", "medium"] else ("high" if gap_diff >= 25 else "medium")
 
-                reason_text = (
-                    f"{candidate_gap.skill_name} is currently your biggest competency gap "
-                    f"({candidate_gap.demonstrated_score}% demonstrated vs {candidate_gap.target_score}% benchmark) for {target_role} roles. "
-                    f"Bridging this {candidate_gap.role_importance.lower()} requirement will directly improve your hiring readiness."
+                # If candidate has zero recorded evidence/baseline (Ground-Zero Deficit),
+                # prescribe a 3-Minute JIT Concept Primer first to solve the assessment trap!
+                is_zero_baseline = (
+                    getattr(candidate_gap, "demonstrated_score", 0) == 0
+                    and getattr(candidate_gap, "evidence_count", 0) == 0
                 )
-                if candidate_gap.latest_feedback:
-                    reason_text += f" Recent feedback: '{candidate_gap.latest_feedback[:100]}...'"
 
-                response = NextBestActionResponse(
-                    action_type="practice_skill",
-                    priority=p_level,
-                    title=f"Bridge Your {candidate_gap.skill_name} Competency Gap",
-                    headline=f"Bridge Your {candidate_gap.skill_name} Competency Gap",
-                    action=f"Practice {candidate_gap.skill_name} Drill",
-                    route="/daily-challenge",
-                    target_role=target_role,
-                    primary_skill=candidate_gap.skill_name,
-                    target_skill=candidate_gap.skill_name,
-                    suggested_action=f"Complete {candidate_gap.skill_name} conceptual challenge",
-                    reason=reason_text,
-                    source="unified_skill_gap",
-                    status=candidate_gap.status,
-                    estimated_effort="10 mins",
-                    weakness_detail=candidate_gap.latest_feedback
-                )
+                if is_zero_baseline:
+                    response = NextBestActionResponse(
+                        action_type="learn_concept",
+                        priority="high",
+                        title=f"3-Minute Primer: Master {candidate_gap.skill_name} Fundamentals",
+                        headline=f"3-Minute Primer: Master {candidate_gap.skill_name} Fundamentals",
+                        action=f"Read {candidate_gap.skill_name} Primer",
+                        route=f"/help?primer={candidate_gap.skill_name}",
+                        target_role=target_role,
+                        primary_skill=candidate_gap.skill_name,
+                        target_skill=candidate_gap.skill_name,
+                        suggested_action=f"Learn {candidate_gap.skill_name} mental models & take 2-question verification",
+                        reason=(
+                            f"You have zero recorded experience in {candidate_gap.skill_name}, but it is a critical {candidate_gap.role_importance.lower()} requirement for {target_role}. "
+                            f"Complete this 3-minute primer to build your mental model before attempting full mock interviews."
+                        ),
+                        source="foundational_gap_primer",
+                        status="NEW",
+                        estimated_effort="3 mins",
+                        weakness_detail=candidate_gap.latest_feedback
+                    )
+                else:
+                    reason_text = (
+                        f"{candidate_gap.skill_name} is currently your biggest competency gap "
+                        f"({candidate_gap.demonstrated_score}% demonstrated vs {candidate_gap.target_score}% benchmark) for {target_role} roles. "
+                        f"Bridging this {candidate_gap.role_importance.lower()} requirement will directly improve your hiring readiness."
+                    )
+                    if candidate_gap.latest_feedback:
+                        reason_text += f" Recent feedback: '{candidate_gap.latest_feedback[:100]}...'"
+
+                    response = NextBestActionResponse(
+                        action_type="practice_skill",
+                        priority=p_level,
+                        title=f"Bridge Your {candidate_gap.skill_name} Competency Gap",
+                        headline=f"Bridge Your {candidate_gap.skill_name} Competency Gap",
+                        action=f"Practice {candidate_gap.skill_name} Drill",
+                        route="/daily-challenge",
+                        target_role=target_role,
+                        primary_skill=candidate_gap.skill_name,
+                        target_skill=candidate_gap.skill_name,
+                        suggested_action=f"Complete {candidate_gap.skill_name} conceptual challenge",
+                        reason=reason_text,
+                        source="unified_skill_gap",
+                        status=candidate_gap.status,
+                        estimated_effort="10 mins",
+                        weakness_detail=candidate_gap.latest_feedback
+                    )
 
         # ---------------------------------------------------------------------
         # RULE 4: Communication / Articulation Deficit from Interview

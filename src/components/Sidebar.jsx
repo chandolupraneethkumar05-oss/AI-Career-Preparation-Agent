@@ -11,7 +11,8 @@ import {
   ChevronRight, 
   LogOut, 
   X,
-  Users
+  Users,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -35,6 +36,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
         { to: '/ats', label: 'Resume / ATS', icon: FileSearch },
         { to: '/progress', label: 'Progress & Insights', icon: TrendingUp },
         { to: '/settings', label: 'Settings', icon: Settings },
+        { to: '/help', label: 'Help & Guide', icon: HelpCircle },
       ]
     }
   ];

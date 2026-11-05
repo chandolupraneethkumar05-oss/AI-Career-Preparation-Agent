@@ -7,6 +7,7 @@ Handles session initialization, dynamic question generation via RAG & candidate 
 5-axis answer evaluation, adaptive follow-up branching, and closed-loop skill gap updates.
 """
 
+import os
 import json
 import uuid
 import random
@@ -166,9 +167,32 @@ class InterviewEngine:
 
         past_session_count = db.query(Interview).filter(Interview.user_id == user_id).count()
 
+        # Resolve explicit technologies or auto-ground from candidate resume
+        requested_techs = getattr(request, "technologies", None) or []
+        strict_tech_focus = getattr(request, "strict_tech_focus", False) or False
+
+        detected_resume_langs = []
+        if not requested_techs:
+            candidate_skills = (
+                career_context.get("matched_skills", []) +
+                [g.get("skill_name") for g in career_context.get("top_skill_gaps", []) if isinstance(g, dict)] +
+                [s for s in career_context.get("all_skills", [])]
+            )
+            KNOWN_LANGUAGES = ["Java", "Python", "C++", "C", "SQL", "JavaScript", "TypeScript", "Go", "Rust", "C#", "Docker"]
+            for s in candidate_skills:
+                if not s:
+                    continue
+                s_clean = s.strip()
+                for lang in KNOWN_LANGUAGES:
+                    if lang.lower() == s_clean.lower() or (len(lang) > 1 and lang.lower() in s_clean.lower()):
+                        if lang not in detected_resume_langs:
+                            detected_resume_langs.append(lang)
+        career_context["detected_resume_languages"] = detected_resume_langs
+        effective_techs = requested_techs if requested_techs else detected_resume_langs
+
         # Grounding: retrieve diverse syllabus / interview knowledge
         # Dynamically retrieve role-calibrated facets with session entropy so back-to-back sessions get fresh topics
-        role_facets = get_role_turn_facets(target_role, category, difficulty)
+        role_facets = get_role_turn_facets(target_role, category, difficulty, technologies=effective_techs)
         seed_offset = (past_session_count + random.randint(0, len(role_facets) - 1)) % len(role_facets)
         retrieval_query = role_facets[seed_offset]
         rag_res = default_retrieval_service.retrieve_relevant_knowledge(
@@ -196,14 +220,19 @@ class InterviewEngine:
             "feedback_language": feedback_lang,
             "session_number": past_session_count + 1,
             "resume_text": "",
-            "job_description": getattr(request, "job_description", "") or ""
+            "job_description": getattr(request, "job_description", "") or "",
+            "technologies": effective_techs,
+            "strict_tech_focus": strict_tech_focus or bool(requested_techs)
         }
 
         interview_mode = getattr(request, "interview_mode", None) or "text"
         session_ctx["interview_mode"] = interview_mode
 
+        # Route to dedicated tech_focus AI API key if available and technologies specified
+        active_generator_mode = "tech_focus" if (strict_tech_focus or requested_techs) and os.getenv("INTERVIEW_TECH_FOCUS_API_KEY") else interview_mode
+
         # Generate question #1 using dedicated Interview Mode LLM
-        q1_data = get_interview_mode_llm_service(mode=interview_mode, purpose="generator").generate_interview_question(
+        q1_data = get_interview_mode_llm_service(mode=active_generator_mode, purpose="generator").generate_interview_question(
             session_context=session_ctx,
             question_index=0,
             total_questions=total_questions,
@@ -235,6 +264,8 @@ class InterviewEngine:
             strengths_json="[]",
             weaknesses_json="[]",
             job_description=getattr(request, "job_description", "") or "",
+            technologies_json=json.dumps(effective_techs),
+            strict_tech_focus=strict_tech_focus or bool(requested_techs),
             started_at=now,
             created_at=now
         )
@@ -289,6 +320,8 @@ class InterviewEngine:
             current_question_index=0,
             current_question=q1_response,
             job_description=interview.job_description or "",
+            technologies=interview.technologies,
+            strict_tech_focus=bool(interview.strict_tech_focus),
             started_at=interview.started_at or now
         )
 
@@ -347,6 +380,8 @@ class InterviewEngine:
             current_question_index=interview.current_question_index,
             current_question=current_q_resp,
             job_description=interview.job_description or "",
+            technologies=interview.technologies,
+            strict_tech_focus=bool(interview.strict_tech_focus),
             started_at=interview.started_at or utc_now()
         )
 
@@ -651,8 +686,13 @@ class InterviewEngine:
                 rag_chunks = rag_res.get("chunks", []) if isinstance(rag_res, dict) else (rag_res or [])
                 effective_chunks = rag_chunks
             else:
-                # Rotate role-calibrated curriculum focus across turns to cover diverse domains
-                role_facets = get_role_turn_facets(interview.role, interview.interview_type or "Technical", adaptive_decision.get("difficulty", "Intermediate"))
+                # Rotate role- or tech-calibrated curriculum focus across turns
+                role_facets = get_role_turn_facets(
+                    interview.role,
+                    interview.interview_type or "Technical",
+                    adaptive_decision.get("difficulty", "Intermediate"),
+                    technologies=interview.technologies
+                )
                 retrieval_query = role_facets[next_index % len(role_facets)]
                 rag_res = default_retrieval_service.retrieve_relevant_knowledge(
                     query=retrieval_query,
@@ -678,13 +718,16 @@ class InterviewEngine:
                 "category": interview.interview_type or "Technical",
                 "interview_language": interview.interview_language or "en",
                 "feedback_language": interview.feedback_language or "en",
-                "resume_text": ""
+                "resume_text": "",
+                "technologies": interview.technologies,
+                "strict_tech_focus": bool(interview.strict_tech_focus)
             }
 
             # Synthesize next question via dedicated Interview Mode LLM
             current_mode = getattr(interview, "interview_mode", "text") or "text"
             session_ctx["interview_mode"] = current_mode
-            next_q_data = get_interview_mode_llm_service(mode=current_mode, purpose="generator").generate_interview_question(
+            active_gen_mode = "tech_focus" if (interview.strict_tech_focus or interview.technologies) and os.getenv("INTERVIEW_TECH_FOCUS_API_KEY") else current_mode
+            next_q_data = get_interview_mode_llm_service(mode=active_gen_mode, purpose="generator").generate_interview_question(
                 session_context=session_ctx,
                 question_index=next_index,
                 total_questions=total_allowed,

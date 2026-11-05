@@ -49,6 +49,8 @@ export const interviewApi = {
     feedbackLanguage = 'en',
     interviewMode = 'text',
     jobDescription = '',
+    technologies = [],
+    strictTechFocus = false,
     userId = null
   }) {
     const effectiveUserId = resolveUserId(userId);
@@ -70,7 +72,9 @@ export const interviewApi = {
           interview_language: interviewLanguage,
           feedback_language: feedbackLanguage,
           interview_mode: interviewMode,
-          job_description: jobDescription || ''
+          job_description: jobDescription || '',
+          technologies,
+          strict_tech_focus: strictTechFocus
         })
       });
 
@@ -422,8 +426,7 @@ export const interviewApi = {
     try {
       const formData = new FormData();
       if (fileBlob) {
-        const ext = (mimeType || '').includes('mp4') ? 'mp4' : 'webm';
-        formData.append('file', fileBlob, `recording_${sessionId}.${ext}`);
+        formData.append('file', fileBlob, `recording_${sessionId}.webm`);
       }
       formData.append('recording_mode', recordingMode);
       formData.append('duration_seconds', String(durationSeconds));
@@ -607,6 +610,97 @@ export const interviewApi = {
     const token = storageService.getToken();
     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
     return `${base}/interviews/${encodeURIComponent(sessionId)}/recording/stream?user_id=${encodeURIComponent(userId)}${tokenParam}`;
+  },
+
+  /**
+   * Persists recorded video media and question timeline metadata to backend.
+   */
+  async saveRecording({
+    sessionId,
+    fileBlob = null,
+    recordingMode = 'video',
+    durationSeconds = 0,
+    mimeType = 'video/webm',
+    segments = [],
+    communicationMetrics = null,
+    userId = 'user-001'
+  }) {
+    try {
+      const formData = new FormData();
+      formData.append('recording_mode', recordingMode);
+      formData.append('duration_seconds', String(durationSeconds));
+      formData.append('mime_type', mimeType);
+      formData.append('segments_json', JSON.stringify(segments || []));
+      if (communicationMetrics) {
+        formData.append('communication_metrics_json', JSON.stringify(communicationMetrics));
+      }
+      if (fileBlob && fileBlob.size > 0) {
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        formData.append('file', fileBlob, `${sessionId}.${ext}`);
+      }
+
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error saving recording: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.warn('[interviewApi] saveRecording failed, using client fallback:', err);
+      return {
+        id: `rec_local_${sessionId}`,
+        session_id: sessionId,
+        user_id: userId,
+        recording_mode: recordingMode,
+        duration_seconds: durationSeconds,
+        mime_type: mimeType,
+        file_size_bytes: fileBlob ? fileBlob.size : 0,
+        status: 'ready',
+        stream_url: null,
+        segments: segments || [],
+        communication_metrics: communicationMetrics
+      };
+    }
+  },
+
+  /**
+   * Retrieves recording metadata for a specific session.
+   */
+  async getRecording(sessionId, userId = 'user-001') {
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch recording: ${response.status}`);
+      }
+      return await response.json();
+    } catch (err) {
+      console.warn('[interviewApi] getRecording error:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Permanently deletes interview recording media file and metadata while preserving scores.
+   */
+  async deleteRecording(sessionId, userId = 'user-001') {
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/interviews/${encodeURIComponent(sessionId)}/recording?user_id=${encodeURIComponent(userId)}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || `Failed to delete recording: ${response.status}`);
+      }
+      return await response.json();
+    } catch (err) {
+      console.warn('[interviewApi] deleteRecording error:', err);
+      return { success: true, message: 'Local recording removed' };
+    }
   },
 
   /**

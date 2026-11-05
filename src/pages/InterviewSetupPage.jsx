@@ -34,6 +34,7 @@ import { useAuth } from '../context/AuthContext';
 import { useInterview } from '../context/InterviewContext';
 import { profileApi } from '../services/profileApi';
 import { reverseInterviewApi } from '../services/reverseInterviewApi';
+import { storageService } from '../utils/storage/storageService';
 
 const FAST_PRESETS = [
   {
@@ -119,7 +120,44 @@ const FAST_PRESETS = [
     tag: 'Production ML',
     desc: 'Feature engineering, drift monitoring, latency-sensitive serving & LLM evaluation.',
     sampleJD: "Job Role: Machine Learning Engineer (3+ yrs)\nRequired Skills: Python, PyTorch/TensorFlow, model training pipelines, MLOps, latency optimization, RAG retrieval architecture, and production inference deployment."
+  },
+  {
+    id: 'java_deepdive',
+    title: 'Core Java & JVM Internals',
+    role: 'Backend Engineer',
+    type: 'Technical',
+    difficulty: 'Intermediate',
+    playbook: 'general',
+    mode: 'text',
+    persona: 'julian',
+    questions: 5,
+    tag: 'Strict Java Focus',
+    technologies: ['Java'],
+    strictTechFocus: true,
+    desc: 'OOP design, JVM memory model, garbage collection, ExecutorService, and Streams API.',
+    sampleJD: "Job Role: Java Backend Engineer (2-4 yrs)\nRequired Skills: Core Java (Java 17+), JVM internals (Heap, Metaspace, GC), Collections framework, Multithreading & Concurrency, Spring Boot, and RESTful APIs."
+  },
+  {
+    id: 'cpp_systems',
+    title: 'C++ Systems & Memory',
+    role: 'Software Engineer',
+    type: 'Technical',
+    difficulty: 'Intermediate',
+    playbook: 'general',
+    mode: 'text',
+    persona: 'julian',
+    questions: 5,
+    tag: 'Strict C++ Focus',
+    technologies: ['C++'],
+    strictTechFocus: true,
+    desc: 'RAII, smart pointers, move semantics, vtables, and low-latency systems engineering.',
+    sampleJD: "Job Role: C++ Systems Software Engineer\nRequired Skills: Modern C++ (C++17/20), RAII, Smart Pointers, Move Semantics, STL internals, memory management, multithreading, and performance profiling."
   }
+];
+
+const POPULAR_TECH_STACKS = [
+  'Java', 'Python', 'C', 'C++', 'SQL', 'Docker',
+  'React', 'JavaScript', 'TypeScript', 'Go', 'Kubernetes', 'FastAPI', 'Spring Boot'
 ];
 
 const SAMPLE_JDS = [
@@ -215,6 +253,40 @@ export default function InterviewSetupPage() {
   const [peerHostRole, setPeerHostRole] = useState('interviewer');
   const [peerJoinRole, setPeerJoinRole] = useState('candidate');
 
+  // Technology Focus & Resume Grounding State
+  const [selectedTechs, setSelectedTechs] = useState(setup.technologies || []);
+  const [strictTechFocus, setStrictTechFocus] = useState(setup.strictTechFocus ?? false);
+  const [customTechInput, setCustomTechInput] = useState('');
+
+  const detectedResumeLanguages = useMemo(() => {
+    const ats = storageService.getATSResult(user?.id);
+    const allSkills = [
+      ...(ats?.matched_skills || []),
+      ...(ats?.extracted_skills || []),
+      ...(ats?.skills || [])
+    ];
+    const KNOWN = ['Java', 'Python', 'C++', 'C', 'SQL', 'JavaScript', 'TypeScript', 'Go', 'Docker', 'React'];
+    return KNOWN.filter(lang =>
+      allSkills.some(s => typeof s === 'string' && (s.toLowerCase() === lang.toLowerCase() || (lang.length > 1 && s.toLowerCase().includes(lang.toLowerCase()))))
+    );
+  }, [user?.id]);
+
+  const handleToggleTech = (tech) => {
+    setSelectedTechs(prev =>
+      prev.includes(tech) ? prev.filter(t => t !== tech) : [...prev, tech]
+    );
+  };
+
+  const handleAddCustomTech = (e) => {
+    if (e) e.preventDefault();
+    const val = (customTechInput || '').trim();
+    if (!val) return;
+    if (!selectedTechs.some(t => t.toLowerCase() === val.toLowerCase())) {
+      setSelectedTechs(prev => [...prev, val]);
+    }
+    setCustomTechInput('');
+  };
+
   const detectedTech = useMemo(() => extractDetectedTech(jobDescription), [jobDescription]);
 
   const handleApplyPreset = (preset) => {
@@ -227,6 +299,12 @@ export default function InterviewSetupPage() {
     setInterviewMode(preset.mode);
     setInterviewerPersona(preset.persona);
     setTotalQuestions(preset.questions);
+    if (preset.technologies) {
+      setSelectedTechs(preset.technologies);
+    }
+    if (preset.strictTechFocus !== undefined) {
+      setStrictTechFocus(preset.strictTechFocus);
+    }
     if (preset.sampleJD) {
       setJobDescription(preset.sampleJD);
     }
@@ -285,7 +363,9 @@ export default function InterviewSetupPage() {
       interviewerPersona,
       resumeFileName: resumeName,
       jobDescription: jobDescription.trim(),
-      totalQuestions
+      totalQuestions,
+      technologies: selectedTechs,
+      strictTechFocus: strictTechFocus
     });
     if (user?.id) {
       profileApi.updateProfile({ target_role: finalRole, role: finalRole }, user.id).catch(() => {});
@@ -495,6 +575,121 @@ export default function InterviewSetupPage() {
         </GlassCard>
 
         {/* ------------------------------------------------------------- */}
+        {/* DIVISION 2: TARGET TECHNOLOGIES & LANGUAGE FOCUS              */}
+        {/* ------------------------------------------------------------- */}
+        <GlassCard className="p-5 sm:p-6 space-y-4 bg-white border border-slate-200/90 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700">
+                <Code2 className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-900">2. Technology &amp; Language Focus</h3>
+                  {selectedTechs.length > 0 && (
+                    <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                      {selectedTechs.length} Selected
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">Focus your interview strictly on specific programming languages or frameworks (e.g. Java, Python, C++, SQL)</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Resume-Grounding Alert Banner if resume languages detected */}
+          {detectedResumeLanguages.length > 0 && selectedTechs.length === 0 && (
+            <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-blue-900">
+                <strong className="font-bold">Resume Auto-Grounding Active: </strong>
+                Your scanned resume contains <span className="font-semibold underline">{detectedResumeLanguages.join(', ')}</span>. The AI interviewer will automatically ground questions in these languages unless you select specific technologies below.
+              </div>
+            </div>
+          )}
+
+          {/* Technology Chips Selector */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-700">
+                Select Technologies to Focus On (Single or Multi-Select):
+              </span>
+              {selectedTechs.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedTechs([])}
+                  className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+                >
+                  Clear Selection (Use Full Role Stack)
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {POPULAR_TECH_STACKS.map((tech) => {
+                const isSelected = selectedTechs.includes(tech);
+                return (
+                  <button
+                    key={tech}
+                    type="button"
+                    onClick={() => handleToggleTech(tech)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-500/20'
+                        : 'bg-slate-50 hover:bg-indigo-50/60 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+                    {tech}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Custom Tech Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                placeholder="Add other tech (e.g. Rust, Go, Redis, GraphQL)..."
+                value={customTechInput}
+                onChange={(e) => setCustomTechInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomTech(e); }}
+                className="text-xs px-3 py-1.5 border border-slate-200 rounded-lg bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 flex-1"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomTech}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg border border-slate-300 transition-colors"
+              >
+                + Add
+              </button>
+            </div>
+
+            {/* Strict Focus Guardrail Toggle */}
+            {selectedTechs.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 pt-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={strictTechFocus}
+                    onChange={(e) => setStrictTechFocus(e.target.checked)}
+                    className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">
+                      Enforce Strict 100% Technology Focus
+                    </span>
+                    <span className="text-[11px] text-slate-500 block leading-relaxed mt-0.5">
+                      When enabled, the AI interviewer applies strict negative prompt constraints so that <strong>NO questions outside {selectedTechs.join(', ')}</strong> will be asked.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+
+        {/* ------------------------------------------------------------- */}
         {/* DIVISION 3: SENIORITY & DIFFICULTY LEVEL (SEPARATE DIVISION)    */}
         {/* ------------------------------------------------------------- */}
         <GlassCard className="p-5 sm:p-6 space-y-4 bg-white border border-slate-200/90 rounded-2xl shadow-xs">
@@ -503,7 +698,7 @@ export default function InterviewSetupPage() {
               <TrendingUp className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">2. Seniority &amp; Experience Level</h3>
+              <h3 className="text-base font-bold text-slate-900">3. Seniority &amp; Experience Level</h3>
               <p className="text-xs text-slate-500">Controls the depth of expected engineering answers, trade-offs, and evaluation rigor</p>
             </div>
           </div>

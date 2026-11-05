@@ -29,6 +29,8 @@ class InterviewCreate(BaseModel):
     feedback_summary: Optional[str] = ""
     rubric_scores: Optional[Dict[str, int]] = Field(default_factory=dict)
     answers: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    technologies: Optional[List[str]] = Field(default_factory=list)
+    strict_tech_focus: Optional[bool] = False
 
 
 class InterviewResponse(BaseModel):
@@ -42,6 +44,8 @@ class InterviewResponse(BaseModel):
     questions_count: int
     feedback_summary: str
     rubric_scores: Dict[str, Any] = Field(default_factory=dict)
+    technologies: Optional[List[str]] = Field(default_factory=list)
+    strict_tech_focus: Optional[bool] = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -71,6 +75,8 @@ class InterviewStartRequest(BaseModel):
     total_questions: Optional[int] = Field(default=5, ge=3, le=15, description="Interview length (Quick: 5, Standard: 10)")
     interview_mode: Optional[str] = Field(default="text", description="Interview mode: text or video")
     job_description: Optional[str] = Field(default="", description="Optional Job Description text for tailored question generation")
+    technologies: Optional[List[str]] = Field(default_factory=list, description="Target technologies/languages (e.g., ['Java'], ['Python', 'SQL'])")
+    strict_tech_focus: Optional[bool] = Field(default=False, description="When True, strictly restricts all questions to specified technologies")
 
 
 class InterviewQuestionResponse(BaseModel):
@@ -102,6 +108,8 @@ class InterviewSessionResponse(BaseModel):
     current_question_index: int
     current_question: Optional[InterviewQuestionResponse] = None
     job_description: Optional[str] = ""
+    technologies: Optional[List[str]] = Field(default_factory=list)
+    strict_tech_focus: Optional[bool] = False
     started_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

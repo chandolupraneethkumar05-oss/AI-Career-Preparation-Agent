@@ -835,6 +835,37 @@ class LocalGroundedLLMService(BaseLLMService):
                 "is_follow_up": True
             }
 
+        # 1.5 Technology-Focused Question (If technologies explicitly specified or strict_tech_focus enabled)
+        session_techs = session_config.get("technologies") or career_context.get("detected_resume_languages") or []
+        strict_focus = session_config.get("strict_tech_focus") or bool(session_config.get("technologies"))
+        if session_techs and (strict_focus or sequence_number in [1, 2, 3]):
+            prime_tech = session_techs[(sequence_number - 1) % len(session_techs)]
+            from .difficulty_profiles import _detect_technology_key, TECH_TOPIC_SEEDS
+            tkey = _detect_technology_key(prime_tech)
+            norm_diff = "Beginner" if any(k in str(difficulty).lower() for k in ["begin", "junior", "entry", "fresher", "foundational", "easy"]) else ("Senior" if any(k in str(difficulty).lower() for k in ["senior", "lead", "advanced", "hard"]) else "Intermediate")
+            seeds = TECH_TOPIC_SEEDS.get(tkey, {}).get(norm_diff, []) if tkey else []
+            if seeds:
+                tech_seed = seeds[(sequence_number - 1) % len(seeds)]
+                q_text = f"In the context of {prime_tech} engineering at {norm_diff} level: Could you explain your approach to {tech_seed}, detailing common failure modes and production best practices?"
+                loc_q = self._localize_question(q_text, language, target_role)
+                return {
+                    "id": qid,
+                    "question_id": qid,
+                    "sequence_number": sequence_number,
+                    "question": loc_q,
+                    "question_text": loc_q,
+                    "skill": prime_tech,
+                    "topic": prime_tech,
+                    "difficulty": difficulty,
+                    "question_type": "Technical",
+                    "source_type": "technology_focus",
+                    "generated_source": "technology_focus",
+                    "rationale": f"Candidate specified focus on {prime_tech}; evaluating {norm_diff} competency.",
+                    "expected_focus": f"Idiomatic {prime_tech} patterns and production awareness regarding {tech_seed}.",
+                    "rubric_guidance": f"Idiomatic {prime_tech} patterns and production awareness regarding {tech_seed}.",
+                    "is_follow_up": False
+                }
+
         # 2. Resume-Aware Question (Questions 1 or 2 for technical/behavioral if resume skills exist)
         resume_candidates = [
             s for s in matched_skills
@@ -1784,7 +1815,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
 
     def _get_client(self):
         from openai import OpenAI
-        kwargs = {"api_key": self.api_key, "timeout": 16.0}
+        kwargs = {"api_key": self.api_key}
         if self.base_url:
             kwargs["base_url"] = self.base_url
         return OpenAI(**kwargs)
@@ -2566,6 +2597,8 @@ def get_interview_mode_llm_service(mode: Optional[str] = "text", purpose: str = 
         "face_to_face": os.getenv("INTERVIEW_FACE_TO_FACE_API_KEY"),
         "peer_chamber": os.getenv("INTERVIEW_PEER_CHAMBER_API_KEY"),
         "reverse_mock": os.getenv("INTERVIEW_REVERSE_MOCK_API_KEY"),
+        "tech_focus": os.getenv("INTERVIEW_TECH_FOCUS_API_KEY") or os.getenv("TECH_INTERVIEW_API_KEY"),
+        "technology": os.getenv("INTERVIEW_TECH_FOCUS_API_KEY") or os.getenv("TECH_INTERVIEW_API_KEY"),
     }
     key = mode_keys.get(norm_mode) or os.getenv("INTERVIEW_API_KEY")
     fallback_factory = get_evaluator_llm_service if purpose == "evaluator" else get_question_generator_llm_service
@@ -2595,6 +2628,18 @@ def get_skill_gap_llm_service() -> BaseLLMService:
     if key and key.strip():
         return create_service_for_key(key, default_factory=get_general_llm_service)
     return get_general_llm_service()
+
+
+def get_skill_primer_llm_service() -> BaseLLMService:
+    """
+    Retrieves the dedicated LLM service for Just-In-Time Skill Primers & Verification:
+    - SKILL_PRIMER_API_KEY (or JIT_PRIMER_API_KEY)
+    Falls back gracefully to get_skill_gap_llm_service() or get_general_llm_service().
+    """
+    key = os.getenv("SKILL_PRIMER_API_KEY") or os.getenv("JIT_PRIMER_API_KEY")
+    if key and key.strip():
+        return create_service_for_key(key, default_factory=get_general_llm_service)
+    return get_skill_gap_llm_service()
 
 
 def get_resume_llm_service() -> BaseLLMService:
