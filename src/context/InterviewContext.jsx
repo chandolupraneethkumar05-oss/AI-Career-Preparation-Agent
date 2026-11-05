@@ -301,10 +301,11 @@ export function InterviewProvider({ children }) {
     if (!evaluation) {
       evaluation = evaluateAnswer(
         currentQ,
-        answerText,
+        effectiveAnswer,
         setup.targetRole,
         setup.interviewType,
-        session.currentDifficulty
+        session.currentDifficulty,
+        { skipped: isSkipped, isSkipped }
       );
 
       const score = evaluation.scores.overall;
@@ -362,7 +363,8 @@ export function InterviewProvider({ children }) {
       question: currentQ.question,
       category: currentQ.category,
       difficulty: session.currentDifficulty,
-      answerText,
+      answerText: effectiveAnswer,
+      isSkipped,
       evaluation,
       hintsUsed: qHints
     };
@@ -375,7 +377,8 @@ export function InterviewProvider({ children }) {
     if (compKeys.length > 0) {
       const compKey = compKeys[session.currentIndex % compKeys.length];
       if (updatedRubric[compKey]) {
-        const scoreVal = evaluation?.scores?.overall ? Math.round(evaluation.scores.overall * 10) : 75;
+        const rawScore = evaluation?.scores?.overall;
+        const scoreVal = (rawScore !== undefined && rawScore !== null) ? Math.round(rawScore * 10) : (isSkipped ? 0 : 70);
         const status = scoreVal >= 70 ? 'verified' : scoreVal < 55 ? 'weak' : 'pending';
         const snippet = answerText ? (answerText.length > 120 ? answerText.slice(0, 117) + '...' : answerText) : 'Verbal response recorded';
         updatedRubric[compKey] = {
@@ -469,25 +472,38 @@ export function InterviewProvider({ children }) {
     let totalConf = 0;
     let totalOverall = 0;
 
+    let nonSkippedCount = 0;
     answers.forEach(a => {
-      const sc = a.evaluation.scores;
-      totalTech += sc.technicalKnowledge;
-      totalRel += sc.relevance;
-      totalClarity += sc.clarity;
-      totalStruct += sc.structure;
-      totalConf += sc.confidence;
-      totalOverall += sc.overall;
+      const isSk = Boolean(a.isSkipped || a.answerText === '[Skipped by candidate]' || a.answerText === '[Skipped]' || !a.answerText?.trim());
+      const sc = a.evaluation?.scores || {};
+      if (!isSk) nonSkippedCount++;
+      totalTech += Number(sc.technicalKnowledge || 0);
+      totalRel += Number(sc.relevance || 0);
+      totalClarity += Number(sc.clarity || 0);
+      totalStruct += Number(sc.structure || 0);
+      totalConf += Number(sc.confidence || 0);
+      totalOverall += Number(sc.overall || 0);
     });
 
     const count = answers.length;
     let finalScores = {
-      overall: Math.round((totalOverall / count) * 10),
-      technicalKnowledge: Math.round((totalTech / count) * 10),
-      relevance: Math.round((totalRel / count) * 10),
-      clarity: Math.round((totalClarity / count) * 10),
-      structure: Math.round((totalStruct / count) * 10),
-      confidence: Math.round((totalConf / count) * 10)
+      overall: count > 0 ? Math.round((totalOverall / count) * 10) : 0,
+      technicalKnowledge: count > 0 ? Math.round((totalTech / count) * 10) : 0,
+      relevance: count > 0 ? Math.round((totalRel / count) * 10) : 0,
+      clarity: count > 0 ? Math.round((totalClarity / count) * 10) : 0,
+      structure: count > 0 ? Math.round((totalStruct / count) * 10) : 0,
+      confidence: count > 0 ? Math.round((totalConf / count) * 10) : 0
     };
+    if (nonSkippedCount === 0) {
+      finalScores = {
+        overall: 0,
+        technicalKnowledge: 0,
+        relevance: 0,
+        clarity: 0,
+        structure: 0,
+        confidence: 0
+      };
+    }
 
     let allStrengths = Array.from(new Set(answers.flatMap(a => a.evaluation.strengths))).slice(0, 4);
     let allImprovements = Array.from(new Set(answers.flatMap(a => a.evaluation.areasToImprove))).slice(0, 3);
@@ -533,7 +549,10 @@ export function InterviewProvider({ children }) {
     let committeeVerdict = 'Lean Hire';
     let committeeReasoning = 'Candidate demonstrated solid baseline competence with areas for growth.';
 
-    if (finalScores.overall >= 88 && rubricCoveragePct >= 75 && weakCount === 0) {
+    if (nonSkippedCount === 0 || finalScores.overall === 0) {
+      committeeVerdict = 'No Hire';
+      committeeReasoning = 'Candidate did not provide verbal or written defenses for the questions. Complete focused drills before re-evaluating.';
+    } else if (finalScores.overall >= 88 && rubricCoveragePct >= 75 && weakCount === 0) {
       committeeVerdict = 'Strong Hire';
       committeeReasoning = 'Universal Strong Hire consensus. Exceptional command across algorithmic depth, architectural trade-offs, and high autonomous execution without requiring steering.';
     } else if (finalScores.overall >= 78 && weakCount === 0) {

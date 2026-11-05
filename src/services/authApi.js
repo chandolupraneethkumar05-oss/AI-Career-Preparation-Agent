@@ -6,6 +6,24 @@
 
 import { API_BASE_URL } from './apiConfig';
 
+const parseErrorDetail = (data, fallback) => {
+  if (!data) return fallback;
+  if (typeof data === 'string') return data;
+  if (typeof data.detail === 'string') return data.detail;
+  if (Array.isArray(data.detail)) {
+    const msgs = data.detail.map(item => {
+      if (typeof item === 'string') return item;
+      return item.msg || item.message || JSON.stringify(item);
+    }).filter(Boolean);
+    if (msgs.length) return msgs.join('. ');
+  }
+  if (data.detail && typeof data.detail === 'object') {
+    return data.detail.msg || data.detail.message || JSON.stringify(data.detail);
+  }
+  if (data.message && typeof data.message === 'string') return data.message;
+  return fallback;
+};
+
 export const authApi = {
   /**
    * Request password recovery token & email dispatch
@@ -21,7 +39,7 @@ export const authApi = {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Could not process password recovery request. Please try again.');
+      throw new Error(parseErrorDetail(err, 'Could not process password recovery request. Please verify your email.'));
     }
 
     return res.json();
@@ -31,18 +49,23 @@ export const authApi = {
    * Complete password reset with one-time signed token
    */
   async resetPassword(token, newPassword) {
+    const cleanToken = (token || '').trim();
+    if (!cleanToken) {
+      throw new Error('A valid password reset token or recovery session is required. Please request a new recovery link.');
+    }
+
     const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        token: (token || '').trim(),
+        token: cleanToken,
         new_password: newPassword
       })
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Could not reset password. The link or token may have expired.');
+      throw new Error(parseErrorDetail(err, 'Could not reset password. The recovery link or token may have expired.'));
     }
 
     return res.json();

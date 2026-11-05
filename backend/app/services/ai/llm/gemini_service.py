@@ -76,7 +76,7 @@ class GeminiLLMService:
                 "parts": [{"text": system_instruction}]
             }
 
-        candidate_models = [self.model, "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.8-flash", "gemini-2.0-flash"]
+        candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", self.model, "gemini-2.5-flash", "gemini-3.8-flash"]
         dedup_models = list(dict.fromkeys(candidate_models))
 
         for model_name in dedup_models:
@@ -100,11 +100,9 @@ class GeminiLLMService:
                                 self.model = model_name  # Pin successful model
                                 return parts[0]["text"]
             except urllib.error.HTTPError as http_err:
-                if http_err.code in [404, 410]:
-                    continue  # Try next candidate model
                 if os.getenv("DEBUG_GEMINI"):
                     print(f"[GeminiLLMService] Gemini HTTP error {http_err.code} on {model_name}")
-                break
+                continue  # Try next candidate model
             except Exception as exc:
                 if os.getenv("DEBUG_GEMINI"):
                     print(f"[GeminiLLMService] Gemini call failed on {model_name}: {exc}")

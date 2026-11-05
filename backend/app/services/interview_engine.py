@@ -795,7 +795,7 @@ class InterviewEngine:
                 target_role=interview.role,
                 interview_type=interview.interview_type or "Technical",
                 difficulty=interview.difficulty,
-                overall_score=interview.overall_score or 75,
+                overall_score=interview.overall_score if interview.overall_score is not None else 0,
                 passed=interview.passed if interview.passed is not None else True,
                 rubric_scores=rubric_scores,
                 strengths=strengths,
@@ -869,19 +869,38 @@ class InterviewEngine:
         now = utc_now()
         interview.status = "completed"
         interview.completed_at = now
-        final_ov = int(final_data.get("overall_score", 75))
-        final_passed = bool(final_data.get("passed", final_ov >= 75))
-        final_rubrics = final_data.get("rubric_scores", {
-            "technicalKnowledge": final_ov,
-            "problemSolving": max(40, final_ov - 2),
-            "communicationSTAR": min(98, final_ov + 2),
-            "systemDesign": final_ov,
-            "confidenceDelivery": min(98, final_ov + 1)
-        })
-        final_summary = final_data.get("feedback_summary") or "Interview completed. Candidate demonstrated solid technical baseline."
-        final_strengths = final_data.get("strengths") or ["Core engineering fundamentals demonstrated"]
-        final_weaknesses = final_data.get("weaknesses") or ["Recommended deeper exploration of high-scale trade-offs"]
-        final_recs = final_data.get("recommendations") or ["Practice multi-tier system scalability drills"]
+        all_evals = [e for e in evaluations if e is not None]
+        all_skipped = len(all_evals) > 0 and all(getattr(e, 'overall_score', 0) == 0 for e in all_evals)
+        raw_ov = final_data.get('overall_score')
+
+        if all_skipped:
+            final_ov = 0
+            final_passed = False
+            final_rubrics = {
+                'technicalKnowledge': 0,
+                'problemSolving': 0,
+                'communicationSTAR': 0,
+                'systemDesign': 0,
+                'confidenceDelivery': 0
+            }
+            final_summary = 'All inquiries were skipped in this interview session. No evaluable responses were submitted. Practice drills required to calibrate performance.'
+            final_strengths = []
+            final_weaknesses = ['All interview questions were skipped by candidate']
+            final_recs = ['Complete a full practice session with recorded verbal or written defenses']
+        else:
+            final_ov = int(raw_ov if raw_ov is not None else 75)
+            final_passed = bool(final_data.get('passed', final_ov >= 75))
+            final_rubrics = final_data.get('rubric_scores', {
+                'technicalKnowledge': final_ov,
+                'problemSolving': max(40, final_ov - 2),
+                'communicationSTAR': min(98, final_ov + 2),
+                'systemDesign': final_ov,
+                'confidenceDelivery': min(98, final_ov + 1)
+            })
+            final_summary = final_data.get('feedback_summary') or 'Interview completed. Candidate demonstrated solid technical baseline.'
+            final_strengths = final_data.get('strengths') or ['Core engineering fundamentals demonstrated']
+            final_weaknesses = final_data.get('weaknesses') or ['Recommended deeper exploration of high-scale trade-offs']
+            final_recs = final_data.get('recommendations') or ['Practice multi-tier system scalability drills']
 
         interview.overall_score = final_ov
         interview.passed = final_passed
@@ -994,12 +1013,12 @@ class InterviewEngine:
             target_role=interview.role,
             interview_type=interview.interview_type or "Technical",
             difficulty=interview.difficulty,
-            overall_score=interview.overall_score,
-            passed=interview.passed,
-            rubric_scores=final_data.get("rubric_scores", {}),
-            strengths=final_data.get("strengths", []),
-            weaknesses=final_data.get("weaknesses", []),
-            recommendations=final_data.get("recommendations", []),
+            overall_score=final_ov,
+            passed=final_passed,
+            rubric_scores=final_rubrics,
+            strengths=final_strengths,
+            weaknesses=final_weaknesses,
+            recommendations=final_recs,
             next_best_action=final_data.get("next_best_action") or {
                 "title": "Review Performance & Practice Gaps",
                 "action": "Open Skill Arena",

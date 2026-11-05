@@ -23,12 +23,18 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
   let probScore = scores.structure || scores.problemSolving;
   let confScore = scores.confidence || scores.confidenceDelivery;
 
+  const allAnswersSkipped = sessionAnswers && sessionAnswers.length > 0 && sessionAnswers.every(a =>
+    Boolean(a.isSkipped || a.answerText === '[Skipped by candidate]' || a.answerText === '[Skipped]' || !a.answerText?.trim())
+  );
+
   if (sessionAnswers && sessionAnswers.length > 0) {
     let tTech = 0, tRel = 0, tComm = 0, tProb = 0, tConf = 0;
     sessionAnswers.forEach(a => {
+      const isSkipped = Boolean(a.isSkipped || a.answerText === '[Skipped by candidate]' || a.answerText === '[Skipped]' || !a.answerText?.trim());
       const sc = a.evaluation?.scores || {};
-      const ansOverall = sc.overall ? (sc.overall <= 10 ? sc.overall * 10 : sc.overall) : 70;
-      const to100 = (val) => val != null ? (val <= 10 ? val * 10 : val) : ansOverall;
+      const rawAnsOverall = sc.overall;
+      const ansOverall = isSkipped ? 0 : (rawAnsOverall !== undefined && rawAnsOverall !== null ? (rawAnsOverall <= 10 ? rawAnsOverall * 10 : rawAnsOverall) : 0);
+      const to100 = (val) => isSkipped ? 0 : (val != null ? (val <= 10 ? val * 10 : val) : ansOverall);
 
       tTech += to100(sc.technicalKnowledge);
       tRel += to100(sc.relevance);
@@ -37,21 +43,31 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
       tConf += to100(sc.confidence);
     });
     const len = sessionAnswers.length;
-    if (!techScore) techScore = Math.round(tTech / len);
-    if (!relScore) relScore = Math.round(tRel / len);
-    if (!commScore) commScore = Math.round(tComm / len);
-    if (!probScore) probScore = Math.round(tProb / len);
-    if (!confScore) confScore = Math.round(tConf / len);
+    if (allAnswersSkipped) {
+      techScore = 0;
+      relScore = 0;
+      commScore = 0;
+      probScore = 0;
+      confScore = 0;
+    } else {
+      if (techScore === undefined) techScore = Math.round(tTech / len);
+      if (relScore === undefined) relScore = Math.round(tRel / len);
+      if (commScore === undefined) commScore = Math.round(tComm / len);
+      if (probScore === undefined) probScore = Math.round(tProb / len);
+      if (confScore === undefined) confScore = Math.round(tConf / len);
+    }
   }
 
-  const baselineScore = scores.overall || 70;
+  const baselineScore = scores.overall ?? (allAnswersSkipped ? 0 : 70);
   techScore = techScore ?? baselineScore;
   relScore = relScore ?? baselineScore;
   commScore = commScore ?? baselineScore;
   probScore = probScore ?? baselineScore;
   confScore = confScore ?? baselineScore;
 
-  const overall = scores.overall || Math.round((techScore + relScore + commScore + probScore + confScore) / 5);
+  const overall = scores.overall !== undefined && scores.overall !== null
+    ? scores.overall
+    : (allAnswersSkipped ? 0 : Math.round((techScore + relScore + commScore + probScore + confScore) / 5));
 
   // Extract actual verified concepts and gaps from candidate answers
   const identifiedSkills = Array.from(new Set(sessionAnswers.flatMap(a => a.evaluation?.detectedTopics || (a.skill ? [a.skill] : [])))).filter(Boolean);
@@ -297,6 +313,7 @@ export function synthesizeInterviewFeedback(sessionSummary, sessionAnswers = [],
   if (overall >= 88) qualitativeRating = 'Exceptional Performance';
   else if (overall >= 75) qualitativeRating = 'Strong Performance';
   else if (overall >= 65) qualitativeRating = 'Developing Performance';
+  else if (overall === 0 || allAnswersSkipped) qualitativeRating = 'Practice Required';
   else qualitativeRating = 'Foundational Baseline';
 
   // Dynamic XP calculation

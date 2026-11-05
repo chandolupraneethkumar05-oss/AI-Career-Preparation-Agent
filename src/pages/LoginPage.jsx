@@ -136,9 +136,16 @@ export default function LoginPage() {
 
   const handleCompleteReset = async (e) => {
     e.preventDefault();
-    if (!resetToken || !newPassword) return;
+    if (!newPassword) {
+      setResetError('Please enter a new password.');
+      return;
+    }
     if (newPassword.length < 6) {
       setResetError('Password must be at least 6 characters.');
+      return;
+    }
+    if (!resetToken) {
+      setResetError('Password reset token is missing. Please enter the token from email or request a new recovery session.');
       return;
     }
     setIsResettingPassword(true);
@@ -152,6 +159,8 @@ export default function LoginPage() {
         setShowForgotModal(false);
         setResetSent(false);
         setPasswordResetSuccess(false);
+        setResetToken('');
+        setNewPassword('');
       }, 2200);
     } catch (err) {
       setResetError(err.message || 'Could not reset password. Please try requesting a new link.');
@@ -569,6 +578,22 @@ export default function LoginPage() {
                 </div>
 
                 <form onSubmit={handleCompleteReset} className="space-y-3">
+                  {!resetToken && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Reset Token / Verification Code
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={resetToken}
+                        onChange={(e) => setResetToken(e.target.value)}
+                        placeholder="Paste verification token from email"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                      />
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       New Password (min. 6 characters)

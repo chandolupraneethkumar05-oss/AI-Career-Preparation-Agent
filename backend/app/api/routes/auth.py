@@ -211,13 +211,9 @@ def forgot_password(
     user = db.query(User).filter(User.email == clean_email).first()
 
     if not user:
-        return ForgotPasswordResponse(
-            success=True,
-            message="If an account with this email exists, password recovery instructions have been sent.",
-            email=clean_email,
-            reset_token=None,
-            reset_link=None,
-            delivered_via="email"
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No account found with email '{clean_email}'. Please verify your email or create an account."
         )
 
     # Generate one-time signed reset token (30-minute expiry)
@@ -237,20 +233,27 @@ def forgot_password(
     </div>
     """
 
-    email_result = email_svc.send_generic_email(
-        recipient_email=user.email,
-        subject="Reset Your TalentPath Account Password",
-        html_body=html_body,
-        plain_text=f"Reset your password with token: {reset_token}"
-    )
+    try:
+        email_result = email_svc.send_generic_email(
+            recipient_email=user.email,
+            subject="Reset Your TalentPath Account Password",
+            html_body=html_body,
+            plain_text=f"Reset your password with token: {reset_token}"
+        )
+    except Exception as exc:
+        email_result = {"status": "failed", "mode": "local_session", "error": str(exc)}
+
+    delivered_mode = email_result.get("mode", "local_session")
+    if not email_result.get("delivered", False):
+        delivered_mode = "local_session"
 
     return ForgotPasswordResponse(
         success=True,
-        message="Password recovery instructions have been dispatched. Use your reset token or link to set a new password.",
+        message="A secure password recovery session is verified. Enter your new password below to update your account immediately.",
         email=user.email,
         reset_token=reset_token,
         reset_link=reset_link,
-        delivered_via=email_result.get("mode", "email")
+        delivered_via=delivered_mode
     )
 
 

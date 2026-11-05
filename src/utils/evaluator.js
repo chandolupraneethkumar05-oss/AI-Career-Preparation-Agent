@@ -8,19 +8,50 @@
  * structure indicators, and sentiment markers.
  */
 
-export function evaluateAnswer(questionObj, answerText, role = 'Machine Learning Engineer', interviewType = 'Technical', _difficulty = 'Intermediate') {
+export function evaluateAnswer(questionObj, answerText, role = 'Machine Learning Engineer', interviewType = 'Technical', _difficulty = 'Intermediate', options = {}) {
   const text = (answerText || '').trim();
+  const isSkipped = Boolean(
+    options?.skipped ||
+    options?.isSkipped ||
+    text === '' ||
+    text === '[Skipped by candidate]' ||
+    text === '[Skipped]' ||
+    text.toLowerCase() === 'skipped'
+  );
+
+  if (isSkipped) {
+    return {
+      scores: {
+        technicalKnowledge: 0,
+        relevance: 0,
+        clarity: 0,
+        structure: 0,
+        confidence: 0,
+        overall: 0
+      },
+      strengths: [],
+      areasToImprove: [
+        `Question was skipped on ${questionObj?.category || 'core principles'}.`,
+        'No verbal or architectural defense was provided for calibration.'
+      ],
+      aiRecommendation: 'Targeted remediation required: complete focused foundational drills to calibrate this competency.',
+      adaptiveNote: 'Question was skipped. Maintaining foundational focus for next challenge.',
+      isAdaptiveFollowUpSuggested: false,
+      followUpQuestion: null
+    };
+  }
+
   const wordCount = text.split(/\s+/).filter(Boolean).length;
 
   if (wordCount < 5) {
     return {
       scores: {
-        technicalKnowledge: 4.0,
-        relevance: 3.5,
-        clarity: 4.0,
-        structure: 3.0,
-        confidence: 3.5,
-        overall: 3.6
+        technicalKnowledge: 2.0,
+        relevance: 2.0,
+        clarity: 2.0,
+        structure: 2.0,
+        confidence: 2.0,
+        overall: 2.0
       },
       strengths: [
         'Attempted to address the question prompt.'
