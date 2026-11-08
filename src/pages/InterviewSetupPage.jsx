@@ -478,24 +478,24 @@ export default function InterviewSetupPage() {
                   onClick={() => handleApplyPreset(p)}
                   className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between text-left ${
                     isSelected
-                      ? 'bg-emerald-50/80 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
-                      : 'bg-slate-50/60 border-slate-200 hover:border-emerald-400 hover:bg-white'
+                      ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'bg-slate-50/60 dark:bg-[var(--theme-surface-subtle)] border-slate-200 dark:border-[var(--theme-border)] hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-white dark:hover:bg-[var(--theme-surface-hover)]'
                   }`}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-mono font-bold text-emerald-700">{p.tag}</span>
+                      <span className="text-[10px] uppercase font-mono font-bold text-emerald-700 dark:text-emerald-400">{p.tag}</span>
                       <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
-                        isSelected ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
+                        isSelected ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/80'
                       }`}>
                         {isSelected && <div className="w-1 h-1 rounded-full bg-white" />}
                       </div>
                     </div>
-                    <h4 className="text-xs font-bold text-slate-900 leading-tight">{p.title}</h4>
-                    <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">{p.desc}</p>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{p.title}</h4>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-300 leading-relaxed line-clamp-2">{p.desc}</p>
                   </div>
-                  <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                    <span className="font-semibold text-emerald-700">{p.difficulty}</span>
+                  <div className="mt-2.5 pt-2 border-t border-slate-200/80 dark:border-[var(--theme-border)] flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400 font-mono">
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">{p.difficulty}</span>
                     <span>{p.questions} Qs</span>
                   </div>
                 </div>
@@ -562,7 +562,7 @@ export default function InterviewSetupPage() {
                       className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
                         isCurrent
                           ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                          : 'bg-slate-50 hover:bg-emerald-50/60 border-slate-200 text-slate-700'
+                          : 'bg-slate-50 dark:bg-[var(--theme-surface-subtle)] hover:bg-emerald-50/60 dark:hover:bg-[var(--theme-surface-hover)] border-slate-200 dark:border-[var(--theme-border)] text-slate-700 dark:text-zinc-200'
                       }`}
                     >
                       {r}
@@ -636,7 +636,7 @@ export default function InterviewSetupPage() {
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
                       isSelected
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-500/20'
-                        : 'bg-slate-50 hover:bg-indigo-50/60 border-slate-200 text-slate-700'
+                        : 'bg-slate-50 dark:bg-[var(--theme-surface-subtle)] hover:bg-indigo-50/60 dark:hover:bg-[var(--theme-surface-hover)] border-slate-200 dark:border-[var(--theme-border)] text-slate-700 dark:text-zinc-200'
                     }`}
                   >
                     {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
@@ -654,12 +654,12 @@ export default function InterviewSetupPage() {
                 value={customTechInput}
                 onChange={(e) => setCustomTechInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomTech(e); }}
-                className="text-xs px-3 py-1.5 border border-slate-200 rounded-lg bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 flex-1"
+                className="text-xs px-3 py-1.5 border border-slate-200 dark:border-[var(--theme-border)] rounded-lg bg-slate-50/50 dark:bg-[var(--theme-surface-subtle)] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 flex-1"
               />
               <button
                 type="button"
                 onClick={handleAddCustomTech}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg border border-slate-300 transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-zinc-200 rounded-lg border border-slate-300 dark:border-slate-700 transition-colors"
               >
                 + Add
               </button>
@@ -667,7 +667,7 @@ export default function InterviewSetupPage() {
 
             {/* Strict Focus Guardrail Toggle */}
             {selectedTechs.length > 0 && (
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 pt-3">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[var(--theme-surface-subtle)] border border-slate-200 dark:border-[var(--theme-border)] space-y-2 pt-3">
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
@@ -676,10 +676,10 @@ export default function InterviewSetupPage() {
                     className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
                   />
                   <div>
-                    <span className="text-xs font-bold text-slate-900 block">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
                       Enforce Strict 100% Technology Focus
                     </span>
-                    <span className="text-[11px] text-slate-500 block leading-relaxed mt-0.5">
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-300 block leading-relaxed mt-0.5">
                       When enabled, the AI interviewer applies strict negative prompt constraints so that <strong>NO questions outside {selectedTechs.join(', ')}</strong> will be asked.
                     </span>
                   </div>
@@ -879,26 +879,26 @@ export default function InterviewSetupPage() {
 
             {/* Peer-to-Peer Chamber Sub-Card */}
             {interviewMode === 'peer_chamber' && (
-              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-4 animate-in fade-in duration-150">
+              <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 space-y-4 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-emerald-700" />
-                    <span className="text-xs font-bold text-emerald-950">Peer-to-Peer Collaborative Chamber</span>
+                    <Users className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-emerald-950 dark:text-emerald-300">Peer-to-Peer Collaborative Chamber</span>
                   </div>
                   <Badge variant="emerald" size="xs">100% FREE WEBRTC</Badge>
                 </div>
-                <p className="text-xs text-emerald-900 leading-relaxed">
+                <p className="text-xs text-emerald-900 dark:text-emerald-200 leading-relaxed">
                   Practice with a classmate! You can host as the Interviewer (with AI teleprompter &amp; rubric) or as the Candidate (collaborative coding &amp; speaking). Both enter the chamber together with a synchronized timer.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                   {/* Option 1: Host a New Peer Room */}
-                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200 space-y-2.5">
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-[var(--theme-surface-subtle)] border border-emerald-200 dark:border-emerald-800/60 space-y-2.5">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       Option 1: Host New Room
                     </span>
-                    <div className="text-[11px] text-slate-600 font-medium">Select your role as host:</div>
+                    <div className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">Select your role as host:</div>
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -906,7 +906,7 @@ export default function InterviewSetupPage() {
                         className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                           peerHostRole === 'interviewer'
                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            : 'bg-slate-50 dark:bg-[var(--theme-surface-low)] text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-[var(--theme-border)] hover:bg-slate-100 dark:hover:bg-[var(--theme-surface-hover)]'
                         }`}
                       >
                         Interviewer
@@ -917,7 +917,7 @@ export default function InterviewSetupPage() {
                         className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                           peerHostRole === 'candidate'
                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            : 'bg-slate-50 dark:bg-[var(--theme-surface-low)] text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-[var(--theme-border)] hover:bg-slate-100 dark:hover:bg-[var(--theme-surface-hover)]'
                         }`}
                       >
                         Candidate
@@ -933,12 +933,12 @@ export default function InterviewSetupPage() {
                   </div>
 
                   {/* Option 2: Join via Room Code */}
-                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200 space-y-2.5">
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-emerald-600" />
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-[var(--theme-surface-subtle)] border border-emerald-200 dark:border-emerald-800/60 space-y-2.5">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       Option 2: Join with Room Code
                     </span>
-                    <div className="text-[11px] text-slate-600 font-medium">Select your joining role:</div>
+                    <div className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">Select your joining role:</div>
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -946,7 +946,7 @@ export default function InterviewSetupPage() {
                         className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                           peerJoinRole === 'candidate'
                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            : 'bg-slate-50 dark:bg-[var(--theme-surface-low)] text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-[var(--theme-border)] hover:bg-slate-100 dark:hover:bg-[var(--theme-surface-hover)]'
                         }`}
                       >
                         Candidate
@@ -957,7 +957,7 @@ export default function InterviewSetupPage() {
                         className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                           peerJoinRole === 'interviewer'
                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            : 'bg-slate-50 dark:bg-[var(--theme-surface-low)] text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-[var(--theme-border)] hover:bg-slate-100 dark:hover:bg-[var(--theme-surface-hover)]'
                         }`}
                       >
                         Interviewer
@@ -969,7 +969,7 @@ export default function InterviewSetupPage() {
                         value={joinRoomCode}
                         onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
                         placeholder="e.g. PEER-XXXXXX"
-                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 uppercase"
+                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[var(--theme-surface-low)] border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-600 uppercase"
                       />
                       <button
                         type="button"
@@ -1041,11 +1041,11 @@ export default function InterviewSetupPage() {
                     key={sample.id}
                     type="button"
                     onClick={() => handleApplySampleJD(sample)}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-left text-xs text-slate-800 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-[var(--theme-surface-subtle)] hover:bg-emerald-50 dark:hover:bg-[var(--theme-surface-hover)] border border-slate-200 dark:border-[var(--theme-border)] hover:border-emerald-300 text-left text-xs text-slate-800 dark:text-zinc-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
-                    <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span className="font-medium">{sample.title}</span>
-                    <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-white text-slate-500 border border-slate-200">
+                    <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-white dark:bg-[var(--theme-surface-low)] text-slate-500 dark:text-zinc-300 border border-slate-200 dark:border-[var(--theme-border)]">
                       {sample.tag}
                     </span>
                   </button>
@@ -1059,17 +1059,17 @@ export default function InterviewSetupPage() {
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste key responsibilities, required skills (e.g. React, JavaScript, SQL, Python), or raw Job Description text here..."
               rows={3}
-              className="w-full p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-colors resize-none font-sans leading-relaxed"
+              className="w-full p-3 rounded-xl bg-white dark:bg-[var(--theme-surface-low)] border border-slate-200 dark:border-[var(--theme-border)] text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-colors resize-none font-sans leading-relaxed"
             />
 
             {/* Detected Tech Stack */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-[var(--theme-surface-subtle)] border border-slate-200 dark:border-[var(--theme-border)] space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 font-semibold text-slate-900">
-                  <Code2 className="w-3.5 h-3.5 text-emerald-600" />
+                <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+                  <Code2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Detected Competencies Grounded from JD:</span>
                 </div>
-                <span className="text-[11px] font-mono text-slate-500">
+                <span className="text-[11px] font-mono text-slate-500 dark:text-zinc-400">
                   {detectedTech.length} skill{detectedTech.length === 1 ? '' : 's'} identified
                 </span>
               </div>
@@ -1079,27 +1079,27 @@ export default function InterviewSetupPage() {
                   {detectedTech.map((tech) => (
                     <span
                       key={tech}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-medium font-mono"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-medium font-mono"
                     >
                       <span>{tech}</span>
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-500 italic">
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 italic">
                   No specific keywords detected yet. Paste a JD or click a template above, or use quick add chips below:
                 </p>
               )}
 
               {/* Quick Add Chips */}
-              <div className="pt-1.5 border-t border-slate-200/80 flex items-center gap-1.5 flex-wrap text-[10px]">
-                <span className="text-slate-500 font-medium">Quick Add to JD:</span>
+              <div className="pt-1.5 border-t border-slate-200/80 dark:border-[var(--theme-border)] flex items-center gap-1.5 flex-wrap text-[10px]">
+                <span className="text-slate-500 dark:text-zinc-400 font-medium">Quick Add to JD:</span>
                 {['React', 'JavaScript', 'Python', 'SQL', 'FastAPI', 'DSA', 'REST APIs', 'Git'].map((tech) => (
                   <button
                     key={tech}
                     type="button"
                     onClick={() => handleAddKeywordToJD(tech)}
-                    className="px-1.5 py-0.5 rounded bg-white hover:bg-emerald-50 border border-slate-200 text-slate-700 font-mono transition-colors cursor-pointer"
+                    className="px-1.5 py-0.5 rounded bg-white dark:bg-[var(--theme-surface-low)] hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-[var(--theme-border)] text-slate-700 dark:text-zinc-200 font-mono transition-colors cursor-pointer"
                   >
                     + {tech}
                   </button>
@@ -1173,7 +1173,9 @@ export default function InterviewSetupPage() {
                   }
                 }}
                 className={`border-2 border-dashed rounded-xl p-4 text-center transition-all ${
-                  isDragging ? 'border-emerald-600 bg-emerald-50' : 'border-slate-200 hover:border-emerald-400 bg-slate-50/60'
+                  isDragging
+                    ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40'
+                    : 'border-slate-200 dark:border-[var(--theme-border)] hover:border-emerald-400 bg-slate-50/60 dark:bg-[var(--theme-surface-subtle)]'
                 }`}
               >
                 <input
@@ -1187,8 +1189,8 @@ export default function InterviewSetupPage() {
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto text-emerald-700 mb-2">
                     <Upload className="w-4 h-4" />
                   </div>
-                  <p className="text-xs font-semibold text-slate-900">Select or drag resume document</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">PDF or Word document up to 10MB</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">Select or drag resume document</p>
+                  <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">PDF or Word document up to 10MB</p>
                 </label>
                 {resumeError && (
                   <div className="mt-2.5 p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-700 text-left">
@@ -1196,8 +1198,8 @@ export default function InterviewSetupPage() {
                   </div>
                 )}
                 {resumeName && !resumeError && (
-                  <div className="mt-3 p-2 rounded-lg bg-white border border-emerald-200 flex items-center justify-center gap-2 text-xs text-emerald-800 font-mono">
-                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <div className="mt-3 p-2 rounded-lg bg-white dark:bg-[var(--theme-surface-low)] border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center gap-2 text-xs text-emerald-800 dark:text-emerald-300 font-mono">
+                    <FileCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span className="truncate">{resumeName}</span>
                   </div>
                 )}
@@ -1209,11 +1211,11 @@ export default function InterviewSetupPage() {
       </div>
 
       {/* FOOTER ACTIONS */}
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+      <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-[var(--theme-border)]">
         <button
           type="button"
           onClick={() => navigate('/dashboard')}
-          className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+          className="text-xs font-semibold text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
         >
           Cancel &amp; Return to Dashboard
         </button>

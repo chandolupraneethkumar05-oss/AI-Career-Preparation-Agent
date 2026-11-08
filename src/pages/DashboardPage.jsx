@@ -274,13 +274,13 @@ export default function DashboardPage() {
   const strokeDashoffset = circumference - (readinessVal / 100) * circumference;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-16 font-sans text-slate-900">
-      
+    <div className="max-w-5xl mx-auto space-y-6 pb-16 font-sans text-[var(--theme-text,#0F172A)]">
+
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 1. TALENT SHINE TOP DIVISION HERO BANNER                      */}
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="rounded-2xl bg-white border border-slate-200/90 shadow-sm p-6 sm:p-7 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:border-slate-300">
-        
+
         {/* Subtle decorative background gradient */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -460,8 +460,8 @@ export default function DashboardPage() {
             I. CAREER READINESS INDEX
           </span>
           <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-            hasInterviews && currentReadiness >= 75 
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+            hasInterviews && currentReadiness >= 75
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-emerald-50 text-emerald-800 border-emerald-200'
           }`}>
             {hasInterviews ? (currentReadiness >= 75 ? 'Strong Progress' : 'In Progress') : 'Calibration Needed'}
@@ -867,7 +867,7 @@ export default function DashboardPage() {
       {showEditProfileModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 text-slate-900 relative">
-            
+
             <button
               onClick={() => setShowEditProfileModal(false)}
               className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"

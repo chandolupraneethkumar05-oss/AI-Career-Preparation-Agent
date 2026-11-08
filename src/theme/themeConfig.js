@@ -1,10 +1,11 @@
 /**
  * Centralized Theme Configuration & Metadata
- * Official Themes:
- *  - system: Auto-detects OS color-scheme preference
- *  - white: Modern Crisp Executive White & Emerald (Default)
- *  - warm: Archival Warm Editorial Parchment
- *  - dark: Midnight Deep Carbon & Slate
+ * Postman-Inspired Modern Design System:
+ *  - system: Auto-detects OS color-scheme preference (Postman Auto)
+ *  - white: Postman Light — Modern Crisp Executive White, high contrast slate typography, emerald & indigo accents
+ *  - dark: Postman Dark — Sleek refined charcoal canvas (#181818), elevated card panels (#212121), crisp readable text (#F5F5F5)
+ *  - black: Postman Black — Ultra-deep OLED pitch black (#000000), deep obsidian surfaces (#111111), razor-sharp hairline dividers (#242424), pure white text (#FFFFFF)
+ *  - warm: Archival Warm Editorial Parchment (Legacy compatibility)
  */
 
 export const DEFAULT_THEME = 'white';
@@ -14,21 +15,22 @@ export const THEMES = [
     id: 'system',
     name: 'System Preference',
     badge: 'Auto Dynamic',
-    description: 'Automatically adapts between light and dark based on your device settings.',
+    description: 'Automatically adapts between Postman Light and Postman Dark based on your device settings.',
     mode: 'auto',
     emoji: '🖥️',
     preview: {
-      bg: '#F1F5F9',
+      bg: '#F8FAFC',
       card: '#FFFFFF',
-      primary: '#059669',
-      secondary: '#0F172A'
+      primary: '#4F46E5',
+      secondary: '#0F172A',
+      border: '#E2E8F0'
     }
   },
   {
     id: 'white',
-    name: 'Pure White',
-    badge: 'Clean Modern',
-    description: 'Crisp minimalist white canvas with high-contrast slate ink, subtle cool borders, and emerald accents.',
+    name: 'Postman Light',
+    badge: 'Pure White',
+    description: 'Crisp minimalist white canvas with high-contrast slate ink, subtle cool borders, and electric indigo & emerald accents.',
     mode: 'light',
     emoji: '☀️',
     colors: {
@@ -40,15 +42,15 @@ export const THEMES = [
       sidebar: '#FFFFFF',
       border: '#E2E8F0',
       borderStrong: '#CBD5E1',
-      primary: '#059669',
-      primaryLight: '#10B981',
-      cta: '#059669',
-      ctaHover: '#047857',
+      primary: '#4F46E5',
+      primaryLight: '#6366F1',
+      cta: '#4F46E5',
+      ctaHover: '#4338CA',
       ctaText: '#FFFFFF',
       secondary: '#0F172A',
-      bronze: '#D97706',
-      bronzeHover: '#B45309',
-      accent: '#059669',
+      bronze: '#F59E0B',
+      bronzeHover: '#D97706',
+      accent: '#FF6C37',
       success: '#10B981',
       successBg: '#ECFDF5',
       warning: '#F59E0B',
@@ -62,15 +64,116 @@ export const THEMES = [
       textMuted: '#64748B',
       textMicro: '#475569',
       cardBg: '#FFFFFF',
-      headerBg: 'rgba(255, 255, 255, 0.98)',
+      headerBg: 'rgba(255, 255, 255, 0.95)',
       inputBg: '#FFFFFF',
-      selected: '#ECFDF5'
+      selected: '#EEF2FF'
     },
     preview: {
       bg: '#F8FAFC',
       card: '#FFFFFF',
-      primary: '#059669',
-      secondary: '#0F172A'
+      primary: '#4F46E5',
+      secondary: '#0F172A',
+      border: '#E2E8F0'
+    }
+  },
+  {
+    id: 'dark',
+    name: 'Postman Dark',
+    badge: 'Charcoal Slate',
+    description: 'Sleek Postman charcoal canvas with elevated card surfaces, crisp readable typography, and vibrant accents.',
+    mode: 'dark',
+    emoji: '🌙',
+    colors: {
+      bg: '#181818',
+      surface: '#212121',
+      surfaceHover: '#2A2A2A',
+      surfaceSubtle: '#262626',
+      surfaceLow: '#1E1E1E',
+      sidebar: '#181818',
+      border: '#2E2E2E',
+      borderStrong: '#444444',
+      primary: '#6366F1',
+      primaryLight: '#818CF8',
+      cta: '#4F46E5',
+      ctaHover: '#4338CA',
+      ctaText: '#FFFFFF',
+      secondary: '#F5F5F5',
+      bronze: '#F59E0B',
+      bronzeHover: '#D97706',
+      accent: '#FF6C37',
+      success: '#10B981',
+      successBg: 'rgba(16, 185, 129, 0.15)',
+      warning: '#F59E0B',
+      warningBg: 'rgba(245, 158, 11, 0.15)',
+      danger: '#EF4444',
+      dangerBg: 'rgba(239, 68, 68, 0.15)',
+      neutral: '#94A3B8',
+      neutralBg: '#262626',
+      text: '#F5F5F5',
+      textSecondary: '#D4D4D8',
+      textMuted: '#A1A1AA',
+      textMicro: '#71717A',
+      cardBg: '#212121',
+      headerBg: 'rgba(24, 24, 24, 0.95)',
+      inputBg: '#181818',
+      selected: '#2A2A2A'
+    },
+    preview: {
+      bg: '#181818',
+      card: '#212121',
+      primary: '#6366F1',
+      secondary: '#F5F5F5',
+      border: '#2E2E2E'
+    }
+  },
+  {
+    id: 'black',
+    name: 'Postman Black',
+    badge: 'OLED Obsidian',
+    description: 'Ultra-deep OLED pitch black canvas with sharp hairline dividers, pure white typography, and maximum contrast.',
+    mode: 'dark',
+    emoji: '🌌',
+    colors: {
+      bg: '#000000',
+      surface: '#111111',
+      surfaceHover: '#1C1C1C',
+      surfaceSubtle: '#161616',
+      surfaceLow: '#0A0A0A',
+      sidebar: '#0A0A0A',
+      border: '#242424',
+      borderStrong: '#383838',
+      primary: '#6366F1',
+      primaryLight: '#818CF8',
+      cta: '#4F46E5',
+      ctaHover: '#4338CA',
+      ctaText: '#FFFFFF',
+      secondary: '#FFFFFF',
+      bronze: '#F59E0B',
+      bronzeHover: '#D97706',
+      accent: '#FF6C37',
+      success: '#10B981',
+      successBg: 'rgba(16, 185, 129, 0.2)',
+      warning: '#F59E0B',
+      warningBg: 'rgba(245, 158, 11, 0.2)',
+      danger: '#EF4444',
+      dangerBg: 'rgba(239, 68, 68, 0.2)',
+      neutral: '#A1A1AA',
+      neutralBg: '#1A1A1A',
+      text: '#FFFFFF',
+      textSecondary: '#E4E4E7',
+      textMuted: '#A1A1AA',
+      textMicro: '#71717A',
+      cardBg: '#111111',
+      headerBg: 'rgba(0, 0, 0, 0.95)',
+      inputBg: '#0A0A0A',
+      selected: '#1C1C1C'
+    },
+    preview: {
+      bg: '#000000',
+      card: '#111111',
+      primary: '#6366F1',
+      secondary: '#FFFFFF',
+      border: '#242424'
     }
   },
   {
@@ -78,7 +181,7 @@ export const THEMES = [
     aliases: ['editorial_scholar'],
     name: 'Warm Parchment',
     badge: 'Editorial Scholar',
-    description: 'Archival warm sandstone aesthetic with navy serif ink, warm bronze highlights, and parchment cards.',
+    description: 'Archival warm sandstone aesthetic with navy ink, warm bronze highlights, and parchment cards.',
     mode: 'light',
     emoji: '📜',
     colors: {
@@ -120,62 +223,14 @@ export const THEMES = [
       bg: '#FBF9F5',
       card: '#FFFFFF',
       primary: '#1B2A4A',
-      secondary: '#8C6E54'
-    }
-  },
-  {
-    id: 'dark',
-    name: 'Midnight Dark',
-    badge: 'Deep Carbon',
-    description: 'Immersive deep obsidian slate canvas with midnight card surfaces, luminescent typography, and emerald accents.',
-    mode: 'dark',
-    emoji: '🌙',
-    colors: {
-      bg: '#090D16',
-      surface: '#0F172A',
-      surfaceHover: '#1E293B',
-      surfaceSubtle: '#1E293B',
-      surfaceLow: '#0B1120',
-      sidebar: '#090D16',
-      border: '#1E293B',
-      borderStrong: '#334155',
-      primary: '#10B981',
-      primaryLight: '#34D399',
-      cta: '#059669',
-      ctaHover: '#047857',
-      ctaText: '#FFFFFF',
-      secondary: '#E2E8F0',
-      bronze: '#38BDF8',
-      bronzeHover: '#0EA5E9',
-      accent: '#10B981',
-      success: '#22C55E',
-      successBg: '#052E16',
-      warning: '#F59E0B',
-      warningBg: '#451A03',
-      danger: '#EF4444',
-      dangerBg: '#450A0A',
-      neutral: '#94A3B8',
-      neutralBg: '#1E293B',
-      text: '#F8FAFC',
-      textSecondary: '#E2E8F0',
-      textMuted: '#94A3B8',
-      textMicro: '#CBD5E1',
-      cardBg: '#0F172A',
-      headerBg: 'rgba(9, 13, 22, 0.95)',
-      inputBg: '#0F172A',
-      selected: '#1E293B'
-    },
-    preview: {
-      bg: '#090D16',
-      card: '#0F172A',
-      primary: '#10B981',
-      secondary: '#38BDF8'
+      secondary: '#8C6E54',
+      border: '#E8E2D5'
     }
   }
 ];
 
 export const PRIMARY_THEMES = THEMES;
-export const VALID_THEME_IDS = ['system', 'warm', 'editorial_scholar', 'white', 'dark'];
+export const VALID_THEME_IDS = ['system', 'white', 'dark', 'black', 'warm', 'editorial_scholar'];
 
 export function isValidTheme(themeId) {
   if (typeof themeId !== 'string') return false;
@@ -186,13 +241,13 @@ export function isValidTheme(themeId) {
 export function getThemeConfig(themeId = DEFAULT_THEME) {
   const tid = typeof themeId === 'string' ? themeId.toLowerCase() : DEFAULT_THEME;
   if (tid === 'editorial_scholar') {
-    return THEMES.find(t => t.id === 'warm') || THEMES[2];
+    return THEMES.find(t => t.id === 'warm') || THEMES[4];
   }
   return THEMES.find(t => t.id === tid) || THEMES.find(t => t.id === 'white') || THEMES[1];
 }
 
 /**
- * Resolves effective concrete theme ID ('warm', 'white', or 'dark') given an active theme ID.
+ * Resolves effective concrete theme ID ('white', 'dark', 'black', or 'warm') given an active theme ID.
  * If theme is 'system', queries window.matchMedia.
  */
 export function resolveEffectiveTheme(themeId) {

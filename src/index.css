@@ -1,18 +1,24 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="black"], .dark, .dark *));
+
 /* =========================================================================
-   TALENTSHINE DESIGN SYSTEM — CLEAN SLATE, PURE WHITE & ELECTRIC INDIGO
-   Inspired by Talent Shine (lms.talentshineindia.com/home/AiInterview)
+   TALENTPATH DESIGN SYSTEM — POSTMAN REFERENCE THEME SUITE
+   Inspired by Postman (www.postman.com)
+   - Postman Light: Pure executive slate & crisp white
+   - Postman Dark: Sleek refined charcoal (#181818) & elevated panels (#212121)
+   - Postman Black: Ultra-deep OLED pitch black (#000000) & razor dividers (#242424)
+   - Archival Warm: Sandstone & warm editorial parchment
    ========================================================================= */
 
-:root, [data-theme="white"], [data-theme="warm"], [data-theme="editorial_scholar"] {
+:root, [data-theme="white"] {
   --theme-id: "white";
-  
-  /* ── Canvas & Surfaces — Talent Shine Clean Slate & Pure White ───────── */
+
+  /* ── Canvas & Surfaces — Postman Light Clean Slate & Pure White ───────── */
   --theme-bg: #F8FAFC;                /* Slate-50 Clean Canvas */
   --theme-surface: #FFFFFF;           /* Pure White Surface */
   --theme-surface-hover: #F1F5F9;     /* Slate-100 Surface Hover */
-  --theme-surface-subtle: #F1F5F9;    /* Slate-100 Inset Surface */
+  --theme-surface-subtle: #F8FAFC;    /* Slate-50 Inset Surface */
   --theme-surface-low: #FFFFFF;       /* Crisp White Surface */
   --theme-sidebar: #FFFFFF;           /* Crisp Modern Sidebar */
   --theme-border: #E2E8F0;            /* Slate-200 1px Border */
@@ -29,7 +35,7 @@
   --theme-text-muted: #64748B;
   --theme-text-micro: #475569;
 
-  /* ── Primary Accents & CTAs — Electric Indigo ────────────────────────── */
+  /* ── Primary Accents & CTAs — Electric Indigo & Postman Accents ─────── */
   --theme-primary: #4F46E5;           /* Indigo-600 */
   --theme-primary-light: #6366F1;     /* Indigo-500 */
   --theme-cta: #4F46E5;               /* Primary Action Button */
@@ -39,7 +45,7 @@
   /* ── Secondary & Status Accents ──────────────────────────────────────── */
   --theme-bronze: #F59E0B;            /* Amber-500 Practice Streaks */
   --theme-bronze-hover: #D97706;
-  --theme-accent: #4F46E5;
+  --theme-accent: #FF6C37;            /* Postman Signature Orange */
 
   /* ── Semantic System ─────────────────────────────────────────────────── */
   --theme-success: #10B981;           /* Emerald-500 Scores & Readiness */
@@ -65,26 +71,26 @@
 [data-theme="dark"], .dark {
   --theme-id: "dark";
 
-  /* ── Canvas & Surfaces — Midnight Dark ────────────────────────────────── */
-  --theme-bg: #0B0F17;                /* Deep Canvas */
-  --theme-surface: #111827;           /* Card Surface */
-  --theme-surface-hover: #1E293B;     /* Surface Hover */
-  --theme-surface-subtle: #1E293B;    /* Inset Surface */
-  --theme-surface-low: #0F172A;       /* Secondary Surface */
-  --theme-sidebar: #0B0F17;           /* Sidebar */
-  --theme-border: #1E293B;            /* 1px Divider */
-  --theme-border-strong: #334155;     /* Border */
+  /* ── Canvas & Surfaces — Postman Dark Charcoal & Slate ───────────────── */
+  --theme-bg: #181818;                /* Postman Dark Canvas */
+  --theme-surface: #212121;           /* Postman Dark Card Surface */
+  --theme-surface-hover: #2A2A2A;     /* Elevated Hover Surface */
+  --theme-surface-subtle: #262626;    /* Inset / Muted Surface */
+  --theme-surface-low: #1A1A1A;       /* Secondary Base Surface */
+  --theme-sidebar: #181818;           /* Seamless Dark Navigation Rail */
+  --theme-border: #2E2E2E;            /* Postman Subtle 1px Divider */
+  --theme-border-strong: #444444;     /* Elevated Border */
 
-  /* ── Typography & Ink Tokens ─────────────────────────────────────────── */
-  --theme-ink-primary: #F8FAFC;       /* Primary Headings */
-  --theme-ink-secondary: #E2E8F0;     /* Body Text */
-  --theme-ink-tertiary: #94A3B8;      /* Subtitles */
-  --theme-ink-micro: #A1A1AA;         /* Micro Labels */
+  /* ── Typography & Ink Tokens (Crisp High-Contrast Legibility) ────────── */
+  --theme-ink-primary: #F5F5F5;       /* Bright High-Contrast Headings */
+  --theme-ink-secondary: #D4D4D8;     /* Crisp Silver Body Text */
+  --theme-ink-tertiary: #B4B4BC;      /* Legible Bright Silver-Zinc Subtitles */
+  --theme-ink-micro: #8E8E93;         /* Micro Labels */
 
-  --theme-text: #F8FAFC;
-  --theme-text-secondary: #E2E8F0;
-  --theme-text-muted: #94A3B8;
-  --theme-text-micro: #A1A1AA;
+  --theme-text: #F5F5F5;
+  --theme-text-secondary: #D4D4D8;
+  --theme-text-muted: #B4B4BC;
+  --theme-text-micro: #8E8E93;
 
   /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
   --theme-primary: #6366F1;
@@ -93,30 +99,130 @@
   --theme-cta-hover: #4338CA;
   --theme-cta-text: #FFFFFF;
 
-  /* ── Secondary Accent ─────────────────────────────────────────────────── */
+  /* ── Secondary & Status Accents ──────────────────────────────────────── */
   --theme-bronze: #F59E0B;
   --theme-bronze-hover: #D97706;
-  --theme-accent: #6366F1;
+  --theme-accent: #FF6C37;
 
   /* ── Semantic System ─────────────────────────────────────────────────── */
   --theme-success: #10B981;
-  --theme-success-bg: #064E3B;
+  --theme-success-bg: rgba(16, 185, 129, 0.15);
   --theme-warning: #F59E0B;
-  --theme-warning-bg: #451A03;
+  --theme-warning-bg: rgba(245, 158, 11, 0.15);
   --theme-danger: #EF4444;
-  --theme-danger-bg: #450A0A;
+  --theme-danger-bg: rgba(239, 68, 68, 0.15);
   --theme-neutral: #94A3B8;
-  --theme-neutral-bg: #1E293B;
+  --theme-neutral-bg: #262626;
 
   /* ── Form Controls & Active States ───────────────────────────────────── */
-  --theme-card-bg: #111827;
-  --theme-header-bg: rgba(11, 15, 23, 0.95);
-  --theme-input-bg: #111827;
-  --theme-selected: #1E293B;
+  --theme-card-bg: #212121;
+  --theme-header-bg: rgba(24, 24, 24, 0.95);
+  --theme-input-bg: #181818;
+  --theme-selected: #2A2A2A;
   --theme-glow-primary: none;
   --theme-glow-secondary: none;
 
   color-scheme: dark;
+}
+
+[data-theme="black"] {
+  --theme-id: "black";
+
+  /* ── Canvas & Surfaces — Postman Black OLED Obsidian ─────────────────── */
+  --theme-bg: #000000;                /* Pure Deep Pitch Black Canvas */
+  --theme-surface: #111111;           /* Elevated Pure Dark Panels */
+  --theme-surface-hover: #1C1C1C;     /* Hover Surface */
+  --theme-surface-subtle: #161616;    /* Inset Dark Surface */
+  --theme-surface-low: #0A0A0A;       /* Base Rail Surface */
+  --theme-sidebar: #0A0A0A;           /* Deep Black Navigation Rail */
+  --theme-border: #242424;            /* Razor-Sharp Hairline Divider */
+  --theme-border-strong: #383838;     /* Strong Divider */
+
+  /* ── Typography & Ink Tokens (Pure Brilliant Contrast) ───────────────── */
+  --theme-ink-primary: #FFFFFF;       /* Pure Brilliant White (100% visible) */
+  --theme-ink-secondary: #E4E4E7;     /* Clean Off-White Body */
+  --theme-ink-tertiary: #B4B4BC;      /* Legible Bright Silver-Zinc Subtitles */
+  --theme-ink-micro: #8E8E93;         /* Micro Labels */
+
+  --theme-text: #FFFFFF;
+  --theme-text-secondary: #E4E4E7;
+  --theme-text-muted: #B4B4BC;
+  --theme-text-micro: #8E8E93;
+
+  /* ── Primary Accents & CTAs ──────────────────────────────────────────── */
+  --theme-primary: #6366F1;
+  --theme-primary-light: #818CF8;
+  --theme-cta: #4F46E5;
+  --theme-cta-hover: #4338CA;
+  --theme-cta-text: #FFFFFF;
+
+  /* ── Secondary & Status Accents ──────────────────────────────────────── */
+  --theme-bronze: #F59E0B;
+  --theme-bronze-hover: #D97706;
+  --theme-accent: #FF6C37;
+
+  /* ── Semantic System ─────────────────────────────────────────────────── */
+  --theme-success: #10B981;
+  --theme-success-bg: rgba(16, 185, 129, 0.2);
+  --theme-warning: #F59E0B;
+  --theme-warning-bg: rgba(245, 158, 11, 0.2);
+  --theme-danger: #EF4444;
+  --theme-danger-bg: rgba(239, 68, 68, 0.2);
+  --theme-neutral: #A1A1AA;
+  --theme-neutral-bg: #1A1A1A;
+
+  /* ── Form Controls & Active States ───────────────────────────────────── */
+  --theme-card-bg: #111111;
+  --theme-header-bg: rgba(0, 0, 0, 0.95);
+  --theme-input-bg: #0A0A0A;
+  --theme-selected: #1C1C1C;
+  --theme-glow-primary: none;
+  --theme-glow-secondary: none;
+
+  color-scheme: dark;
+}
+
+[data-theme="warm"], [data-theme="editorial_scholar"] {
+  --theme-id: "warm";
+  --theme-bg: #FBF9F5;
+  --theme-surface: #FFFFFF;
+  --theme-surface-hover: #F5EFE6;
+  --theme-surface-subtle: #FAF6EE;
+  --theme-surface-low: #F4EFE6;
+  --theme-sidebar: #FDFBF7;
+  --theme-border: #E8E2D5;
+  --theme-border-strong: #D5CCBA;
+  --theme-ink-primary: #1F1B16;
+  --theme-ink-secondary: #3B352E;
+  --theme-ink-tertiary: #786E63;
+  --theme-ink-micro: #544D44;
+  --theme-text: #1F1B16;
+  --theme-text-secondary: #3B352E;
+  --theme-text-muted: #786E63;
+  --theme-text-micro: #544D44;
+  --theme-primary: #1B2A4A;
+  --theme-primary-light: #2D4474;
+  --theme-cta: #1B2A4A;
+  --theme-cta-hover: #131F37;
+  --theme-cta-text: #FFFFFF;
+  --theme-bronze: #8C6E54;
+  --theme-bronze-hover: #735841;
+  --theme-accent: #1B2A4A;
+  --theme-success: #2B6E44;
+  --theme-success-bg: #EFF7F1;
+  --theme-warning: #B45309;
+  --theme-warning-bg: #FEF8EE;
+  --theme-danger: #C53030;
+  --theme-danger-bg: #FDF2F2;
+  --theme-neutral: #786E63;
+  --theme-neutral-bg: #F4EFE6;
+  --theme-card-bg: #FFFFFF;
+  --theme-header-bg: rgba(251, 249, 245, 0.98);
+  --theme-input-bg: #FFFFFF;
+  --theme-selected: #F4EFE6;
+  --theme-glow-primary: none;
+  --theme-glow-secondary: none;
+  color-scheme: light;
 }
 
 /* =========================================================================
@@ -165,7 +271,259 @@
   }
 }
 
-/* Legacy parchment / cream color migration helper */
+/* =========================================================================
+   DARK & BLACK THEME AUTOMATIC NORMALIZATION
+   Guarantees high-contrast readability across all views, boxes, and cards.
+   Excludes the printable resume paper so PDF printing & preview remain pristine white.
+   ========================================================================= */
+
+/* ── 1. Base Surfaces & Inner Box Containers ─────────────────────────── */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.bg-white):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  background-color: var(--theme-surface) !important;
+}
+
+/* Transform light box/card/tile backgrounds into elevated dark surfaces across the entire site */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  [class*="bg-white/"],
+  .bg-slate-50,
+  [class*="bg-slate-50"],
+  .bg-slate-100,
+  [class*="bg-slate-100"],
+  .bg-slate-200,
+  [class*="bg-slate-200"],
+  .bg-zinc-50,
+  [class*="bg-zinc-50"],
+  .bg-zinc-100,
+  [class*="bg-zinc-100"],
+  .bg-gray-50,
+  [class*="bg-gray-50"],
+  .bg-gray-100,
+  [class*="bg-gray-100"],
+  .bg-\[\#F8F6F0\],
+  .bg-\[\#f8f6f0\],
+  .bg-\[\#F2EFE9\],
+  .bg-\[\#f2efe9\]
+):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  background-color: var(--theme-surface-subtle) !important;
+}
+
+/* Hover state for boxes and interactive tiles in dark & black themes */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  [class*="hover:bg-white"]:hover,
+  [class*="hover:bg-slate-50"]:hover,
+  [class*="hover:bg-slate-100"]:hover,
+  [class*="hover:bg-slate-200"]:hover
+):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  background-color: var(--theme-surface-hover) !important;
+}
+
+/* Hairline dividers and borders on boxes & cards */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .border-slate-200,
+  [class*="border-slate-200"],
+  .border-slate-100,
+  [class*="border-slate-100"],
+  .border-slate-300,
+  [class*="border-slate-300"],
+  .border-\[\#E5E0D5\],
+  .border-\[\#e5e0d5\],
+  .border-\[\#D5CFBF\],
+  .border-\[\#d5cfbf\],
+  .border-\[\#E8E2D5\],
+  .border-\[\#e8e2d5\]
+):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  border-color: var(--theme-border) !important;
+}
+
+/* ── 2. High-Contrast Typography Across All Boxes & Views ─────────────── */
+/* Headings, titles, and bold labels */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  h1, h2, h3, h4, h5, h6,
+  .text-slate-900,
+  [class*="text-slate-900"],
+  .text-slate-800,
+  [class*="text-slate-800"],
+  .text-\[\#1F1B16\],
+  .text-\[\#1f1b16\],
+  .text-\[\#0F172A\],
+  .text-\[\#0f172a\]
+):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  color: var(--theme-text) !important;
+}
+
+/* Body copy, descriptions, and paragraphs inside boxes */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) p:not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  color: var(--theme-text-secondary) !important;
+}
+
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  p,
+  .text-slate-700,
+  [class*="text-slate-700"],
+  .text-slate-600,
+  [class*="text-slate-600"],
+  .text-\[\#3B352E\],
+  .text-\[\#3b352e\],
+  .text-\[\#334155\]
+):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  color: var(--theme-text-secondary) !important;
+}
+
+/* Secondary subtitles, micro-labels, and question counts */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .text-slate-500,
+  [class*="text-slate-500"],
+  .text-slate-400,
+  [class*="text-slate-400"],
+  .text-\[\#70685E\],
+  .text-\[\#70685e\],
+  .text-\[\#5C554B\],
+  .text-\[\#5c554b\],
+  .text-\[\#64748B\]
+):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  color: var(--theme-text-muted) !important;
+}
+
+/* ── 3. Form Inputs & Interactive Controls ────────────────────────────── */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) input:not([type="checkbox"]):not([type="radio"]),
+:where(.dark, [data-theme="dark"], [data-theme="black"]) textarea,
+:where(.dark, [data-theme="dark"], [data-theme="black"]) select {
+  background-color: var(--theme-input-bg) !important;
+  color: var(--theme-text) !important;
+  border-color: var(--theme-border) !important;
+}
+
+:where(.dark, [data-theme="dark"], [data-theme="black"]) .btn-secondary {
+  background-color: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+
+:where(.dark, [data-theme="dark"], [data-theme="black"]) .btn-secondary:hover {
+  background-color: var(--theme-surface-hover) !important;
+  color: var(--theme-text) !important;
+}
+
+/* ── 4. Semantic Badges, Status Tags & Accent Boxes ───────────────────── */
+/* Emerald / Success */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .text-emerald-950, .text-emerald-900, .text-emerald-800, .text-emerald-700, .text-emerald-600,
+  [class*="text-emerald-950"], [class*="text-emerald-900"], [class*="text-emerald-800"], [class*="text-emerald-700"]
+) {
+  color: #34D399 !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .bg-emerald-50, .bg-emerald-100, [class*="bg-emerald-50"], [class*="bg-emerald-100"]
+):not(#resume-print-area, #resume-print-area *) {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .border-emerald-100, .border-emerald-200, .border-emerald-300, [class*="border-emerald-100"], [class*="border-emerald-200"]
+):not(#resume-print-area, #resume-print-area *) {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* Amber / Warning */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .text-amber-950, .text-amber-900, .text-amber-800, .text-amber-700, .text-amber-600,
+  [class*="text-amber-950"], [class*="text-amber-900"], [class*="text-amber-800"], [class*="text-amber-700"]
+) {
+  color: #FBBF24 !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .bg-amber-50, .bg-amber-100, [class*="bg-amber-50"], [class*="bg-amber-100"]
+):not(#resume-print-area, #resume-print-area *) {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .border-amber-100, .border-amber-200, .border-amber-300, [class*="border-amber-100"], [class*="border-amber-200"]
+):not(#resume-print-area, #resume-print-area *) {
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+/* Rose / Danger */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .text-rose-950, .text-rose-900, .text-rose-800, .text-rose-700, .text-rose-600,
+  [class*="text-rose-950"], [class*="text-rose-900"], [class*="text-rose-800"], [class*="text-rose-700"]
+) {
+  color: #FB7185 !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .bg-rose-50, .bg-rose-100, [class*="bg-rose-50"], [class*="bg-rose-100"]
+):not(#resume-print-area, #resume-print-area *) {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .border-rose-100, .border-rose-200, .border-rose-300, [class*="border-rose-100"], [class*="border-rose-200"]
+):not(#resume-print-area, #resume-print-area *) {
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Indigo & Blue / Primary Accents */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .text-indigo-950, .text-indigo-900, .text-indigo-800, .text-indigo-700, .text-indigo-600,
+  [class*="text-indigo-950"], [class*="text-indigo-900"], [class*="text-indigo-800"], [class*="text-indigo-700"],
+  .text-blue-950, .text-blue-900, .text-blue-800, .text-blue-700, .text-blue-600,
+  [class*="text-blue-950"], [class*="text-blue-900"], [class*="text-blue-800"], [class*="text-blue-700"]
+) {
+  color: #A5B4FC !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .bg-indigo-50, .bg-indigo-100, [class*="bg-indigo-50"], [class*="bg-indigo-100"],
+  .bg-blue-50, .bg-blue-100, [class*="bg-blue-50"], [class*="bg-blue-100"],
+  .bg-sky-50, .bg-sky-100, [class*="bg-sky-50"], [class*="bg-sky-100"]
+):not(#resume-print-area, #resume-print-area *) {
+  background-color: rgba(79, 70, 229, 0.15) !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .border-indigo-100, .border-indigo-200, .border-indigo-300, [class*="border-indigo-100"], [class*="border-indigo-200"],
+  .border-blue-100, .border-blue-200, .border-blue-300, [class*="border-blue-100"], [class*="border-blue-200"]
+):not(#resume-print-area, #resume-print-area *) {
+  border-color: rgba(79, 70, 229, 0.35) !important;
+}
+
+/* ── Legacy Badge Normalization for Dark / Black Themes ───────────────── */
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.bg-\[\#EAEFF5\]) {
+  background-color: rgba(79, 70, 229, 0.15) !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.text-\[\#1A365D\]) {
+  color: #A5B4FC !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.border-\[\#D0DBE7\], .border-\[\#BAC7D5\]) {
+  border-color: rgba(79, 70, 229, 0.3) !important;
+}
+
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.bg-\[\#F5EFEA\], .bg-\[\#FDF2E9\]) {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.text-\[\#8C6E54\], .text-\[\#9A421A\]) {
+  color: #FBBF24 !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.border-\[\#E8DCD1\], .border-\[\#F7D7C4\], .border-\[\#F0D5C0\]) {
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.bg-\[\#EBF4EE\]) {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.text-\[\#235E3B\]) {
+  color: #34D399 !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.border-\[\#CDE3D5\], .border-\[\#C2E0C6\]) {
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.bg-\[\#EFECE6\]) {
+  background-color: #262626 !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.text-\[\#4A453E\]) {
+  color: #D4D4D8 !important;
+}
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(.border-\[\#E0DCD3\]) {
+  border-color: #383838 !important;
+}
+
+/* Legacy parchment / cream color migration helper for light mode */
 .bg-\[\#F8F6F0\], .bg-\[\#f8f6f0\] {
   background-color: var(--theme-bg, #F8FAFC) !important;
 }
@@ -195,7 +553,7 @@
 }
 
 /* =========================================================================
-   4. TALENTSHINE BUTTONS & CONTROLS
+   4. BUTTONS & CONTROLS
    ========================================================================= */
 
 /* Primary Action Buttons */
@@ -216,14 +574,14 @@ button.bg-gradient-to-r:hover {
 
 /* Secondary Button */
 .btn-secondary {
-  background-color: #F8FAFC !important;
-  border: 1px solid #E2E8F0 !important;
-  color: #334155 !important;
+  background-color: var(--theme-surface, #F8FAFC) !important;
+  border: 1px solid var(--theme-border, #E2E8F0) !important;
+  color: var(--theme-text-secondary, #334155) !important;
 }
 
 .btn-secondary:hover {
-  background-color: #F1F5F9 !important;
-  color: #0F172A !important;
+  background-color: var(--theme-surface-hover, #F1F5F9) !important;
+  color: var(--theme-text, #0F172A) !important;
 }
 
 /* Form Controls */

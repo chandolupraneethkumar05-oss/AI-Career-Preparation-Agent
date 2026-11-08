@@ -24,7 +24,7 @@ export function ThemeProvider({ children }) {
     const root = document.documentElement;
 
     root.setAttribute('data-theme', effectiveTheme);
-    if (effectiveTheme === 'dark') {
+    if (effectiveTheme === 'dark' || effectiveTheme === 'black') {
       root.classList.add('dark');
       root.classList.remove('light');
     } else {
@@ -80,7 +80,7 @@ export function ThemeProvider({ children }) {
     themes: THEMES,
     availableThemes: THEMES,
     themeConfig: activeConfig,
-    isDark: effectiveTheme === 'dark'
+    isDark: effectiveTheme === 'dark' || effectiveTheme === 'black'
   };
 
   return (

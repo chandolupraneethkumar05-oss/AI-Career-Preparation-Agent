@@ -27,20 +27,20 @@ export default function RadioCard({
       case 'emerald':
       case 'easy':
       case 'green':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60';
       case 'amber':
       case 'medium':
       case 'orange':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60';
       case 'rose':
       case 'hard':
       case 'red':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
+        return 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60';
       case 'sky':
       case 'blue':
-        return 'bg-sky-50 text-sky-700 border-sky-200';
+        return 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800/60';
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
     }
   };
 
@@ -60,10 +60,10 @@ export default function RadioCard({
         relative p-3.5 sm:p-4 rounded-xl border text-left transition-all duration-150 cursor-pointer
         flex flex-col justify-between
         ${selected
-          ? 'bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-500/15 shadow-xs'
-          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 shadow-2xs'
+          ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/15 shadow-xs'
+          : 'bg-white dark:bg-[var(--theme-surface-subtle)] border-slate-200 dark:border-[var(--theme-border)] hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50/60 dark:hover:bg-[var(--theme-surface-hover)] shadow-2xs'
         }
-        ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}
+        ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900' : ''}
         ${className}
       `}
     >
@@ -73,8 +73,8 @@ export default function RadioCard({
           <div
             className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
               selected
-                ? 'border-emerald-600 bg-emerald-600 ring-2 ring-emerald-100'
-                : 'border-slate-300 bg-white'
+                ? 'border-emerald-600 bg-emerald-600 ring-2 ring-emerald-100 dark:ring-emerald-900/40'
+                : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/80'
             }`}
           >
             {selected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -84,8 +84,8 @@ export default function RadioCard({
             <div
               className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
                 selected
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-slate-100 text-slate-500'
+                  ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -95,7 +95,7 @@ export default function RadioCard({
           <div className="truncate min-w-0">
             <span
               className={`text-xs sm:text-sm font-semibold truncate block ${
-                selected ? 'text-emerald-950 font-bold' : 'text-slate-800'
+                selected ? 'text-emerald-950 dark:text-emerald-300 font-bold' : 'text-slate-800 dark:text-white'
               }`}
             >
               {title}
@@ -113,13 +113,13 @@ export default function RadioCard({
       </div>
 
       {description && (
-        <p className="mt-2 text-xs text-slate-500 leading-relaxed pl-6.5">
+        <p className="mt-2 text-xs text-slate-500 dark:text-zinc-300 leading-relaxed pl-6.5">
           {description}
         </p>
       )}
 
       {meta && (
-        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 pl-6.5">
+        <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-[var(--theme-border)] flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 pl-6.5">
           {meta}
         </div>
       )}

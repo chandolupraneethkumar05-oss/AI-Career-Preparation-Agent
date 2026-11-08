@@ -1,15 +1,15 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Mic, 
-  FileSearch, 
-  Code2, 
-  TrendingUp, 
-  Settings, 
-  ChevronLeft, 
-  ChevronRight, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  Mic,
+  FileSearch,
+  Code2,
+  TrendingUp,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
   X,
   Users,
   HelpCircle,
@@ -59,7 +59,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-200"
+          className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-200"
           aria-hidden="true"
         />
       )}
@@ -67,10 +67,11 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
       {/* Static Sidebar Element */}
       <aside
         className={`
-          bg-white 
-          border-r border-slate-200 
-          flex flex-col justify-between 
-          transition-all duration-200 z-40 
+          bg-[var(--theme-sidebar,#FFFFFF)]
+          border-r border-[var(--theme-border,#E2E8F0)]
+          text-[var(--theme-text,#0F172A)]
+          flex flex-col justify-between
+          transition-all duration-200 z-40
           h-screen shrink-0
           fixed inset-y-0 left-0
           md:static md:inset-auto md:h-screen
@@ -80,17 +81,17 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
       >
         {/* Top Header / Brand */}
         <div>
-          <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-200 bg-white">
+          <div className="h-16 flex items-center justify-between px-3.5 border-b border-[var(--theme-border,#E2E8F0)] bg-[var(--theme-sidebar,#FFFFFF)]">
             {(!collapsed || mobileOpen) ? (
               <div className="flex items-center gap-2.5 overflow-hidden">
                 <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-sm shadow-emerald-600/30">
                   <span className="font-sans font-bold text-xs tracking-wider">TP</span>
                 </div>
                 <div className="truncate">
-                  <span className="font-sans font-bold text-base tracking-tight text-slate-900 block">
+                  <span className="font-sans font-bold text-base tracking-tight text-[var(--theme-text,#0F172A)] block">
                     TalentPath
                   </span>
-                  <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold truncate">
+                  <p className="text-[9px] uppercase tracking-widest text-[var(--theme-text-muted,#64748B)] font-bold truncate">
                     Career Prep Agent
                   </p>
                 </div>
@@ -104,7 +105,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             {/* Desktop Collapse Toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="p-1 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors hidden md:block cursor-pointer"
+              className="p-1 rounded-lg border border-[var(--theme-border,#E2E8F0)] text-[var(--theme-text-muted,#64748B)] hover:text-[var(--theme-text,#0F172A)] hover:bg-[var(--theme-surface-hover,#F1F5F9)] transition-colors hidden md:block cursor-pointer"
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -114,7 +115,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             {/* Mobile Close Button */}
             <button
               onClick={() => setMobileOpen(false)}
-              className="p-1 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 md:hidden cursor-pointer"
+              className="p-1 rounded-lg border border-[var(--theme-border,#E2E8F0)] text-[var(--theme-text-muted,#64748B)] hover:text-[var(--theme-text,#0F172A)] hover:bg-[var(--theme-surface-hover,#F1F5F9)] md:hidden cursor-pointer"
               title="Close navigation"
             >
               <X className="w-4 h-4" />
@@ -127,12 +128,12 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
               <div key={section.title} className="space-y-0.5">
                 {(!collapsed || mobileOpen) ? (
                   <div className="px-3 pt-1 pb-1">
-                    <span className="text-[9px] font-sans uppercase tracking-widest text-slate-400 font-bold select-none">
+                    <span className="text-[9px] font-sans uppercase tracking-widest text-[var(--theme-text-muted,#64748B)] font-bold select-none opacity-80">
                       {section.title}
                     </span>
                   </div>
                 ) : sIdx > 0 ? (
-                  <div className="my-1.5 border-t border-slate-100" />
+                  <div className="my-1.5 border-t border-[var(--theme-border,#E2E8F0)]" />
                 ) : null}
 
                 {section.items.map((item) => {
@@ -145,8 +146,8 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
                       className={({ isActive }) => `
                         flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-colors duration-150
                         ${isActive
-                          ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100 shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                          ? 'bg-[var(--theme-selected,#EEF2FF)] text-[var(--theme-primary,#4F46E5)] font-semibold border border-[var(--theme-border,#E2E8F0)] shadow-xs'
+                          : 'text-[var(--theme-text-secondary,#334155)] hover:text-[var(--theme-text,#0F172A)] hover:bg-[var(--theme-surface-hover,#F1F5F9)] border border-transparent'
                         }
                         ${collapsed && !mobileOpen ? 'justify-center px-1.5 py-2' : ''}
                       `}
@@ -165,25 +166,25 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
         </div>
 
         {/* Bottom Candidate Profile Bar */}
-        <div className="p-2.5 border-t border-slate-200 bg-white">
+        <div className="p-2.5 border-t border-[var(--theme-border,#E2E8F0)] bg-[var(--theme-sidebar,#FFFFFF)]">
           {(!collapsed || mobileOpen) ? (
-            <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-50 border border-slate-200">
+            <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-[var(--theme-surface,#FFFFFF)] border border-[var(--theme-border,#E2E8F0)]">
               <img
                 src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'}
                 alt={user?.name || 'Candidate'}
-                className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
+                className="w-8 h-8 rounded-lg object-cover border border-[var(--theme-border,#E2E8F0)] shrink-0"
               />
               <div className="truncate flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-900 truncate">
+                <p className="text-xs font-semibold text-[var(--theme-text,#0F172A)] truncate">
                   {user?.name || 'Candidate'}
                 </p>
-                <p className="text-[10px] text-slate-500 truncate">
+                <p className="text-[10px] text-[var(--theme-text-muted,#64748B)] truncate">
                   {user?.targetRole || 'ML Engineer'}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                className="p-1.5 rounded-lg text-[var(--theme-text-muted,#64748B)] hover:text-rose-500 hover:bg-rose-500/10 transition-colors shrink-0 cursor-pointer"
                 title="Log Out"
                 aria-label="Log Out"
               >
@@ -193,7 +194,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
           ) : (
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center p-2 rounded-lg text-[var(--theme-text-muted,#64748B)] hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
               title="Log Out"
               aria-label="Log Out"
             >

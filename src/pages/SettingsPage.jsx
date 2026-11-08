@@ -284,17 +284,17 @@ export default function SettingsPage() {
 
         {/* Visual Appearance & Theme Settings */}
         <GlassCard className="p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E0D5] pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--theme-border,#E5E0D5)] pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-[#EAEFF5] border border-[#D0DBE7] flex items-center justify-center text-[#1A365D]">
+              <div className="w-8 h-8 rounded-md bg-[var(--theme-surface-hover,#EAEFF5)] border border-[var(--theme-border,#D0DBE7)] flex items-center justify-center text-[var(--theme-primary,#1A365D)]">
                 <Palette className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-serif font-bold text-[#1F1B16]">
+                <h3 className="text-base font-serif font-bold text-[var(--theme-text,#1F1B16)]">
                   IV. Visual Appearance &amp; Themes
                 </h3>
-                <p className="text-xs text-[#70685E]">
-                  Choose your reading aesthetic: System auto-detect, Archival Warm Scholar, Pure White, or Midnight Dark
+                <p className="text-xs text-[var(--theme-text-muted,#70685E)]">
+                  Postman-inspired theme suite: System auto-detect, Postman Light, Postman Dark, or Postman Black
                 </p>
               </div>
             </div>
@@ -303,7 +303,7 @@ export default function SettingsPage() {
 
           {/* Attractive Interactive Theme Card Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
-            {availableThemes.map((thm) => {
+            {availableThemes.filter(t => t.id !== 'warm' && t.id !== 'editorial_scholar').map((thm) => {
               const isSelected = activeTheme === thm.id;
               return (
                 <button
@@ -312,13 +312,13 @@ export default function SettingsPage() {
                   onClick={() => changeTheme(thm.id)}
                   className={`relative text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 group ${
                     isSelected
-                      ? 'border-emerald-600 bg-emerald-50/20 ring-2 ring-emerald-500/20 shadow-md'
-                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 shadow-xs'
+                      ? 'border-[var(--theme-primary,#4F46E5)] bg-[var(--theme-selected,#EEF2FF)] ring-2 ring-[var(--theme-primary,#4F46E5)]/20 shadow-md'
+                      : 'border-[var(--theme-border,#E2E8F0)] hover:border-[var(--theme-border-strong,#CBD5E1)] hover:bg-[var(--theme-surface-hover,#F1F5F9)] shadow-xs'
                   }`}
                 >
                   {/* Visual Layout Mockup */}
                   <div
-                    className="w-full h-20 rounded-lg p-2 flex flex-col justify-between overflow-hidden border border-black/10 shadow-2xs transition-transform group-hover:scale-[1.02]"
+                    className="w-full h-20 rounded-lg p-2 flex flex-col justify-between overflow-hidden border border-[var(--theme-border,#E2E8F0)] shadow-2xs transition-transform group-hover:scale-[1.02]"
                     style={{ backgroundColor: thm.preview?.bg || '#F8FAFC' }}
                   >
                     <div className="flex items-center justify-between">
@@ -329,7 +329,7 @@ export default function SettingsPage() {
                       <div className="w-3 h-1.5 rounded-full bg-slate-400/30" />
                     </div>
                     <div
-                      className="w-full h-10 rounded-md p-1.5 border border-black/5 flex items-center justify-between"
+                      className="w-full h-10 rounded-md p-1.5 border border-[var(--theme-border,#E2E8F0)] flex items-center justify-between"
                       style={{ backgroundColor: thm.preview?.card || '#FFFFFF' }}
                     >
                       <div className="space-y-1">
@@ -348,7 +348,7 @@ export default function SettingsPage() {
                   {/* Title & Badge */}
                   <div>
                     <div className="flex items-center justify-between gap-1.5">
-                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-[var(--theme-text,#0F172A)] flex items-center gap-1.5">
                         <span>{thm.emoji}</span>
                         <span>{thm.name}</span>
                       </span>
@@ -357,18 +357,18 @@ export default function SettingsPage() {
                           ✓
                         </span>
                       ) : (
-                        <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" />
+                        <span className="w-3.5 h-3.5 rounded-full border border-[var(--theme-border,#E2E8F0)] shrink-0" />
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
+                    <p className="text-[11px] text-[var(--theme-text-muted,#64748B)] leading-relaxed mt-1">
                       {thm.description}
                     </p>
                   </div>
 
-                  <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-slate-400 uppercase tracking-wider">{thm.badge}</span>
+                  <div className="pt-1 border-t border-[var(--theme-border,#E2E8F0)] flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-[var(--theme-text-muted,#64748B)] uppercase tracking-wider">{thm.badge}</span>
                     {isSelected && (
-                      <span className="font-bold text-emerald-600">Active</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">Active</span>
                     )}
                   </div>
                 </button>

@@ -134,8 +134,8 @@ export default function ProgressPage() {
   const unlockedAchievementsCount = dynamicAchievements.filter(a => a.unlocked).length;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-16 font-sans text-slate-900">
-      
+    <div className="max-w-5xl mx-auto space-y-6 pb-16 font-sans text-[var(--theme-text,#0F172A)]">
+
       {/* ───────────────────────────────────────────────────────────── */}
       {/* 1. TOP HEADER & UNIFIED TAB NAVIGATION                        */}
       {/* ───────────────────────────────────────────────────────────── */}
@@ -175,7 +175,7 @@ export default function ProgressPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {activeTab === 'readiness' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          
+
           {/* 3 Quick Stat Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-1">
@@ -359,7 +359,7 @@ export default function ProgressPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {activeTab === 'milestones' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          
+
           {/* Milestone Career Roadmap Stages */}
           <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2.5">
