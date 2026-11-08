@@ -19,6 +19,7 @@ const MockInterviewPage = lazy(() => import('./pages/MockInterviewPage'));
 const InterviewFeedbackPage = lazy(() => import('./pages/InterviewFeedbackPage'));
 const SkillGapPage = lazy(() => import('./pages/SkillGapPage'));
 const ATSScannerPage = lazy(() => import('./pages/ATSScannerPage'));
+const ResumeBuilderPage = lazy(() => import('./pages/ResumeBuilderPage'));
 const SkillArenaPage = lazy(() => import('./pages/SkillArenaPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -71,6 +72,7 @@ export default function App() {
                   <Route path="/interview-feedback" element={<InterviewFeedbackPage />} />
                   <Route path="/skill-arena" element={<SkillArenaPage />} />
                   <Route path="/ats" element={<ATSScannerPage />} />
+                  <Route path="/resume-builder" element={<ResumeBuilderPage />} />
                   <Route path="/skill-gap" element={<SkillGapPage />} />
                   <Route path="/progress" element={<ProgressPage />} />
                   <Route path="/settings" element={<SettingsPage />} />

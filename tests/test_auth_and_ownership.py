@@ -979,6 +979,457 @@ class TestAuthAndTenantIsolation(unittest.TestCase):
         expired_found = self.db.query(ConsumedStreamTicket).filter(ConsumedStreamTicket.ticket_hash == "exp_hash_12345").first()
         self.assertIsNone(expired_found)
 
+    def test_33_seed_initial_data_all_scenarios(self):
+        """Tests all 6 default user, profile, and reminder preferences seeding scenarios for Bug 1."""
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from backend.app.db.models import Base, User, Profile, ReminderPreference, seed_initial_data
+        from backend.app.core.security import hash_password
+
+        # Use an isolated in-memory SQLite database
+        test_engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(test_engine)
+        TestSession = sessionmaker(bind=test_engine)
+        mem_db = TestSession()
+
+        try:
+            # Scenario 1: First-time default user creation
+            seed_initial_data(mem_db)
+            user = mem_db.query(User).filter(User.id == "user-001").first()
+            profile = mem_db.query(Profile).filter(Profile.user_id == "user-001").first()
+            reminder = mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").first()
+            self.assertIsNotNone(user, "Default user must be created on first seed")
+            self.assertEqual(user.email, "candidate@example.com")
+            self.assertIsNotNone(profile, "Default profile must be created on first seed")
+            self.assertIn("Machine Learning Engineer", profile.bio)
+            self.assertIsNotNone(reminder, "Default reminder must be created on first seed")
+            self.assertEqual(reminder.email, "candidate@example.com")
+
+            # Scenario 2: Existing user with password and existing profile/preferences (preserve existing data)
+            profile.bio = "Custom Candidate Bio that should never be overwritten."
+            reminder.preferred_time = "07:30"
+            mem_db.commit()
+
+            seed_initial_data(mem_db)
+            profile_after = mem_db.query(Profile).filter(Profile.user_id == "user-001").first()
+            reminder_after = mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").first()
+            self.assertEqual(profile_after.bio, "Custom Candidate Bio that should never be overwritten.")
+            self.assertEqual(reminder_after.preferred_time, "07:30")
+
+            # Scenario 3: Existing user with password but missing profile (repairs profile)
+            mem_db.query(Profile).filter(Profile.user_id == "user-001").delete(synchronize_session="fetch")
+            mem_db.commit()
+            self.assertIsNone(mem_db.query(Profile).filter(Profile.user_id == "user-001").first())
+
+            seed_initial_data(mem_db)
+            repaired_profile = mem_db.query(Profile).filter(Profile.user_id == "user-001").first()
+            self.assertIsNotNone(repaired_profile, "Seeding must repair missing profile for existing user")
+            self.assertEqual(reminder_after.preferred_time, "07:30", "Reminder preferences must be preserved during profile repair")
+
+            # Scenario 4: Existing user with password but missing reminder preferences (repairs preferences)
+            mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").delete(synchronize_session="fetch")
+            mem_db.commit()
+            self.assertIsNone(mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").first())
+
+            seed_initial_data(mem_db)
+            repaired_reminder = mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").first()
+            self.assertIsNotNone(repaired_reminder, "Seeding must repair missing reminder preference for existing user")
+            self.assertEqual(repaired_reminder.email, "candidate@example.com")
+
+            # Scenario 5: Existing user missing both profile and reminder preferences (repairs both)
+            mem_db.query(Profile).filter(Profile.user_id == "user-001").delete(synchronize_session="fetch")
+            mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").delete(synchronize_session="fetch")
+            mem_db.commit()
+
+            seed_initial_data(mem_db)
+            self.assertIsNotNone(mem_db.query(Profile).filter(Profile.user_id == "user-001").first())
+            self.assertIsNotNone(mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").first())
+
+            # Scenario 6: Calling seed function multiple times does not create duplicates
+            for _ in range(3):
+                seed_initial_data(mem_db)
+
+            user_count = mem_db.query(User).filter(User.id == "user-001").count()
+            profile_count = mem_db.query(Profile).filter(Profile.user_id == "user-001").count()
+            reminder_count = mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").count()
+            self.assertEqual(user_count, 1, "Duplicate users must not be created")
+            self.assertEqual(profile_count, 1, "Duplicate profiles must not be created")
+            self.assertEqual(reminder_count, 1, "Duplicate reminder preferences must not be created")
+        finally:
+            mem_db.close()
+
+    def test_34_expired_ticket_cleanup_scheduler_integration(self):
+        """Tests scheduler integration and execution of expired ticket cleanup for Bug 2."""
+        import time
+        from datetime import datetime, timezone
+        from backend.app.services.scheduler import proactive_scheduler
+        from backend.app.db.models import ConsumedStreamTicket
+
+        now = int(time.time())
+
+        # 1. Expired consumed tickets are deleted
+        t_exp = ConsumedStreamTicket(
+            ticket_hash="sched_exp_hash_999",
+            user_id="u_sched",
+            session_id="s_sched",
+            consumed_at=datetime.now(timezone.utc),
+            expires_at=now - 120
+        )
+        self.db.merge(t_exp)
+
+        # 2. Unexpired consumed tickets remain
+        t_act = ConsumedStreamTicket(
+            ticket_hash="sched_act_hash_888",
+            user_id="u_sched",
+            session_id="s_sched",
+            consumed_at=datetime.now(timezone.utc),
+            expires_at=now + 500
+        )
+        self.db.merge(t_act)
+        self.db.commit()
+
+        # Execute cleanup via scheduler method
+        deleted_count = proactive_scheduler.cleanup_expired_tickets()
+        self.assertGreaterEqual(deleted_count, 1)
+
+        # Verify expired deleted, active preserved
+        self.assertIsNone(self.db.query(ConsumedStreamTicket).filter(ConsumedStreamTicket.ticket_hash == "sched_exp_hash_999").first())
+        self.assertIsNotNone(self.db.query(ConsumedStreamTicket).filter(ConsumedStreamTicket.ticket_hash == "sched_act_hash_888").first())
+
+        # 3. Cleanup is actually registered with the scheduler
+        registered_jobs = proactive_scheduler.get_registered_jobs()
+        self.assertIn("cleanup_expired_tickets", registered_jobs)
+        self.assertEqual(registered_jobs["cleanup_expired_tickets"]["interval_seconds"], proactive_scheduler.ticket_cleanup_interval)
+
+        # 4. Database sessions are closed after execution (verify session closure)
+        from unittest.mock import patch, MagicMock
+        mock_db = MagicMock()
+        with patch("backend.app.services.scheduler.SessionLocal", return_value=mock_db):
+            proactive_scheduler.cleanup_expired_tickets()
+            mock_db.close.assert_called_once()
+
+        # 5. Cleanup exceptions are handled safely without crashing
+        with patch("backend.app.core.security.cleanup_expired_consumed_tickets", side_effect=RuntimeError("Database lock error")):
+            result = proactive_scheduler.cleanup_expired_tickets()
+            self.assertEqual(result, 0, "Cleanup must return 0 on failure and catch exceptions safely")
+
+        # 6. Scheduler registration does not create duplicate jobs
+        added_duplicate = proactive_scheduler.register_job("cleanup_expired_tickets", "Duplicate Job", 3600, lambda: None)
+        self.assertFalse(added_duplicate, "Scheduler must reject duplicate job registration with same job_id")
+        self.assertEqual(list(proactive_scheduler._registered_jobs.keys()).count("cleanup_expired_tickets"), 1)
+
+    def test_35_decode_access_token_payload_type_and_claims_matrix(self):
+        """Tests complete payload type validation, claim types, and timestamp bounds for Bug 3."""
+        import time
+        import json
+        import hmac
+        import hashlib
+        from backend.app.core.security import decode_access_token, create_access_token, get_secret_key, _b64url_encode
+
+        now = int(time.time())
+
+        def forge_jwt(header_obj, payload_obj, tamper=False):
+            h_b64 = _b64url_encode(json.dumps(header_obj, separators=(",", ":")).encode("utf-8"))
+            p_b64 = _b64url_encode(json.dumps(payload_obj, separators=(",", ":")).encode("utf-8"))
+            secret_key = get_secret_key()
+            sig = hmac.new(secret_key.encode("utf-8"), f"{h_b64}.{p_b64}".encode("utf-8"), hashlib.sha256).digest()
+            sig_b64 = _b64url_encode(sig)
+            if tamper:
+                sig_b64 = sig_b64[:-4] + "xxxx"
+            return f"{h_b64}.{p_b64}.{sig_b64}"
+
+        # 1. Valid token
+        t_valid = create_access_token({"sub": "valid_user_001", "role": "candidate"})
+        decoded_valid = decode_access_token(t_valid)
+        self.assertIsNotNone(decoded_valid)
+        self.assertEqual(decoded_valid["sub"], "valid_user_001")
+
+        # 2. Expired token
+        t_exp = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": "user_002", "exp": now - 60})
+        self.assertIsNone(decode_access_token(t_exp))
+
+        # 3. Missing expiration claim
+        t_no_exp = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": "user_003", "iat": now})
+        self.assertIsNone(decode_access_token(t_no_exp))
+
+        # 4. JSON list payload
+        t_list = forge_jwt({"alg": "HS256", "typ": "JWT"}, ["sub", "user_004", "admin"])
+        self.assertIsNone(decode_access_token(t_list))
+
+        # 5. JSON string payload
+        t_str = forge_jwt({"alg": "HS256", "typ": "JWT"}, "just_a_string_payload")
+        self.assertIsNone(decode_access_token(t_str))
+
+        # 6. JSON number payload
+        t_num = forge_jwt({"alg": "HS256", "typ": "JWT"}, 987654321)
+        self.assertIsNone(decode_access_token(t_num))
+
+        # 7. JSON null payload
+        t_null = forge_jwt({"alg": "HS256", "typ": "JWT"}, None)
+        self.assertIsNone(decode_access_token(t_null))
+
+        # 8. Missing required claims (missing 'sub')
+        t_no_sub = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"exp": now + 600, "role": "candidate"})
+        self.assertIsNone(decode_access_token(t_no_sub))
+
+        # 9. Invalid claim types ('sub' is an integer, list, or empty)
+        t_int_sub = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": 12345, "exp": now + 600})
+        self.assertIsNone(decode_access_token(t_int_sub))
+        t_blank_sub = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": "   ", "exp": now + 600})
+        self.assertIsNone(decode_access_token(t_blank_sub))
+
+        # 10. Boolean timestamp values ('exp' is True, 'iat' is False)
+        t_bool_exp = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": "user_005", "exp": True})
+        self.assertIsNone(decode_access_token(t_bool_exp))
+        t_bool_iat = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": "user_005", "exp": now + 600, "iat": False})
+        self.assertIsNone(decode_access_token(t_bool_iat))
+
+        # 11. NaN and infinity timestamps
+        t_nan_exp = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": "user_006", "exp": float("nan")})
+        self.assertIsNone(decode_access_token(t_nan_exp))
+        t_inf_exp = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": "user_006", "exp": float("inf")})
+        self.assertIsNone(decode_access_token(t_inf_exp))
+
+        # 12. Invalid signature
+        t_tampered = forge_jwt({"alg": "HS256", "typ": "JWT"}, {"sub": "user_007", "exp": now + 600}, tamper=True)
+        self.assertIsNone(decode_access_token(t_tampered))
+
+    def test_36_scheduler_loop_recurring_job_retry_and_interval_lifecycle(self):
+        """Tests scheduler loop recurring job invocation, interval enforcement, retry on failure, and timestamp precision."""
+        import asyncio
+        from datetime import datetime, timezone, timedelta
+        from unittest.mock import MagicMock, patch
+        from backend.app.services.scheduler import ProactiveScheduler
+
+        # 1. Use an isolated scheduler instance with short virtual intervals (10s interval, 2s retry)
+        sched = ProactiveScheduler(check_interval_seconds=1, ticket_cleanup_interval_seconds=10, ticket_cleanup_retry_seconds=2)
+
+        # Verify built-in cleanup job is registered
+        self.assertIn("cleanup_expired_tickets", sched.get_registered_jobs())
+
+        # Register a test recurring job with mock handler to verify scheduler-loop lifecycle
+        mock_handler = MagicMock()
+        sched.register_job("job_lifecycle_test", "Test Recurring Job", interval_seconds=10, retry_interval_seconds=2, handler=mock_handler)
+
+        t0 = datetime(2026, 11, 8, 12, 0, 0, tzinfo=timezone.utc)
+
+        # 1. First execution: job has never run -> must be invoked
+        # Simulate execution starting at t0 and completing at t0 + 2s
+        t_complete_1 = t0 + timedelta(seconds=2)
+        asyncio.run(sched._run_pending_jobs(current_time=t0, completion_time=t_complete_1))
+        self.assertEqual(mock_handler.call_count, 1)
+        job_meta = sched._registered_jobs["job_lifecycle_test"]
+        self.assertEqual(job_meta["last_status"], "success")
+        self.assertEqual(job_meta["last_run"], t_complete_1, "last_run must record actual completion timestamp")
+        self.assertIsNone(job_meta["last_failed_at"])
+
+        # 2. Not repeatedly executed before interval expires from completion time (t0 + 11s < t0 + 2s + 10s)
+        asyncio.run(sched._run_pending_jobs(current_time=t0 + timedelta(seconds=11)))
+        self.assertEqual(mock_handler.call_count, 1, "Job must not run again before interval from completion expires")
+
+        # 3. Failed execution handling: handler raises exception at t0 + 12s, fails at t0 + 13s
+        t_fail_1 = t0 + timedelta(seconds=13)
+        mock_handler.side_effect = RuntimeError("Simulated Database Error")
+        asyncio.run(sched._run_pending_jobs(current_time=t0 + timedelta(seconds=12), completion_time=t_fail_1))
+        self.assertEqual(mock_handler.call_count, 2)
+        # Verify failure recorded, last_run was NOT updated to failure time
+        self.assertEqual(job_meta["last_status"], "failed")
+        self.assertEqual(job_meta["last_run"], t_complete_1, "last_run must NOT be updated on failure")
+        self.assertEqual(job_meta["last_failed_at"], t_fail_1, "last_failed_at must record actual failure timestamp")
+
+        # 4. Before retry interval expires from failure time (t0 + 14s, retry is 2s from t0+13s so t0+15s is required): must NOT run yet
+        asyncio.run(sched._run_pending_jobs(current_time=t0 + timedelta(seconds=14)))
+        self.assertEqual(mock_handler.call_count, 2, "Failed job must not retry before retry interval expires")
+
+        # 5. Failed execution can be retried once retry interval expires (t0 + 15s >= 2s from failure at t0+13s)
+        mock_handler.side_effect = None  # Recover
+        t_complete_2 = t0 + timedelta(seconds=15)
+        asyncio.run(sched._run_pending_jobs(current_time=t0 + timedelta(seconds=15), completion_time=t_complete_2))
+        self.assertEqual(mock_handler.call_count, 3, "Failed job must be retried after retry interval")
+        self.assertEqual(job_meta["last_status"], "success")
+        self.assertEqual(job_meta["last_run"], t_complete_2)
+        self.assertIsNone(job_meta["last_failed_at"], "last_failed_at must be cleared after successful retry")
+
+        # 6. Successful execution follows configured 10s interval from completion (t0 + 20s < 10s from t0+15s)
+        asyncio.run(sched._run_pending_jobs(current_time=t0 + timedelta(seconds=20)))
+        self.assertEqual(mock_handler.call_count, 3, "After successful retry, must wait full interval from completion")
+
+        # At t0 + 25s (10s after last completion at t0+15s) -> runs again!
+        asyncio.run(sched._run_pending_jobs(current_time=t0 + timedelta(seconds=25)))
+        self.assertEqual(mock_handler.call_count, 4)
+
+        # 7. Existing reminder processing is not disrupted by recurring job errors
+        with patch.object(sched, "run_check_cycle") as mock_reminders:
+            mock_handler.side_effect = RuntimeError("Crash recurring job")
+            async def run_one_tick():
+                sched.is_running = True
+                await asyncio.to_thread(sched.run_check_cycle)
+                await sched._run_pending_jobs(current_time=t0 + timedelta(seconds=35))
+            asyncio.run(run_one_tick())
+            mock_reminders.assert_called_once()
+
+    def test_38_scheduler_real_loop_execution_and_error_resilience(self):
+        """Verifies actual _loop() method: reminder cycle invocation, recurring job error resilience, and clean exit."""
+        import asyncio
+        from unittest.mock import MagicMock, patch
+        from backend.app.services.scheduler import ProactiveScheduler
+
+        # 1. Use an isolated scheduler instance
+        sched = ProactiveScheduler(check_interval_seconds=1)
+        sched._registered_jobs.clear()
+
+        # 2. Register an async job and a failing sync recurring job to verify handler contracts and error resilience
+        async_job_called = []
+        async def async_success_job():
+            async_job_called.append(True)
+
+        failing_job_mock = MagicMock(side_effect=RuntimeError("Simulated job failure inside scheduler loop"))
+
+        sched.register_job(
+            job_id="async_success_job",
+            name="Async Success Job",
+            interval_seconds=10,
+            handler=async_success_job
+        )
+        sched.register_job(
+            job_id="loop_failing_job",
+            name="Loop Failing Job",
+            interval_seconds=10,
+            retry_interval_seconds=2,
+            handler=failing_job_mock
+        )
+
+        # 3. Mock run_check_cycle to avoid real database dependencies and verify invocation
+        mock_reminder_cycle = MagicMock(return_value=[{"user_id": "user-001", "dispatched": True}])
+
+        # 4. Mock asyncio.sleep: allow 2 ticks so we can verify that reminder processing continues across ticks even after a failure
+        tick_count = [0]
+        async def mock_sleep(interval):
+            tick_count[0] += 1
+            if tick_count[0] >= 2:
+                sched.is_running = False  # Terminate loop cleanly after 2 ticks
+
+        async def run_loop_test():
+            sched.is_running = True
+            with patch.object(sched, "run_check_cycle", mock_reminder_cycle), \
+                 patch("asyncio.sleep", side_effect=mock_sleep):
+                await sched._loop()
+
+        asyncio.run(run_loop_test())
+
+        # 5. Verify run_check_cycle executed during the real loop across multiple ticks
+        self.assertEqual(mock_reminder_cycle.call_count, 2, "run_check_cycle must execute on each loop tick")
+
+        # 6. Verify async job executed and was awaited properly
+        self.assertEqual(len(async_job_called), 1)
+        self.assertEqual(sched._registered_jobs["async_success_job"]["last_status"], "success")
+
+        # 7. Verify failing job handler was invoked
+        failing_job_mock.assert_called_once()
+
+        # 8. Verify the scheduler recorded failure without crashing or terminating prematurely
+        job_meta = sched._registered_jobs["loop_failing_job"]
+        self.assertEqual(job_meta["last_status"], "failed")
+        self.assertIsNotNone(job_meta["last_failed_at"])
+        self.assertIsNone(job_meta["last_run"], "last_run must NOT be set on failure")
+        self.assertFalse(job_meta["is_running"], "is_running flag must be cleared even after failure")
+
+        # 9. Verify the loop exited cleanly
+        self.assertFalse(sched.is_running)
+
+    def test_37_seed_initial_data_transaction_rollback_on_error(self):
+        """Verifies seed_initial_data transactional atomicity, rollback on mid-flight failure, and recovery."""
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from unittest.mock import patch
+        from backend.app.db.models import Base, User, Profile, ReminderPreference, Skill, InterviewExperience, seed_initial_data
+
+        test_engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(test_engine)
+        TestSession = sessionmaker(bind=test_engine)
+        mem_db = TestSession()
+
+        try:
+            # 1. Simulate mid-flight database error during seeding (error adding Profile after User is flushed)
+            real_add = mem_db.add
+
+            def failing_add(instance):
+                if isinstance(instance, Profile):
+                    raise RuntimeError("Simulated Database I/O Write Error on Profile")
+                return real_add(instance)
+
+            with patch.object(mem_db, "add", side_effect=failing_add):
+                with self.assertRaises(RuntimeError) as ctx:
+                    seed_initial_data(mem_db)
+                self.assertIn("Simulated Database I/O Write Error on Profile", str(ctx.exception))
+
+            # 2. Verify rollback: no partially seeded user, profile, or reminder records remain in the database
+            user_count = mem_db.query(User).filter(User.id == "user-001").count()
+            profile_count = mem_db.query(Profile).filter(Profile.user_id == "user-001").count()
+            reminder_count = mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").count()
+            self.assertEqual(user_count, 0, "Partially seeded user record must be rolled back")
+            self.assertEqual(profile_count, 0, "No profile record should exist after rollback")
+            self.assertEqual(reminder_count, 0, "No reminder preference record should exist after rollback")
+
+            # 3. Subsequent valid seeding attempt succeeds cleanly
+            seed_initial_data(mem_db)
+            self.assertEqual(mem_db.query(User).filter(User.id == "user-001").count(), 1)
+            self.assertEqual(mem_db.query(Profile).filter(Profile.user_id == "user-001").count(), 1)
+            self.assertEqual(mem_db.query(ReminderPreference).filter(ReminderPreference.user_id == "user-001").count(), 1)
+            self.assertGreater(mem_db.query(Skill).count(), 0)
+            self.assertGreater(mem_db.query(InterviewExperience).count(), 0)
+        finally:
+            mem_db.close()
+
+    def test_38_interview_experience_seeding_and_idempotency(self):
+        """Verifies InterviewExperience seeding, question relations, and idempotent non-duplication."""
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from backend.app.db.models import (
+            Base, User, InterviewExperience, InterviewExperienceQuestion, seed_initial_data
+        )
+
+        test_engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(test_engine)
+        TestSession = sessionmaker(bind=test_engine)
+        mem_db = TestSession()
+
+        try:
+            # 1. Initial seed should populate experiences and questions
+            seed_initial_data(mem_db)
+
+            exp1 = mem_db.query(InterviewExperience).filter(InterviewExperience.id == "exp-seed-001").first()
+            exp2 = mem_db.query(InterviewExperience).filter(InterviewExperience.id == "exp-seed-002").first()
+            self.assertIsNotNone(exp1, "exp-seed-001 must be seeded")
+            self.assertEqual(exp1.role, "Machine Learning Engineer")
+            self.assertEqual(exp1.moderation_status, "APPROVED")
+
+            self.assertIsNotNone(exp2, "exp-seed-002 must be seeded")
+            self.assertEqual(exp2.role, "Backend & Distributed Systems Engineer")
+
+            q_count = mem_db.query(InterviewExperienceQuestion).count()
+            self.assertEqual(q_count, 4, "Must seed 4 interview experience questions (2 per experience)")
+
+            # 2. Modify candidate XP to verify re-seeding preserves user progress
+            user = mem_db.query(User).filter(User.id == "user-001").first()
+            user.xp = 350
+            user.streak = 5
+            mem_db.commit()
+
+            # 3. Run seed_initial_data second time: verify idempotency and no record duplication
+            seed_initial_data(mem_db)
+
+            exp_total = mem_db.query(InterviewExperience).count()
+            q_total = mem_db.query(InterviewExperienceQuestion).count()
+            self.assertEqual(exp_total, 2, "Idempotent seed must not duplicate interview experiences")
+            self.assertEqual(q_total, 4, "Idempotent seed must not duplicate questions")
+
+            user_reloaded = mem_db.query(User).filter(User.id == "user-001").first()
+            self.assertEqual(user_reloaded.xp, 350, "Candidate XP must not be reset during re-seed")
+            self.assertEqual(user_reloaded.streak, 5, "Candidate streak must not be reset during re-seed")
+        finally:
+            mem_db.close()
+
 
 if __name__ == "__main__":
     unittest.main()

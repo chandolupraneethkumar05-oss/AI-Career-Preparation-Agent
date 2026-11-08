@@ -974,162 +974,209 @@ class PeerRoomSession(Base):
     )
 
 
+class ResumeDraft(Base):
+    """
+    Dedicated independent persistence for candidate-crafted resume drafts.
+    Stores structured JSON content across all resume sections, template choice, and customization.
+    Strictly isolated per candidate with user_id Foreign Key and tenant checks.
+    Does NOT modify or interfere with the existing ResumeAnalysis model.
+    """
+    __tablename__ = "resume_drafts"
+
+    id = Column(String(64), primary_key=True, index=True)
+    user_id = Column(String(64), ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(128), default="Untitled Resume", nullable=False)
+    target_role = Column(String(64), default="", nullable=True)
+    template_id = Column(String(32), default="modern_professional", nullable=False)
+    accent_color = Column(String(32), default="#245A45", nullable=False)
+    content_json = Column(Text, default="{}", nullable=False)
+
+    created_at = Column(DateTime, default=utc_now, nullable=False, index=True)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    user = relationship("User")
+
+    @property
+    def content(self) -> Dict[str, Any]:
+        try:
+            return json.loads(self.content_json) if self.content_json else {}
+        except Exception:
+            return {}
+
+    @content.setter
+    def content(self, value: Dict[str, Any]):
+        self.content_json = json.dumps(value) if value is not None else "{}"
+
+
 def seed_initial_data(db):
     """
-    Seeds default candidate account with honest starting defaults (0 XP, 0 streak)
-    and populates initial skill taxonomy.
+    Seeds default candidate account with honest starting defaults (0 XP, 0 streak),
+    ensures default profile and reminder preferences exist, and populates initial skill taxonomy.
+    Uses a safe transaction with rollback handling and avoids unnecessary intermediate commits.
     """
     from ..core.security import hash_password
     DEFAULT_USER_ID = "user-001"
-    existing_user = db.query(User).filter(User.id == DEFAULT_USER_ID).first()
 
-    if not existing_user:
-        # Create default candidate account
-        default_user = User(
-            id=DEFAULT_USER_ID,
-            email="candidate@example.com",
-            name="Candidate",
-            hashed_password=hash_password("DemoCandidate123!"),
-            role="AI/ML Engineer",
-            target_role="Machine Learning Engineer",
-            xp=0,
-            level=1,
-            streak=0,
-            longest_streak=0
-        )
-        db.add(default_user)
-        db.flush()
-    elif not existing_user.hashed_password:
-        existing_user.hashed_password = hash_password("DemoCandidate123!")
+    try:
+        existing_user = db.query(User).filter(User.id == DEFAULT_USER_ID).first()
+
+        if not existing_user:
+            # Create default candidate account
+            default_user = User(
+                id=DEFAULT_USER_ID,
+                email="candidate@example.com",
+                name="Candidate",
+                hashed_password=hash_password("DemoCandidate123!"),
+                role="AI/ML Engineer",
+                target_role="Machine Learning Engineer",
+                xp=0,
+                level=1,
+                streak=0,
+                longest_streak=0
+            )
+            db.add(default_user)
+            db.flush()
+        elif not existing_user.hashed_password:
+            existing_user.hashed_password = hash_password("DemoCandidate123!")
+            db.flush()
+
+        # Independently check whether profile exists and create only when missing
+        existing_profile = db.query(Profile).filter(Profile.user_id == DEFAULT_USER_ID).first()
+        if not existing_profile:
+            default_profile = Profile(
+                user_id=DEFAULT_USER_ID,
+                bio="Software and Machine Learning Engineer specializing in full-stack AI applications, LLMs, and autonomous agent systems.",
+                target_company="Leading Technology Companies",
+                experience_level="Entry to Mid Level",
+                resume_headline="Machine Learning & Software Engineer"
+            )
+            db.add(default_profile)
+            db.flush()
+
+        # Independently check whether reminder preferences exist and create only when missing
+        existing_reminder = db.query(ReminderPreference).filter(ReminderPreference.user_id == DEFAULT_USER_ID).first()
+        if not existing_reminder:
+            default_reminder = ReminderPreference(
+                user_id=DEFAULT_USER_ID,
+                enabled=False,
+                time="19:00",
+                preferred_time="19:00",
+                method="email",
+                email="candidate@example.com",
+                timezone="UTC",
+                frequency="daily",
+                target_role="Machine Learning Engineer"
+            )
+            db.add(default_reminder)
+            db.flush()
+
+        # Seed core skills taxonomy if empty
+        if db.query(Skill).count() == 0:
+            initial_skills = [
+                # Machine Learning & AI
+                Skill(name="Python", category="Foundational", importance="Critical", default_target_score=85),
+                Skill(name="Machine Learning", category="Core ML", importance="Critical", default_target_score=80),
+                Skill(name="Deep Learning", category="Core ML", importance="High", default_target_score=75),
+                Skill(name="PyTorch / TensorFlow", category="Core ML", importance="High", default_target_score=75),
+                # MLOps & Production
+                Skill(name="Docker", category="MLOps & Deployment", importance="High", default_target_score=80),
+                Skill(name="Kubernetes", category="MLOps & Deployment", importance="Medium", default_target_score=70),
+                Skill(name="MLflow", category="MLOps & Deployment", importance="Medium", default_target_score=75),
+                Skill(name="CI/CD Pipelines", category="MLOps & Deployment", importance="High", default_target_score=75),
+                # Soft Skills & Systems
+                Skill(name="System Design", category="System Design", importance="High", default_target_score=75),
+                Skill(name="Communication (STAR)", category="Communication", importance="Critical", default_target_score=80),
+                Skill(name="Problem Solving", category="Foundational", importance="Critical", default_target_score=85),
+                Skill(name="Confidence & Articulation", category="Communication", importance="High", default_target_score=80),
+            ]
+            db.add_all(initial_skills)
+            db.flush()
+
+        # Seed initial approved interview experiences for career preparation if empty
+        if db.query(InterviewExperience).count() == 0:
+            exp1 = InterviewExperience(
+                id="exp-seed-001",
+                user_id="user-001",
+                role="Machine Learning Engineer",
+                experience_level="mid",
+                round_type="technical",
+                company=None,
+                company_disclosure="industry_only",
+                industry="Artificial Intelligence & ML",
+                difficulty="hard",
+                outcome="offer",
+                experience_text="The technical round was a deep dive into Transformer architectures, parameter-efficient fine-tuning (LoRA), and production latency bottlenecks under batch inference.",
+                topics_json=json.dumps(["Transformers", "PyTorch", "LoRA", "Inference Optimization"]),
+                preparation_tips="Be ready to explain the KV cache memory footprint formula and tradeoffs between quantized INT8/FP8 inference.",
+                resume_summary_json=json.dumps({"years_exp": 2, "top_skills": ["Python", "PyTorch", "HuggingFace", "Docker"]}),
+                moderation_status="APPROVED",
+                moderation_notes="Verified seed experience for career preparation.",
+                pii_scan_status="CLEAN",
+                pii_detected_categories_json="[]"
+            )
+            db.add(exp1)
+            db.flush()
+
+            q1 = InterviewExperienceQuestion(
+                id="expq-seed-001",
+                experience_id="exp-seed-001",
+                question_text="How does LoRA (Low-Rank Adaptation) reduce the trainable parameter count during LLM fine-tuning?",
+                round_type="technical",
+                topic="Transformers",
+                difficulty="hard"
+            )
+            q2 = InterviewExperienceQuestion(
+                id="expq-seed-002",
+                experience_id="exp-seed-001",
+                question_text="How do you calculate KV cache memory for an LLM with 32 attention heads, 128 hidden dim, and batch size 8 across 2048 sequence length?",
+                round_type="technical",
+                topic="Inference Optimization",
+                difficulty="hard"
+            )
+            db.add_all([q1, q2])
+
+            exp2 = InterviewExperience(
+                id="exp-seed-002",
+                user_id="user-001",
+                role="Backend & Distributed Systems Engineer",
+                experience_level="mid",
+                round_type="system_design",
+                company="Scalable Cloud Services",
+                company_disclosure="specific",
+                industry="Cloud Infrastructure",
+                difficulty="medium",
+                outcome="offer",
+                experience_text="System design interview focusing on high-throughput distributed rate limiting and caching topologies with Redis Cluster and fallback circuit breakers.",
+                topics_json=json.dumps(["System Design", "Redis", "Rate Limiting", "Distributed Systems"]),
+                preparation_tips="Practice drawing system components clearly, calculating queries per second (QPS), and addressing cache stampedes.",
+                resume_summary_json=json.dumps({"years_exp": 3, "top_skills": ["FastAPI", "Go", "Redis", "Kafka"]}),
+                moderation_status="APPROVED",
+                moderation_notes="Verified seed experience for system design preparation.",
+                pii_scan_status="CLEAN",
+                pii_detected_categories_json="[]"
+            )
+            db.add(exp2)
+            db.flush()
+
+            q3 = InterviewExperienceQuestion(
+                id="expq-seed-003",
+                experience_id="exp-seed-002",
+                question_text="How do you design a distributed rate limiter supporting 100,000 requests per second across multiple data centers?",
+                round_type="system_design",
+                topic="System Design",
+                difficulty="hard"
+            )
+            q4 = InterviewExperienceQuestion(
+                id="expq-seed-004",
+                experience_id="exp-seed-002",
+                question_text="What are the concurrency challenges with Redis INCR and EXPIRE in a sliding window log rate limiter, and how can Lua scripts solve them?",
+                round_type="technical",
+                topic="Redis",
+                difficulty="medium"
+            )
+            db.add_all([q3, q4])
+
         db.commit()
-
-        # Create corresponding profile
-        default_profile = Profile(
-            user_id=DEFAULT_USER_ID,
-            bio="Software and Machine Learning Engineer specializing in full-stack AI applications, LLMs, and autonomous agent systems.",
-            target_company="Leading Technology Companies",
-            experience_level="Entry to Mid Level",
-            resume_headline="Machine Learning & Software Engineer"
-        )
-        db.add(default_profile)
-
-        # Create default reminder preferences
-        default_reminder = ReminderPreference(
-            user_id=DEFAULT_USER_ID,
-            enabled=False,
-            time="19:00",
-            preferred_time="19:00",
-            method="email",
-            email="candidate@example.com",
-            timezone="UTC",
-            frequency="daily",
-            target_role="Machine Learning Engineer"
-        )
-        db.add(default_reminder)
-
-    # Seed core skills taxonomy if empty
-    if db.query(Skill).count() == 0:
-        initial_skills = [
-            # Machine Learning & AI
-            Skill(name="Python", category="Foundational", importance="Critical", default_target_score=85),
-            Skill(name="Machine Learning", category="Core ML", importance="Critical", default_target_score=80),
-            Skill(name="Deep Learning", category="Core ML", importance="High", default_target_score=75),
-            Skill(name="PyTorch / TensorFlow", category="Core ML", importance="High", default_target_score=75),
-            # MLOps & Production
-            Skill(name="Docker", category="MLOps & Deployment", importance="High", default_target_score=80),
-            Skill(name="Kubernetes", category="MLOps & Deployment", importance="Medium", default_target_score=70),
-            Skill(name="MLflow", category="MLOps & Deployment", importance="Medium", default_target_score=75),
-            Skill(name="CI/CD Pipelines", category="MLOps & Deployment", importance="High", default_target_score=75),
-            # Soft Skills & Systems
-            Skill(name="System Design", category="System Design", importance="High", default_target_score=75),
-            Skill(name="Communication (STAR)", category="Communication", importance="Critical", default_target_score=80),
-            Skill(name="Problem Solving", category="Foundational", importance="Critical", default_target_score=85),
-            Skill(name="Confidence & Articulation", category="Communication", importance="High", default_target_score=80),
-        ]
-        db.add_all(initial_skills)
-
-    # Seed initial approved interview experiences for career preparation if empty
-    if db.query(InterviewExperience).count() == 0:
-        exp1 = InterviewExperience(
-            id="exp-seed-001",
-            user_id="user-001",
-            role="Machine Learning Engineer",
-            experience_level="mid",
-            round_type="technical",
-            company=None,
-            company_disclosure="industry_only",
-            industry="Artificial Intelligence & ML",
-            difficulty="hard",
-            outcome="offer",
-            experience_text="The technical round was a deep dive into Transformer architectures, parameter-efficient fine-tuning (LoRA), and production latency bottlenecks under batch inference.",
-            topics_json=json.dumps(["Transformers", "PyTorch", "LoRA", "Inference Optimization"]),
-            preparation_tips="Be ready to explain the KV cache memory footprint formula and tradeoffs between quantized INT8/FP8 inference.",
-            resume_summary_json=json.dumps({"years_exp": 2, "top_skills": ["Python", "PyTorch", "HuggingFace", "Docker"]}),
-            moderation_status="APPROVED",
-            moderation_notes="Verified seed experience for career preparation.",
-            pii_scan_status="CLEAN",
-            pii_detected_categories_json="[]"
-        )
-        db.add(exp1)
-        db.flush()
-
-        q1 = InterviewExperienceQuestion(
-            id="expq-seed-001",
-            experience_id="exp-seed-001",
-            question_text="How does LoRA (Low-Rank Adaptation) reduce the trainable parameter count during LLM fine-tuning?",
-            round_type="technical",
-            topic="Transformers",
-            difficulty="hard"
-        )
-        q2 = InterviewExperienceQuestion(
-            id="expq-seed-002",
-            experience_id="exp-seed-001",
-            question_text="How do you calculate KV cache memory for an LLM with 32 attention heads, 128 hidden dim, and batch size 8 across 2048 sequence length?",
-            round_type="technical",
-            topic="Inference Optimization",
-            difficulty="hard"
-        )
-        db.add_all([q1, q2])
-
-        exp2 = InterviewExperience(
-            id="exp-seed-002",
-            user_id="user-001",
-            role="Backend & Distributed Systems Engineer",
-            experience_level="mid",
-            round_type="system_design",
-            company="Scalable Cloud Services",
-            company_disclosure="specific",
-            industry="Cloud Infrastructure",
-            difficulty="medium",
-            outcome="offer",
-            experience_text="System design interview focusing on high-throughput distributed rate limiting and caching topologies with Redis Cluster and fallback circuit breakers.",
-            topics_json=json.dumps(["System Design", "Redis", "Rate Limiting", "Distributed Systems"]),
-            preparation_tips="Practice drawing system components clearly, calculating queries per second (QPS), and addressing cache stampedes.",
-            resume_summary_json=json.dumps({"years_exp": 3, "top_skills": ["FastAPI", "Go", "Redis", "Kafka"]}),
-            moderation_status="APPROVED",
-            moderation_notes="Verified seed experience for system design preparation.",
-            pii_scan_status="CLEAN",
-            pii_detected_categories_json="[]"
-        )
-        db.add(exp2)
-        db.flush()
-
-        q3 = InterviewExperienceQuestion(
-            id="expq-seed-003",
-            experience_id="exp-seed-002",
-            question_text="How do you design a distributed rate limiter supporting 100,000 requests per second across multiple data centers?",
-            round_type="system_design",
-            topic="System Design",
-            difficulty="hard"
-        )
-        q4 = InterviewExperienceQuestion(
-            id="expq-seed-004",
-            experience_id="exp-seed-002",
-            question_text="What are the concurrency challenges with Redis INCR and EXPIRE in a sliding window log rate limiter, and how can Lua scripts solve them?",
-            round_type="technical",
-            topic="Redis",
-            difficulty="medium"
-        )
-        db.add_all([q3, q4])
-
-    db.commit()
+    except Exception:
+        db.rollback()
+        raise

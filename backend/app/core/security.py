@@ -152,6 +152,8 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
 def decode_access_token(token: str, db: Optional[Any] = None) -> Optional[Dict[str, Any]]:
     """
     Verifies token signature and checks expiration in constant time.
+    Strictly validates header and payload types and required claims (sub, exp).
+    Rejects malformed, non-dict, non-finite, boolean, and expired payloads safely.
     If db session is supplied, checks whether token has been revoked on the server.
     Returns decoded claims dictionary or None if invalid, expired, or revoked.
     """
@@ -185,16 +187,32 @@ def decode_access_token(token: str, db: Optional[Any] = None) -> Optional[Dict[s
     except Exception:
         return None
 
-    # Verify expiration
+    # Verify header and payload are dictionaries
+    if not isinstance(header, dict) or not isinstance(payload, dict):
+        return None
+
+    # Validate required 'sub' (subject/user_id) claim
+    sub = payload.get("sub")
+    if not isinstance(sub, str) or not sub.strip():
+        return None
+
+    # Validate required 'exp' (expiration) claim
     exp = payload.get("exp")
-    if exp is not None:
-        if isinstance(exp, bool) or not isinstance(exp, (int, float)) or math.isnan(exp) or math.isinf(exp) or exp <= 0:
-            return None
-        if time.time() > exp:
+    if exp is None:
+        return None
+    if isinstance(exp, bool) or not isinstance(exp, (int, float)) or math.isnan(exp) or math.isinf(exp) or exp <= 0:
+        return None
+    if time.time() >= exp:
+        return None
+
+    # Validate optional 'iat' (issued-at) claim if present
+    iat = payload.get("iat")
+    if iat is not None:
+        if isinstance(iat, bool) or not isinstance(iat, (int, float)) or math.isnan(iat) or math.isinf(iat) or iat <= 0:
             return None
 
     # Single-purpose media streaming tickets cannot be used as master API bearer tokens
-    if payload.get("scope") == "media_stream" or (isinstance(header, dict) and header.get("typ") == "TICKET"):
+    if payload.get("scope") == "media_stream" or header.get("typ") == "TICKET":
         return None
 
     # Check server-side revocation if db session provided
