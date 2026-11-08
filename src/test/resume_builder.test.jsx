@@ -176,6 +176,39 @@ describe('Resume Builder - ResumeFormEditor Component', () => {
     fireEvent.click(eduTab);
     expect(screen.getByRole('button', { name: /Add Education/i })).toBeInTheDocument();
   });
+
+  it('preserves spaces and commas while typing in comma-separated skills input', () => {
+    const handleChange = vi.fn();
+    const content = {
+      personal_info: { full_name: 'Bob' },
+      skills: [{ id: 'sk_1', category: 'Languages', skills: ['Python'] }],
+    };
+
+    render(<ResumeFormEditor content={content} onChange={handleChange} />);
+
+    // Switch to Skills tab
+    const skillsTab = screen.getByRole('button', { name: /Skills/i });
+    fireEvent.click(skillsTab);
+
+    // Locate skills input
+    const skillsInput = screen.getByPlaceholderText(/e\.g\. Python, TypeScript, React/i);
+    expect(skillsInput).toBeInTheDocument();
+    expect(skillsInput.value).toBe('Python');
+
+    // Simulate typing comma and space after Python
+    fireEvent.change(skillsInput, { target: { value: 'Python, ' } });
+    expect(skillsInput.value).toBe('Python, ');
+
+    // Simulate typing React
+    fireEvent.change(skillsInput, { target: { value: 'Python, React' } });
+    expect(skillsInput.value).toBe('Python, React');
+
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skills: [expect.objectContaining({ skills: ['Python', 'React'] })],
+      })
+    );
+  });
 });
 
 describe('Resume Builder - AnalyzeResumeModal Component', () => {

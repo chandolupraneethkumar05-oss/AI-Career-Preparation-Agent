@@ -13,7 +13,6 @@ import {
   ChevronUp,
   ChevronDown,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 
 const SECTIONS = [
@@ -28,6 +27,41 @@ const SECTIONS = [
   { id: 'achievements', label: 'Achievements', icon: Trophy },
   { id: 'custom_sections', label: 'Custom', icon: Layers },
 ];
+
+function CommaSeparatedInput({ value = [], onChange, placeholder, className }) {
+  const [text, setText] = useState(() => (value || []).join(', '));
+  const [prevValue, setPrevValue] = useState(value);
+
+  // Synchronize when the external value prop changes
+  if (value !== prevValue) {
+    setPrevValue(value);
+    const currentParsed = text.split(',').map(s => s.trim()).filter(Boolean);
+    const incoming = value || [];
+    const isDifferent =
+      currentParsed.length !== incoming.length ||
+      currentParsed.some((s, i) => s !== incoming[i]);
+    if (isDifferent) {
+      setText(incoming.join(', '));
+    }
+  }
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setText(val);
+    const parsed = val.split(',').map(s => s.trim()).filter(Boolean);
+    onChange(parsed);
+  };
+
+  return (
+    <input
+      type="text"
+      value={text}
+      onChange={handleChange}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
 
 export default function ResumeFormEditor({ content = {}, onChange }) {
   const [activeTab, setActiveTab] = useState('personal_info');
@@ -452,16 +486,9 @@ export default function ResumeFormEditor({ content = {}, onChange }) {
                     </div>
                     <div>
                       <label className="block text-slate-600 mb-1">Skills (comma-separated)</label>
-                      <input
-                        type="text"
-                        value={(skillGroup.skills || []).join(', ')}
-                        onChange={e => {
-                          const arr = e.target.value
-                            .split(',')
-                            .map(s => s.trim())
-                            .filter(Boolean);
-                          updateItemField('skills', idx, 'skills', arr);
-                        }}
+                      <CommaSeparatedInput
+                        value={skillGroup.skills || []}
+                        onChange={arr => updateItemField('skills', idx, 'skills', arr)}
                         placeholder="e.g. Python, TypeScript, React, Docker, PostgreSQL"
                         className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white"
                       />
@@ -564,16 +591,9 @@ export default function ResumeFormEditor({ content = {}, onChange }) {
                     </div>
                     <div>
                       <label className="block text-slate-600 mb-1">Technologies (comma-separated)</label>
-                      <input
-                        type="text"
-                        value={(proj.tech_stack || []).join(', ')}
-                        onChange={e => {
-                          const arr = e.target.value
-                            .split(',')
-                            .map(s => s.trim())
-                            .filter(Boolean);
-                          updateItemField('projects', idx, 'tech_stack', arr);
-                        }}
+                      <CommaSeparatedInput
+                        value={proj.tech_stack || []}
+                        onChange={arr => updateItemField('projects', idx, 'tech_stack', arr)}
                         placeholder="e.g. Go, Redis, Docker, gRPC"
                         className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white"
                       />
