@@ -58,8 +58,9 @@ export async function ensureAuthToken(force = false) {
 }
 
 /**
- * Universal authenticated fetch with automated token attachment,
- * transparent token initialization, and single-attempt retry on HTTP 401.
+ * Universal authenticated fetch with automated token attachment.
+ * On HTTP 401, clears invalid credentials and dispatches 'auth:unauthorized'
+ * event without silently re-authenticating as a demo user.
  */
 export async function authenticatedFetch(url, options = {}) {
   let token = storageService.getToken();
@@ -72,16 +73,12 @@ export async function authenticatedFetch(url, options = {}) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  let response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
 
-  // If token was rejected (expired/invalidated), refresh and retry once
   if (response.status === 401) {
     storageService.removeToken();
-    const refreshedToken = await ensureAuthToken();
-    if (refreshedToken) {
-      const retryHeaders = new Headers(options.headers || {});
-      retryHeaders.set('Authorization', `Bearer ${refreshedToken}`);
-      response = await fetch(url, { ...options, headers: retryHeaders });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
   }
 
@@ -93,20 +90,38 @@ export async function authenticatedFetch(url, options = {}) {
  * Resolves the absolute WebSocket URL matching current origin or VITE_API_URL.
  */
 export function getWebSocketUrl(path) {
-  const normPath = path.startsWith('/') ? path : `/${path}`;
+  let cleanPath = (path || '').startsWith('/') ? path : `/${path || ''}`;
+  // Strip duplicate /api prefixes if already included by caller
+  if (cleanPath.startsWith('/api/')) {
+    cleanPath = cleanPath.slice(4);
+  } else if (cleanPath === '/api') {
+    cleanPath = '';
+  }
+
+  const rawApiUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ? import.meta.env.VITE_API_URL : (API_BASE_URL || '/api');
+
   if (typeof window === 'undefined') {
-    return `ws://127.0.0.1:8000/api${normPath}`;
+    if (rawApiUrl.startsWith('http://') || rawApiUrl.startsWith('https://')) {
+      const parsed = new URL(rawApiUrl);
+      const wsProto = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+      const basePrefix = parsed.pathname.replace(/\/+$/, '') || '/api';
+      return `${wsProto}//${parsed.host}${basePrefix}${cleanPath}`;
+    }
+    return `ws://127.0.0.1:8000/api${cleanPath}`;
   }
 
-  // If API_BASE_URL is relative (e.g. '/api'), use current window location
-  if (API_BASE_URL.startsWith('/')) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${window.location.host}${API_BASE_URL}${normPath}`;
+  if (rawApiUrl.startsWith('http://') || rawApiUrl.startsWith('https://')) {
+    const parsed = new URL(rawApiUrl);
+    const wsProto = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+    const basePrefix = parsed.pathname.replace(/\/+$/, '') || '/api';
+    return `${wsProto}//${parsed.host}${basePrefix}${cleanPath}`;
   }
 
-  // If API_BASE_URL is absolute
-  const parsed = new URL(API_BASE_URL);
-  const protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
-  const basePath = parsed.pathname.replace(/\/+$/, '');
-  return `${protocol}//${parsed.host}${basePath}${normPath}`;
+  const isHttps = window.location.protocol === 'https:';
+  const wsProto = isHttps ? 'wss://' : 'ws://';
+  let basePrefix = rawApiUrl.startsWith('/') ? rawApiUrl.replace(/\/+$/, '') : `/${rawApiUrl}`;
+  if (!basePrefix || basePrefix === '/') {
+    basePrefix = '/api';
+  }
+  return `${wsProto}//${window.location.host}${basePrefix}${cleanPath}`;
 }

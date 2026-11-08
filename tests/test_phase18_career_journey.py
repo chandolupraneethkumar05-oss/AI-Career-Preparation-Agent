@@ -46,6 +46,9 @@ class TestPhase18CareerJourney(unittest.TestCase):
     def setUpClass(cls):
         init_db()
         cls.client = TestClient(app)
+        login_res = cls.client.post("/api/auth/demo-login")
+        token = login_res.json()["access_token"]
+        cls.auth_headers = {"Authorization": f"Bearer {token}"}
 
     def setUp(self):
         self.db = SessionLocal()
@@ -218,7 +221,7 @@ class TestPhase18CareerJourney(unittest.TestCase):
     def test_04_career_journey_api_endpoints(self):
         """Validates HTTP endpoints: /api/career-journey and /api/career-journey/readiness."""
         # 1. Main endpoint
-        resp = self.client.get("/api/career-journey?user_id=user-001")
+        resp = self.client.get("/api/career-journey?user_id=user-001", headers=self.auth_headers)
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data["user_id"], "user-001")
@@ -228,16 +231,16 @@ class TestPhase18CareerJourney(unittest.TestCase):
         self.assertIn("next_best_action", data)
 
         # 2. Readiness endpoint
-        resp_readiness = self.client.get("/api/career-journey/readiness?user_id=user-001")
+        resp_readiness = self.client.get("/api/career-journey/readiness?user_id=user-001", headers=self.auth_headers)
         self.assertEqual(resp_readiness.status_code, 200)
         readiness_data = resp_readiness.json()
         self.assertIn("readiness_band", readiness_data)
         self.assertEqual(len(readiness_data["dimensions"]), 5)
         self.assertTrue(len(readiness_data["disclaimer"]) > 10)
 
-        # 3. Non-existent candidate handling
-        resp_404 = self.client.get("/api/career-journey?user_id=non-existent-user-999")
-        self.assertEqual(resp_404.status_code, 404)
+        # 3. Non-existent candidate handling / cross-tenant forbidden check
+        resp_403 = self.client.get("/api/career-journey?user_id=non-existent-user-999", headers=self.auth_headers)
+        self.assertEqual(resp_403.status_code, 403)
 
 
 if __name__ == "__main__":

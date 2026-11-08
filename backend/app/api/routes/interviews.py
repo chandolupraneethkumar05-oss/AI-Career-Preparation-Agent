@@ -3,7 +3,9 @@ Mock Interview Routes
 AI Career Preparation Agent
 """
 
+import os
 import json
+import logging
 import uuid
 import re
 from typing import Optional, Dict, Any, List
@@ -14,7 +16,7 @@ from sqlalchemy.orm import Session
 from ...db.database import get_db
 from ...db.models import Interview, InterviewRecording, User, utc_now
 from ..deps import get_current_user, get_optional_current_user, verify_user_ownership
-from ...core.security import create_stream_ticket, verify_stream_ticket
+from ...core.security import create_stream_ticket, verify_stream_ticket, verify_consumed_ticket_for_range
 from ...schemas.interview import (
     InterviewCreate,
     InterviewResponse,
@@ -45,6 +47,8 @@ from ...services.recording_storage_service import default_recording_storage, Rec
 from ...services.communication_analysis_service import default_communication_service
 from ...services.skill_service import record_skill_evidence, sync_unified_skill_profile
 from ...services.transcription_service import default_transcription_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/interviews", tags=["Mock Interviews"])
 
@@ -163,7 +167,8 @@ def get_interview_transcript(
 @router.post("/quick-answer", response_model=QuickAnswerResponse)
 def generate_quick_answer(
     request: QuickAnswerRequest,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -171,13 +176,16 @@ def generate_quick_answer(
     Does NOT submit an answer, update scores, or advance the interview session.
     """
     try:
-        effective_user_id = request.user_id or user_id
+        effective_user_id = verify_user_ownership(request.user_id or user_id, current_user)
         return default_interview_engine.generate_quick_answer(
             db=db,
             user_id=effective_user_id,
             request=request
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.exception("Quick-answer generation failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -185,7 +193,8 @@ def generate_quick_answer(
 async def transcribe_audio_payload(
     file: UploadFile = File(..., description="Binary audio payload (WebM, WAV, OGG, MP4)"),
     language: Optional[str] = Form("en", description="Target speech language code (e.g. en, es, hi, te)"),
-    transcript_hint: Optional[str] = Form(None, description="Optional client-side transcript hint")
+    transcript_hint: Optional[str] = Form(None, description="Optional client-side transcript hint"),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Ingests candidate verbal audio recording and executes speech-to-text transcription
@@ -194,6 +203,11 @@ async def transcribe_audio_payload(
     """
     try:
         audio_bytes = await file.read()
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="The uploaded audio file is empty.")
+        if len(audio_bytes) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Uploaded audio file exceeds maximum allowed size (25 MB).")
+
         result = default_transcription_service.transcribe_bytes(
             audio_bytes=audio_bytes,
             filename_hint=file.filename or "audio.webm",
@@ -201,7 +215,10 @@ async def transcribe_audio_payload(
             transcript_hint=transcript_hint
         )
         return TranscribeAudioResponse(**result)
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.exception("Audio transcription failed")
         raise HTTPException(status_code=500, detail=f"Audio transcription failed: {str(e)}")
 
 
@@ -448,10 +465,39 @@ def get_interview(
 # Phase 15: Video Interview Recording & Communication Analysis Endpoints
 # =========================================================================
 
+def _detect_and_validate_media_format(chunk: bytes, client_content_type: Optional[str] = None, fallback_mime: str = "video/webm") -> str:
+    """
+    Inspects binary magic bytes to safely validate uploaded audio/video formats.
+    Does not rely solely on client-supplied headers or filename extensions.
+    Supported formats: WebM, MP4, WAV, OGG, MP3.
+    """
+    if len(chunk) >= 4 and chunk[:4] == b"\x1a\x45\xdf\xa3":
+        if client_content_type and "audio" in client_content_type.lower():
+            return "audio/webm"
+        return "video/webm"
+
+    if len(chunk) >= 8 and (chunk[4:8] in (b"ftyp", b"moov") or chunk[:4] in (b"\x00\x00\x00\x18", b"\x00\x00\x00\x20")):
+        return "video/mp4"
+
+    if len(chunk) >= 12 and chunk[:4] == b"RIFF" and chunk[8:12] == b"WAVE":
+        return "audio/wav"
+
+    if len(chunk) >= 4 and chunk[:4] == b"OggS":
+        return "audio/ogg"
+
+    if len(chunk) >= 3 and (chunk[:3] == b"ID3" or chunk[:2] in (b"\xff\xfb", b"\xff\xf3", b"\xff\xf2")):
+        return "audio/mpeg"
+
+    raise HTTPException(
+        status_code=415,
+        detail="Unsupported or invalid media format. Allowed formats: WebM, MP4, WAV, OGG, MP3."
+    )
+
+
 @router.post("/{session_id}/recording", response_model=RecordingMetadataResponse)
 async def save_interview_recording(
     session_id: str,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
     recording_mode: str = Form("video"),
     duration_seconds: float = Form(0.0),
     mime_type: str = Form("video/webm"),
@@ -508,23 +554,62 @@ async def save_interview_recording(
 
     storage_path = None
     file_size_bytes = 0
+    final_target = None
 
-    if file:
+    if file and file.filename:
+        # Configurable maximum recording file size (default 100MB)
+        max_size = int(os.getenv("MAX_RECORDING_SIZE_BYTES", str(100 * 1024 * 1024)))
+        chunk_size = 1024 * 64
+        total_read = 0
+        temp_path = None
         try:
-            file_bytes = await file.read()
-            file_size_bytes = len(file_bytes)
-            save_res = default_recording_storage.save_recording(
-                user_id=effective_user_id,
-                session_id=session_id,
-                file_bytes=file_bytes,
-                mime_type=file.content_type or mime_type
-            )
-            storage_path = save_res["storage_path"]
-            mime_type = save_res["mime_type"]
-        except RecordingStorageError as rse:
-            raise HTTPException(status_code=400, detail=str(rse))
+            session_dir = default_recording_storage._get_session_dir(effective_user_id, session_id)
+            temp_path = session_dir / f"upload_{uuid.uuid4().hex[:8]}.tmp"
+            first_chunk = True
+            clean_mime = None
+
+            with open(temp_path, "wb") as f_out:
+                while True:
+                    chunk = await file.read(chunk_size)
+                    if not chunk:
+                        break
+                    total_read += len(chunk)
+                    if total_read > max_size:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Uploaded recording exceeds maximum allowable size limit of {max_size // (1024 * 1024)}MB."
+                        )
+                    if first_chunk:
+                        clean_mime = _detect_and_validate_media_format(chunk, file.content_type, mime_type)
+                        first_chunk = False
+                    f_out.write(chunk)
+
+            if total_read == 0:
+                raise HTTPException(status_code=400, detail="The uploaded recording file is empty.")
+
+            ext = default_recording_storage.ALLOWED_MIME_TYPES.get(clean_mime, ".webm")
+            final_target = session_dir / f"recording{ext}"
+            if temp_path.exists():
+                temp_path.replace(final_target)
+
+            storage_path = str(final_target.relative_to(default_recording_storage.base_dir))
+            file_size_bytes = total_read
+            mime_type = clean_mime
+        except HTTPException:
+            if temp_path and temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+            raise
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to persist recording media: {str(e)}")
+            if temp_path and temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+            logger.exception("Failed to persist recording media")
+            raise HTTPException(status_code=500, detail="Failed to persist recording media.")
 
     # Check for existing recording to update or create
     existing_rec = (
@@ -545,8 +630,18 @@ async def save_interview_recording(
         existing_rec.communication_metrics_json = json.dumps(parsed_metrics)
         existing_rec.status = "ready"
         existing_rec.deleted_at = None
-        db.commit()
-        db.refresh(existing_rec)
+        try:
+            db.commit()
+            db.refresh(existing_rec)
+        except Exception as db_exc:
+            db.rollback()
+            if final_target and final_target.exists():
+                try:
+                    final_target.unlink()
+                except Exception:
+                    pass
+            logger.exception("Database commit failed for recording metadata")
+            raise HTTPException(status_code=500, detail="Failed to save recording metadata to database.")
         rec = existing_rec
     else:
         rec_id = f"rec_{uuid.uuid4().hex[:12]}"
@@ -565,8 +660,18 @@ async def save_interview_recording(
             created_at=now
         )
         db.add(rec)
-        db.commit()
-        db.refresh(rec)
+        try:
+            db.commit()
+            db.refresh(rec)
+        except Exception as db_exc:
+            db.rollback()
+            if final_target and final_target.exists():
+                try:
+                    final_target.unlink()
+                except Exception:
+                    pass
+            logger.exception("Database commit failed for recording metadata")
+            raise HTTPException(status_code=500, detail="Failed to save recording metadata to database.")
 
     # Record granular Communication and Delivery skill evidence for candidate profile
     comm_score = parsed_metrics.get("clarity_score", 80)
@@ -620,7 +725,7 @@ async def save_interview_recording(
 @router.get("/{session_id}/recording", response_model=RecordingMetadataResponse)
 def get_interview_recording(
     session_id: str,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -697,7 +802,7 @@ def stream_interview_recording(
     session_id: str,
     request: Request,
     ticket: Optional[str] = Query(None, description="Short-lived streaming ticket"),
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
     current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
@@ -705,11 +810,15 @@ def stream_interview_recording(
     Streams the recorded video/audio media with HTTP Range support for video seeking.
     Authenticates via either:
     1. Short-lived single-purpose stream ticket (?ticket=...)
-    2. Authenticated user session via Authorization header / query token
+    2. Authenticated user session via Authorization: Bearer <token> header
     """
+    range_header = request.headers.get("range")
     effective_user_id = None
     if ticket:
-        ticket_user_id = verify_stream_ticket(ticket, session_id=session_id)
+        ticket_user_id = verify_stream_ticket(ticket, session_id=session_id, db=db)
+        if not ticket_user_id and range_header:
+            # Allow active playback session range requests (seeking/scrubbing) using previously consumed ticket
+            ticket_user_id = verify_consumed_ticket_for_range(ticket, session_id=session_id, db=db)
         if not ticket_user_id:
             raise HTTPException(
                 status_code=401,
@@ -780,7 +889,7 @@ def stream_interview_recording(
 @router.delete("/{session_id}/recording")
 def delete_interview_recording(
     session_id: str,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -798,14 +907,22 @@ def delete_interview_recording(
     if not rec:
         raise HTTPException(status_code=404, detail="Recording not found or already deleted.")
 
-    # Remove media files from user storage
-    default_recording_storage.delete_recording(user_id=effective_user_id, session_id=session_id)
-
-    # Soft delete in database
+    # Soft delete in database first to guarantee database transaction consistency
     rec.status = "deleted"
     rec.storage_path = None
     rec.deleted_at = utc_now()
-    db.commit()
+    try:
+        db.commit()
+    except Exception as db_err:
+        db.rollback()
+        logger.exception(f"Database commit failed during recording deletion for session {session_id}")
+        raise HTTPException(status_code=500, detail="Failed to delete recording record.")
+
+    # Remove media files from user storage after database state is safely committed
+    try:
+        default_recording_storage.delete_recording(user_id=effective_user_id, session_id=session_id)
+    except Exception as storage_err:
+        logger.warning(f"Storage cleanup warning for session {session_id}: {storage_err}")
 
     return {
         "status": "deleted",
@@ -818,7 +935,7 @@ def delete_interview_recording(
 def analyze_session_communication(
     session_id: str,
     payload: Dict[str, Any],
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -826,6 +943,14 @@ def analyze_session_communication(
     Runs communication and verbal delivery analysis on transcripts.
     """
     effective_user_id = verify_user_ownership(user_id, current_user)
+    interview = (
+        db.query(Interview)
+        .filter(Interview.id == session_id, Interview.user_id == effective_user_id)
+        .first()
+    )
+    if not interview:
+        raise HTTPException(status_code=404, detail=f"Interview session {session_id} not found.")
+
     transcript = payload.get("transcript", "")
     duration = float(payload.get("duration", 0.0))
     is_behavioral = bool(payload.get("is_behavioral", False))

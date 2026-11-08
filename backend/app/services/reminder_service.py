@@ -4,7 +4,7 @@ AI Career Preparation Agent
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from typing import Optional, Tuple, Dict, Any, List
 from sqlalchemy.orm import Session
@@ -22,6 +22,33 @@ from .recommendation_service import evaluate_next_best_action
 from .email_service import get_email_service
 
 logger = logging.getLogger("reminder_service")
+
+PLACEHOLDER_EMAILS = {
+    "candidate@example.com",
+    "user@example.com",
+    "test@example.com",
+    "demo@example.com",
+    "placeholder@example.com"
+}
+
+
+def is_valid_delivery_email(email: Optional[str]) -> bool:
+    """
+    Validates candidate email address for reminder delivery.
+    Rejects missing, malformed, or default placeholder addresses.
+    """
+    if not email or not isinstance(email, str):
+        return False
+    email_clean = email.strip().lower()
+    if email_clean in PLACEHOLDER_EMAILS:
+        return False
+    if "@" not in email_clean or "." not in email_clean.split("@")[-1]:
+        return False
+    import re
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email_clean):
+        return False
+    return True
+
 
 
 def utc_now() -> datetime:
@@ -135,9 +162,9 @@ class ProactiveReminderService:
         if not pref or not pref.enabled:
             return False, "Proactive reminders are disabled by user", None
 
-        # Condition 2: Valid email required
-        if not pref.email or "@" not in pref.email:
-            return False, "No valid email address configured", None
+        # Condition 2: Valid candidate email required (non-placeholder)
+        if not is_valid_delivery_email(pref.email):
+            return False, "Configured email address is a placeholder or invalid (e.g. candidate@example.com)", None
 
         # Condition 3: Timezone local time resolution
         user_tz = get_user_timezone(pref.timezone)
@@ -150,8 +177,13 @@ class ProactiveReminderService:
 
         # Condition 5: Preferred time reached
         pref_time_str = pref.preferred_time or pref.time or "19:00"
+        target_hour, target_min = 19, 0
         try:
-            target_hour, target_min = map(int, pref_time_str.split(":"))
+            if ":" in str(pref_time_str):
+                parts = str(pref_time_str).split(":", 1)
+                h, m = int(parts[0]), int(parts[1])
+                if 0 <= h <= 23 and 0 <= m <= 59:
+                    target_hour, target_min = h, m
         except Exception:
             target_hour, target_min = 19, 0
 
@@ -167,12 +199,13 @@ class ProactiveReminderService:
         if has_practiced_today(db, user_id):
             return False, "User has already completed meaningful career practice today", local_now
 
-        # Condition 7: Duplicate prevention (database check for today's local date)
+        # Condition 7: Duplicate prevention (database check for today's local date, excluding test dispatches)
         today_date_str = local_now.strftime("%Y-%m-%d")
         already_sent = (
             db.query(ReminderLog)
             .filter(ReminderLog.user_id == user_id)
             .filter(ReminderLog.reminder_date == today_date_str)
+            .filter(ReminderLog.reminder_type != "test_reminder")
             .filter(ReminderLog.status.in_(["sent", "development"]))
             .first()
         )
@@ -310,19 +343,97 @@ class ProactiveReminderService:
             name = user.name
             streak = user.streak
 
+        # Verify valid non-placeholder email before production dispatch
+        if not is_test and not is_valid_delivery_email(recipient):
+            logger.info(f"Skipping production reminder for {user_id}: placeholder or invalid email.")
+            return {
+                "status": "skipped",
+                "reason": "Configured email address is a placeholder or invalid (e.g. candidate@example.com)",
+                "delivered": False,
+                "email_sent": False
+            }
+
         # Atomic pre-reservation to prevent concurrent multi-worker dispatch races
         log_entry = None
         if not is_test:
             existing_log = db.query(ReminderLog).filter(
                 ReminderLog.user_id == user_id,
-                ReminderLog.reminder_date == today_date_str
+                ReminderLog.reminder_date == today_date_str,
+                ReminderLog.reminder_type != "test_reminder"
             ).first()
-            if existing_log and existing_log.status in ["sent", "development", "pending"]:
-                logger.info(f"Reminder already claimed/dispatched today for {user_id}")
-                return {"status": "skipped", "reason": "Already dispatched or claimed today", "delivered": False, "email_sent": False}
 
-            # Atomically insert pending record before external email call
-            if not existing_log:
+            if existing_log:
+                if existing_log.status in ["sent", "development"]:
+                    logger.info(f"Reminder already claimed/dispatched today for {user_id}")
+                    return {"status": "skipped", "reason": "Already dispatched or claimed today", "delivered": False, "email_sent": False}
+                elif existing_log.status == "pending":
+                    # Check if pending record is stale (> 300 seconds)
+                    created_ts = existing_log.created_at or existing_log.sent_at or utc_now()
+                    if created_ts.tzinfo is None:
+                        created_ts = created_ts.replace(tzinfo=timezone.utc)
+                    age_seconds = (utc_now() - created_ts).total_seconds()
+                    if age_seconds < 300:
+                        logger.info(f"Concurrent reminder dispatch currently pending for {user_id} (age: {age_seconds:.1f}s)")
+                        return {"status": "skipped", "reason": "Concurrent worker currently processing dispatch", "delivered": False, "email_sent": False}
+                    # Stale pending record: reclaim it safely via database-level atomic conditional update
+                    stale_cutoff = utc_now() - timedelta(seconds=300)
+                    rows_updated = (
+                        db.query(ReminderLog)
+                        .filter(
+                            ReminderLog.id == existing_log.id,
+                            ReminderLog.status == "pending",
+                            ReminderLog.created_at <= stale_cutoff
+                        )
+                        .update(
+                            {
+                                ReminderLog.status: "pending",
+                                ReminderLog.created_at: utc_now(),
+                                ReminderLog.message: "Reclaiming stale pending dispatch..."
+                            },
+                            synchronize_session=False
+                        )
+                    )
+                    try:
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+                        rows_updated = 0
+
+                    if rows_updated == 0:
+                        logger.info(f"Another worker already claimed stale reminder for {user_id}")
+                        return {"status": "skipped", "reason": "Concurrent worker already claimed reminder", "delivered": False, "email_sent": False}
+                    log_entry = existing_log
+                elif existing_log.status == "failed":
+                    # Allow safe retry of failed dispatch via database-level atomic conditional update
+                    rows_updated = (
+                        db.query(ReminderLog)
+                        .filter(
+                            ReminderLog.id == existing_log.id,
+                            ReminderLog.status == "failed"
+                        )
+                        .update(
+                            {
+                                ReminderLog.status: "pending",
+                                ReminderLog.sent_at: utc_now(),
+                                ReminderLog.created_at: utc_now(),
+                                ReminderLog.message: "Retrying failed dispatch..."
+                            },
+                            synchronize_session=False
+                        )
+                    )
+                    try:
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+                        rows_updated = 0
+
+                    if rows_updated == 0:
+                        logger.info(f"Another worker already claimed retry for {user_id}")
+                        return {"status": "skipped", "reason": "Concurrent worker already claimed retry", "delivered": False, "email_sent": False}
+                    log_entry = existing_log
+                else:
+                    log_entry = existing_log
+            else:
                 log_entry = ReminderLog(
                     user_id=user_id,
                     reminder_date=today_date_str,
@@ -341,8 +452,6 @@ class ProactiveReminderService:
                     db.rollback()
                     logger.warning(f"Concurrent multi-worker reminder race prevented: {insert_exc}")
                     return {"status": "skipped", "reason": "Concurrent worker already claimed reminder", "delivered": False, "email_sent": False}
-            else:
-                log_entry = existing_log
 
         # Call Email Service with strict error handling and audit tracking
         try:
@@ -365,29 +474,25 @@ class ProactiveReminderService:
                 log_entry.sent_at = utc_now()
                 db.commit()
             elif is_test:
-                existing_log = db.query(ReminderLog).filter(
-                    ReminderLog.user_id == user_id,
-                    ReminderLog.reminder_date == today_date_str
-                ).first()
-                if existing_log:
-                    existing_log.status = result.get("status", "development")
-                    existing_log.subject = result.get("subject", drill_info["subject"])
-                    existing_log.message = drill_info["drill_prompt"]
-                    existing_log.sent_at = utc_now()
-                    db.commit()
-                else:
-                    test_log = ReminderLog(
-                        user_id=user_id,
-                        reminder_date=today_date_str,
-                        reminder_type="test_reminder",
-                        subject=result.get("subject", drill_info["subject"]),
-                        message=drill_info["drill_prompt"],
-                        status=result.get("status", "development"),
-                        sent_at=utc_now(),
-                        created_at=utc_now()
-                    )
+                # Isolate test reminders with unique key so they never overwrite or block production reminders
+                import uuid
+                test_date_key = f"test_{today_date_str}_{uuid.uuid4().hex[:8]}"
+                test_log = ReminderLog(
+                    user_id=user_id,
+                    reminder_date=test_date_key,
+                    reminder_type="test_reminder",
+                    subject=result.get("subject", drill_info["subject"]),
+                    message=drill_info["drill_prompt"],
+                    status=result.get("status", "development"),
+                    sent_at=utc_now(),
+                    created_at=utc_now()
+                )
+                try:
                     db.add(test_log)
                     db.commit()
+                except Exception as t_exc:
+                    db.rollback()
+                    logger.warning(f"Could not record test reminder log: {t_exc}")
 
             return result
         except Exception as send_err:
@@ -412,6 +517,7 @@ class ProactiveReminderService:
             db.query(ReminderLog)
             .filter(ReminderLog.user_id == user_id)
             .filter(ReminderLog.reminder_date == today_date_str)
+            .filter(ReminderLog.reminder_type != "test_reminder")
             .filter(ReminderLog.status.in_(["sent", "development"]))
             .first()
         ) is not None

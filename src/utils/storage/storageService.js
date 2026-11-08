@@ -285,19 +285,27 @@ export const storageService = {
     };
   },
 
-  // 11. Backend Synchronization & Hydration
+  // 13. Backend Synchronization & Hydration
   async hydrateFromBackend(userId = 'user-001') {
     const baseUrl = import.meta.env?.VITE_API_URL || '/api';
+    const authHeaders = this.getAuthHeaders();
+    if (!authHeaders.Authorization) {
+      return { user: null, interviews: 0, ats: false };
+    }
+
     const results = { user: null, interviews: 0, ats: false };
 
     // 1. Profile Hydration
     try {
-      const pRes = await fetch(`${baseUrl}/profile?user_id=${encodeURIComponent(userId)}`);
+      const pRes = await fetch(`${baseUrl}/profile?user_id=${encodeURIComponent(userId)}`, {
+        headers: authHeaders
+      });
       if (pRes.ok) {
         const profile = await pRes.json();
         if (profile && profile.id) {
           const current = this.getCurrentUser() || {};
           this.saveCurrentUser({ ...current, ...profile });
+          this.saveProfile(profile, userId);
           results.user = profile;
         }
       }
@@ -307,17 +315,25 @@ export const storageService = {
 
     // 2. Interviews Hydration
     try {
-      const iRes = await fetch(`${baseUrl}/interviews?user_id=${encodeURIComponent(userId)}&limit=50`);
+      const iRes = await fetch(`${baseUrl}/interviews?user_id=${encodeURIComponent(userId)}&limit=50`, {
+        headers: authHeaders
+      });
       if (iRes.ok) {
         const data = await iRes.json();
-        if (data && Array.isArray(data.interviews) && data.interviews.length > 0) {
-          const localInterviews = this.getInterviews();
-          const localIds = new Set(localInterviews.map((i) => i.id));
-          const newFromBackend = data.interviews.filter((i) => !localIds.has(i.id));
-          if (newFromBackend.length > 0) {
-            this.setInterviews([...localInterviews, ...newFromBackend]);
+        if (data && Array.isArray(data.interviews)) {
+          if (data.interviews.length === 0) {
+            // Empty backend result: preserve only unsynced local items, clearing stale server items
+            const localInterviews = this.getInterviews(userId);
+            const unsyncedOnly = localInterviews.filter(i => i.synced === false || String(i.id).startsWith('offline_') || String(i.id).startsWith('local_'));
+            this.setInterviews(unsyncedOnly, userId);
+            results.interviews = 0;
+          } else {
+            const localInterviews = this.getInterviews(userId);
+            const backendIds = new Set(data.interviews.map(i => i.id));
+            const unsyncedOnly = localInterviews.filter(i => (i.synced === false || String(i.id).startsWith('offline_') || String(i.id).startsWith('local_')) && !backendIds.has(i.id));
+            this.setInterviews([...data.interviews, ...unsyncedOnly], userId);
+            results.interviews = data.interviews.length;
           }
-          results.interviews = data.interviews.length;
         }
       }
     } catch (e) {
@@ -326,11 +342,13 @@ export const storageService = {
 
     // 3. ATS Analysis Hydration
     try {
-      const aRes = await fetch(`${baseUrl}/resume/latest/${encodeURIComponent(userId)}`);
+      const aRes = await fetch(`${baseUrl}/resume/latest/${encodeURIComponent(userId)}`, {
+        headers: authHeaders
+      });
       if (aRes.ok) {
         const atsData = await aRes.json();
         if (atsData && (atsData.ats_score !== undefined || atsData.overallScore !== undefined)) {
-          this.setATSResult(atsData);
+          this.setATSResult(atsData, userId);
           results.ats = true;
         }
       }
@@ -343,16 +361,27 @@ export const storageService = {
 
   async syncInterviewToBackend(interview, userId = 'user-001') {
     const baseUrl = import.meta.env?.VITE_API_URL || '/api';
+    const authHeaders = this.getAuthHeaders();
+    if (!authHeaders.Authorization) {
+      return false;
+    }
+
+    const overallScore = interview.score ?? interview.overall_score ?? 75;
+    const passed = interview.passed ?? (overallScore >= 70);
+
     try {
       const res = await fetch(`${baseUrl}/interviews?user_id=${encodeURIComponent(userId)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
         body: JSON.stringify({
           role: interview.role || 'Machine Learning Engineer',
           interview_type: interview.interviewType || interview.type || 'Technical',
           difficulty: interview.difficulty || 'Intermediate',
-          overall_score: interview.score || interview.overall_score || 75,
-          passed: interview.score ? interview.score >= 70 : true,
+          overall_score: overallScore,
+          passed: passed,
           questions_count: interview.questionsCount || 5,
           feedback_summary: interview.summary || interview.feedback_summary || 'Mock interview session completed.',
           rubric_scores: interview.rubricScores || {}
@@ -367,7 +396,19 @@ export const storageService = {
 
   clearAll() {
     try {
-      Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+      const keysToRemove = [];
+      const baseKeys = Object.values(STORAGE_KEYS);
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (
+          baseKeys.includes(k) ||
+          baseKeys.some(base => k.startsWith(`${base}_`)) ||
+          k === 'talentpath_explicit_logout'
+        ) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
       return true;
     } catch (err) {
       console.error('[storageService] Failed to clear storage:', err);
@@ -375,4 +416,3 @@ export const storageService = {
     }
   }
 };
-

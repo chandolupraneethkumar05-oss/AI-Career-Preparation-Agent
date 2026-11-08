@@ -27,6 +27,14 @@ def client():
 
 
 @pytest.fixture(scope="module")
+def auth_headers(client):
+    res = client.post("/api/auth/demo-login")
+    assert res.status_code == 200
+    token = res.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(scope="module")
 def synthetic_speech_wav():
     """
     Generates a valid PCM 16-bit 16kHz WAV audio payload.
@@ -103,8 +111,8 @@ class TestAudioTranscriptionPipeline:
         assert result["duration_seconds"] > 0
         assert isinstance(result["words"], list)
 
-    def test_04_transcribe_audio_api_endpoint(self, client, synthetic_speech_wav):
-        """Verifies POST /api/interviews/transcribe-audio endpoint ingestion and response."""
+    def test_04_transcribe_audio_api_endpoint(self, client, auth_headers, synthetic_speech_wav):
+        """Verifies POST /api/interviews/transcribe-audio endpoint ingestion and response with valid auth."""
         files = {
             "file": ("test_answer.wav", synthetic_speech_wav, "audio/wav")
         }
@@ -112,7 +120,7 @@ class TestAudioTranscriptionPipeline:
             "language": "en",
             "transcript_hint": "I implemented a distributed caching architecture"
         }
-        response = client.post("/api/interviews/transcribe-audio", files=files, data=data)
+        response = client.post("/api/interviews/transcribe-audio", files=files, data=data, headers=auth_headers)
         assert response.status_code == 200
         payload = response.json()
         assert "transcript" in payload
@@ -122,8 +130,8 @@ class TestAudioTranscriptionPipeline:
         assert "source" in payload
         assert payload["word_count"] > 0
 
-    def test_05_transcribe_audio_api_empty_file_with_hint(self, client):
-        """Verifies API endpoint gracefully handles empty audio with client hint."""
+    def test_05_transcribe_audio_api_empty_file_with_hint(self, client, auth_headers):
+        """Verifies API endpoint gracefully handles audio with client hint with valid auth."""
         files = {
             "file": ("empty.webm", b"0" * 20, "audio/webm")
         }
@@ -131,8 +139,16 @@ class TestAudioTranscriptionPipeline:
             "language": "en",
             "transcript_hint": "Client side interim recognized speech"
         }
-        response = client.post("/api/interviews/transcribe-audio", files=files, data=data)
+        response = client.post("/api/interviews/transcribe-audio", files=files, data=data, headers=auth_headers)
         assert response.status_code == 200
         payload = response.json()
         assert payload["transcript"] == "Client side interim recognized speech"
         assert payload["word_count"] == 5
+
+    def test_06_transcribe_audio_api_requires_auth(self, client, synthetic_speech_wav):
+        """Verifies POST /api/interviews/transcribe-audio rejects unauthenticated requests with 401."""
+        files = {
+            "file": ("test_answer.wav", synthetic_speech_wav, "audio/wav")
+        }
+        response = client.post("/api/interviews/transcribe-audio", files=files)
+        assert response.status_code == 401

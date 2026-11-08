@@ -4,7 +4,7 @@ AI Career Preparation Agent
 """
 
 from typing import Optional
-from fastapi import Depends, HTTPException, Header, Request, status
+from fastapi import Depends, HTTPException, Header, Request, Query, status
 from sqlalchemy.orm import Session
 
 from ..db.database import get_db
@@ -23,44 +23,59 @@ def get_token_from_header(authorization: Optional[str] = Header(None)) -> Option
 
 
 def get_optional_current_user(
-    request: Request,
+    request: Request = None,
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> Optional[User]:
     """
     Attempts to resolve authenticated user from Bearer token.
     Validates token signature, expiration, and server-side revocation against database.
-    Returns User if valid token is provided, otherwise None.
+    Returns User if valid token is provided, or None if no authorization credentials were supplied.
+    If an authorization header IS provided but is invalid, expired, or revoked, strictly raises HTTP 401
+    to prevent sensitive endpoints from silently treating forged or expired tokens as anonymous access.
     """
+    if not authorization or not authorization.strip():
+        return None
+
     token = get_token_from_header(authorization)
     if not token:
-        token = request.query_params.get("token")
-
-    if not token:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format. Expected 'Bearer <token>'.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     payload = decode_access_token(token, db=db)
     if not payload or "sub" not in payload:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid, expired, or revoked authentication credentials.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     user_id = payload["sub"]
     user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated user account not found.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     return user
 
 
 def get_current_user(
-    request: Request,
+    request: Request = None,
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> User:
     """
     Guarantees user is genuinely authenticated with a verified, unrevoked bearer token.
     Raises HTTP 401 if token is missing, invalid, expired, or revoked.
+    Query-string tokens are not accepted for standard API operations.
     """
     token = get_token_from_header(authorization)
-    if not token:
-        token = request.query_params.get("token")
-
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -114,3 +129,16 @@ def verify_user_ownership(
             detail="Forbidden: You do not have permission to access resources belonging to another candidate."
         )
     return current_user.id
+
+
+def get_authenticated_user_id(
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user)
+) -> str:
+    """
+    Resolves the authenticated candidate's ID.
+
+    A caller may omit user_id or provide their own ID.
+    A caller must never be allowed to select another candidate.
+    """
+    return verify_user_ownership(user_id, current_user)

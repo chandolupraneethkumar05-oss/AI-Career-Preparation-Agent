@@ -4,8 +4,10 @@ AI Career Preparation Agent
 """
 
 import logging
+import sqlite3
 from typing import Generator
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 from ..core.config import settings
@@ -15,8 +17,22 @@ logger = logging.getLogger("db")
 # SQLite requires check_same_thread=False when used across multiple FastAPI request threads
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {}
+    connect_args={"check_same_thread": False, "timeout": 30} if "sqlite" in settings.DATABASE_URL else {}
 )
+
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """
+    Ensures SQLite foreign key constraints are enforced.
+    Runs ONLY for SQLite database connections, preserving compatibility with PostgreSQL.
+    """
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.close()
+
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

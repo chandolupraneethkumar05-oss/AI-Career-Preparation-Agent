@@ -21,6 +21,25 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  // Handle unauthorized events across the application
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('talentpath_explicit_logout', 'true');
+      }
+      storageService.removeToken();
+      storageService.remove(STORAGE_KEYS.AUTH_USER);
+      setUser(null);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth:unauthorized', handleUnauthorized);
+      return () => {
+        window.removeEventListener('auth:unauthorized', handleUnauthorized);
+      };
+    }
+  }, []);
+
   // Initial background token verification and profile hydration
   useEffect(() => {
     const token = storageService.getToken();
@@ -43,13 +62,13 @@ export function AuthProvider({ children }) {
               streak: data.streak
             }));
           } else if (res.status === 401) {
-            // Token expired or invalidated; refresh via demo token
-            storageService.removeToken();
-            const fresh = await ensureAuthToken();
-            if (fresh) {
-              const demoUser = storageService.getCurrentUser();
-              if (demoUser) setUser(demoUser);
+            // Token expired or invalidated; clear session
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('talentpath_explicit_logout', 'true');
             }
+            storageService.removeToken();
+            storageService.remove(STORAGE_KEYS.AUTH_USER);
+            setUser(null);
           }
         })
         .catch(() => {});
@@ -222,23 +241,25 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
+    const token = storageService.getToken();
     try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('talentpath_explicit_logout', 'true');
-        localStorage.removeItem('interview_ai_auth_user');
-        localStorage.removeItem('interview_ai_auth_token');
-      }
-      const headers = storageService.getAuthHeaders();
-      if (headers.Authorization) {
+      if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
-          headers
-        }).catch(() => {});
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
       }
+    } catch (err) {
+      console.error('Logout error:', err);
     } finally {
-      setUser(null);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('talentpath_explicit_logout', 'true');
+      }
       storageService.removeToken();
       storageService.remove(STORAGE_KEYS.AUTH_USER);
+      setUser(null);
     }
   }, []);
 

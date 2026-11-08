@@ -81,6 +81,20 @@ class RevokedToken(Base):
     token_preview = Column(String(32), nullable=True)  # Safe non-sensitive token prefix for audit logging
 
 
+class ConsumedStreamTicket(Base):
+    """
+    Stores consumed single-use media stream tickets to prevent replay attacks across multiple workers.
+    Primary key is SHA-256 hash of the raw ticket, guaranteeing atomic single-use consumption.
+    """
+    __tablename__ = "consumed_stream_tickets"
+
+    ticket_hash = Column(String(64), primary_key=True, index=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    session_id = Column(String(64), nullable=False, index=True)
+    consumed_at = Column(DateTime, default=utc_now, nullable=False)
+    expires_at = Column(Integer, nullable=False, index=True)
+
+
 class Profile(Base):
     """Detailed candidate profile and career preferences."""
     __tablename__ = "profiles"

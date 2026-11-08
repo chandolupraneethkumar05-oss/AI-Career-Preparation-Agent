@@ -4,11 +4,12 @@ Skills & Competency Gap Routes
 AI Career Preparation Agent
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from ...db.database import get_db
+from ...db.models import User
 from ...schemas.skill import (
     SkillResponse,
     SkillGapCreate,
@@ -20,6 +21,8 @@ from ...schemas.skill import (
 )
 from ...services.skill_service import get_all_skills, get_user_skill_profile, upsert_skill_gap
 from ...services.primer_service import get_skill_primer, verify_primer_quiz
+from ...services.ai.llm.llm_service import get_skill_gap_llm_service
+from ..deps import get_current_user, verify_user_ownership
 
 router = APIRouter(prefix="/skills", tags=["Skills & Radar Analysis"])
 
@@ -33,47 +36,52 @@ def list_taxonomy(db: Session = Depends(get_db)):
 
 @router.get("/profile", response_model=SkillProfileResponse)
 def get_candidate_skill_profile(
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Calculates candidate 6-axis competency radar and prioritized skill gaps."""
-    return get_user_skill_profile(db, user_id=user_id)
+    effective_user_id = verify_user_ownership(user_id, current_user)
+    return get_user_skill_profile(db, user_id=effective_user_id)
 
 
 @router.get("/unified-profile", response_model=SkillProfileResponse)
 def get_candidate_unified_skill_profile(
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Retrieves full unified multi-source skill profile with evidence breakdown."""
-    return get_user_skill_profile(db, user_id=user_id)
+    effective_user_id = verify_user_ownership(user_id, current_user)
+    return get_user_skill_profile(db, user_id=effective_user_id)
 
 
 @router.post("/gap", response_model=SkillGapResponse)
 def update_skill_gap(
     gap_in: SkillGapCreate,
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Inserts or updates a candidate's skill gap score."""
-    gap = upsert_skill_gap(db, user_id=user_id, data=gap_in)
+    effective_user_id = verify_user_ownership(user_id, current_user)
+    gap = upsert_skill_gap(db, user_id=effective_user_id, data=gap_in)
     return SkillGapResponse.model_validate(gap)
-
-from typing import Dict, Any
-from ...services.ai.llm.llm_service import get_skill_gap_llm_service
 
 
 @router.get("/ai-analysis")
 @router.post("/ai-analysis")
 def generate_ai_skill_gap_analysis(
-    user_id: str = Query("user-001", description="Candidate User ID"),
+    user_id: Optional[str] = Query(None, description="Candidate User ID"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Generates intelligent skill gap remediation & readiness roadmap
     powered by the dedicated SKILL_GAP_API_KEY LLM service.
     """
-    profile = get_user_skill_profile(db, user_id=user_id)
+    effective_user_id = verify_user_ownership(user_id, current_user)
+    profile = get_user_skill_profile(db, user_id=effective_user_id)
     raw_gaps = getattr(profile, "top_skill_gaps", None) or getattr(profile, "skill_gaps", []) or []
     gaps_summary = []
     for g in raw_gaps[:6]:
@@ -122,7 +130,7 @@ Provide an executive skill gap analysis and remediation plan. Return STRICTLY JS
                 cleaned = cleaned[:-3]
             ai_data = json.loads(cleaned.strip())
             return {
-                "user_id": user_id,
+                "user_id": effective_user_id,
                 "target_role": profile.target_role,
                 "overall_readiness": profile.overall_readiness,
                 "ai_analysis": ai_data,
@@ -147,7 +155,7 @@ Provide an executive skill gap analysis and remediation plan. Return STRICTLY JS
         "estimated_weeks_to_ready": 4 if profile.overall_readiness < 60 else 2
     }
     return {
-        "user_id": user_id,
+        "user_id": effective_user_id,
         "target_role": profile.target_role,
         "overall_readiness": profile.overall_readiness,
         "ai_analysis": fallback_analysis,
@@ -172,15 +180,17 @@ def get_primer_endpoint(
 def verify_primer_endpoint(
     skill_name: str,
     request: SkillPrimerVerifyRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Evaluates the 2-question primer quiz.
     Upon passing, creates verified skill evidence, awards +35 XP, and updates closed-loop Next-Best-Action.
     """
+    effective_user_id = verify_user_ownership(request.user_id, current_user)
     return verify_primer_quiz(
         db=db,
-        user_id=request.user_id or "user-001",
+        user_id=effective_user_id,
         skill_name=skill_name,
         answers=request.answers
     )

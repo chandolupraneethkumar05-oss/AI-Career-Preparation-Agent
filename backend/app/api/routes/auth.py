@@ -4,10 +4,16 @@ AI Career Preparation Agent
 """
 
 import uuid
+import html
+import logging
+import os
+import time
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+
+logger = logging.getLogger(__name__)
 
 from ...db.database import get_db
 from ...db.models import User, Profile, ReminderPreference
@@ -34,9 +40,6 @@ from ...core.config import settings
 from ..deps import get_current_user, get_token_from_header
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Identity"])
-
-
-
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -201,9 +204,6 @@ def login_as_demo(
     )
 
 
-import time
-import os
-
 _FORGOT_PW_RATE_LIMITS = {}
 MAX_FORGOT_PW_REQUESTS = 5
 FORGOT_PW_WINDOW_SECONDS = 900
@@ -246,47 +246,45 @@ def forgot_password(
 
     is_production = os.getenv("ENVIRONMENT", os.getenv("APP_ENV", "development")).strip().lower() == "production"
     allow_dev_token = os.getenv("ALLOW_DEV_PASSWORD_RESET_TOKEN", "").strip().lower() in ("true", "1")
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No account found with email '{clean_email}'. Please verify your email or create an account."
-        )
-
-    # Generate one-time signed reset token (30-minute expiry)
-    reset_token = create_password_reset_token(user_id=user.id, email=user.email, expires_minutes=30)
-    reset_link = f"/login?reset_token={reset_token}"
-
-    email_svc = get_email_service()
-    html_body = f"""
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #0F172A; color: #F8FAFC; border-radius: 16px;">
-        <h2 style="color: #6366F1; margin-bottom: 8px;">AI Career Preparation Agent</h2>
-        <h3 style="color: #F8FAFC; margin-top: 0;">Password Reset Instructions</h3>
-        <p style="color: #94A3B8; font-size: 14px; line-height: 1.6;">Hello {user.name}, we received a request to reset your password. Use the secure token below within the next 30 minutes to set a new password.</p>
-        <div style="margin: 24px 0; background: #1E293B; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all; color: #38BDF8;">
-            {reset_token}
-        </div>
-        <p style="color: #64748B; font-size: 12px;">If you did not request this reset, you can safely ignore this email.</p>
-    </div>
-    """
-
-    try:
-        email_result = email_svc.send_generic_email(
-            recipient_email=user.email,
-            subject="Reset Your AI Career Preparation Agent Password",
-            html_body=html_body,
-            plain_text=f"Reset your password with token: {reset_token}"
-        )
-    except Exception as exc:
-        email_result = {"status": "failed", "mode": "local_session", "error": str(exc), "delivered": False}
-
     is_testing = bool(os.getenv("PYTEST_CURRENT_TEST"))
     expose_token = (not is_production) and allow_dev_token and (not is_testing)
+
+    reset_token = None
+    reset_link = None
     delivered_via = "email"
+
+    if user:
+        # Generate one-time signed reset token (30-minute expiry)
+        reset_token = create_password_reset_token(user_id=user.id, email=user.email, expires_minutes=30)
+        reset_link = f"/login?reset_token={reset_token}"
+
+        email_svc = get_email_service()
+        safe_name = html.escape(user.name or "Candidate")
+        html_body = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #0F172A; color: #F8FAFC; border-radius: 16px;">
+            <h2 style="color: #6366F1; margin-bottom: 8px;">AI Career Preparation Agent</h2>
+            <h3 style="color: #F8FAFC; margin-top: 0;">Password Reset Instructions</h3>
+            <p style="color: #94A3B8; font-size: 14px; line-height: 1.6;">Hello {safe_name}, we received a request to reset your password. Use the secure token below within the next 30 minutes to set a new password.</p>
+            <div style="margin: 24px 0; background: #1E293B; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all; color: #38BDF8;">
+                {reset_token}
+            </div>
+            <p style="color: #64748B; font-size: 12px;">If you did not request this reset, you can safely ignore this email.</p>
+        </div>
+        """
+
+        try:
+            email_svc.send_generic_email(
+                recipient_email=user.email,
+                subject="Reset Your AI Career Preparation Agent Password",
+                html_body=html_body,
+                plain_text=f"Reset your password with token: {reset_token}"
+            )
+        except Exception as exc:
+            logger.warning("Failed to deliver password reset email: %s", exc)
 
     return ForgotPasswordResponse(
         success=True,
-message="If an account with this email exists, password recovery instructions have been sent.",
+        message="If an account with this email exists, password recovery instructions have been sent.",
         email=clean_email,
         reset_token=reset_token if expose_token else None,
         reset_link=reset_link if expose_token else None,
@@ -349,9 +347,6 @@ def logout(
     Revoked tokens are recorded in the RevokedToken blocklist and immediately rejected.
     """
     token = get_token_from_header(authorization)
-    if not token:
-        token = request.query_params.get("token")
-
     if token:
         revoke_token(token, db, current_user.id)
 

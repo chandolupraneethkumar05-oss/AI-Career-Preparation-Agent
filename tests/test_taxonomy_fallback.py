@@ -37,7 +37,10 @@ def test_role_aliases_resolve_without_fallback():
 
 
 def test_unmapped_roles_trigger_honest_fallback_disclosure(caplog):
+    import backend.app.services.skill_taxonomy as st
+    st.logger.propagate = True
     caplog.set_level(logging.WARNING)
+    caplog.set_level(logging.WARNING, logger=st.logger.name)
     unknown_role = "Quantum Cryogenic Architect"
 
     canonical, is_fallback, reason = resolve_canonical_role_with_disclosure(unknown_role)

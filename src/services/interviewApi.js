@@ -8,6 +8,27 @@ import { evaluateAnswer } from '../utils/evaluator';
 import { storageService } from '../utils/storage/storageService';
 import { API_BASE_URL, authenticatedFetch } from './apiConfig';
 
+const isNetworkError = (err) => {
+  if (!err) return false;
+  if (err.isHttpError) return false;
+  if (err.name === 'TypeError') return true;
+  const msg = (err.message || '').toLowerCase();
+  return (
+    msg.includes('fetch') ||
+    msg.includes('network') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('offline')
+  );
+};
+
+async function parseErrorAndThrow(response, defaultMsg = 'Server error') {
+  const err = await response.json().catch(() => ({}));
+  const httpErr = new Error(err.detail || `${defaultMsg}: ${response.status}`);
+  httpErr.status = response.status;
+  httpErr.isHttpError = true;
+  throw httpErr;
+}
+
 const resolveUserId = (id) => (id && id !== 'user-001') ? id : (storageService.getCurrentUser()?.id || id || 'usr_candidate');
 
 export const interviewApi = {
@@ -79,12 +100,14 @@ export const interviewApi = {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Server error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Start session failed');
       }
 
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] startSession failed, utilizing offline fallback:', err);
       // Client-side offline fallback
       const roleBank = QUESTION_BANK[role] || QUESTION_BANK['Machine Learning Engineer'];
@@ -140,11 +163,13 @@ export const interviewApi = {
         }
       });
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Server error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Get current question failed');
       }
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] getCurrentQuestion failed:', err);
       return null;
     }
@@ -184,12 +209,14 @@ export const interviewApi = {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Server error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Submit answer failed');
       }
 
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] submitAnswer failed, utilizing offline evaluation fallback:', err);
       // Client-side offline evaluator fallback
       if (skipped) {
@@ -306,12 +333,14 @@ export const interviewApi = {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Server error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Complete session failed');
       }
 
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] completeSession failed, using offline report fallback:', err);
       return null;
     }
@@ -330,11 +359,13 @@ export const interviewApi = {
         }
       });
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Server error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Get session detail failed');
       }
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] getSessionDetail failed:', err);
       return null;
     }
@@ -353,10 +384,13 @@ export const interviewApi = {
         }
       });
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Get history failed');
       }
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
 
       console.warn('[interviewApi] getHistory failed:', err);
       return { interviews: [], total_count: 0, average_score: 0 };
@@ -399,12 +433,14 @@ export const interviewApi = {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Server error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Get quick answer failed');
       }
 
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] getQuickAnswer failed, utilizing offline question-aware fallback:', err);
       return generateOfflineQuickAnswer(question, topic, targetRole, interviewType);
     }
@@ -443,12 +479,14 @@ export const interviewApi = {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Upload failed: ${response.status}`);
+        await parseErrorAndThrow(response, 'Upload recording failed');
       }
 
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] saveRecording failed, using offline stub:', err);
       return {
         id: `offline_rec_${sessionId}`,
@@ -458,7 +496,10 @@ export const interviewApi = {
         duration_seconds: durationSeconds,
         mime_type: mimeType,
         file_size_bytes: fileBlob ? fileBlob.size : 0,
-        status: 'ready',
+        status: 'unsynced',
+        synced: false,
+        is_offline_stub: true,
+        sync_strategy: 'retain_local_until_reconnect',
         segments: segments,
         communication_metrics: communicationMetrics || {
           speaking_pace_wpm: 135.0,
@@ -488,11 +529,13 @@ export const interviewApi = {
       });
       if (!response.ok) {
         if (response.status === 404) return null;
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Fetch error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Fetch recording failed');
       }
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] getRecording failed:', err);
       return null;
     }
@@ -508,11 +551,13 @@ export const interviewApi = {
         headers: storageService.getAuthHeaders()
       });
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Delete error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Delete recording failed');
       }
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] deleteRecording failed:', err);
       return { status: 'deleted', message: 'Recording removed (offline fallback)' };
     }
@@ -545,12 +590,14 @@ export const interviewApi = {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Analysis error: ${response.status}`);
+        await parseErrorAndThrow(response, 'Analysis error');
       }
 
       return await response.json();
     } catch (err) {
+      if (!isNetworkError(err)) {
+        throw err;
+      }
       console.warn('[interviewApi] analyzeCommunication fallback triggered:', err);
       // Honest client-side fallback calculation
       const wordCount = transcript ? transcript.trim().split(/\s+/).filter(Boolean).length : 0;

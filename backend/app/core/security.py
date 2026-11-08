@@ -9,6 +9,7 @@ import base64
 import hmac
 import hashlib
 import time
+import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 import bcrypt
@@ -173,6 +174,12 @@ def decode_access_token(token: str, db: Optional[Any] = None) -> Optional[Dict[s
         return None
 
     try:
+        header_bytes = _b64url_decode(header_b64)
+        header = json.loads(header_bytes.decode("utf-8"))
+    except Exception:
+        return None
+
+    try:
         payload_bytes = _b64url_decode(payload_b64)
         payload = json.loads(payload_bytes.decode("utf-8"))
     except Exception:
@@ -180,11 +187,14 @@ def decode_access_token(token: str, db: Optional[Any] = None) -> Optional[Dict[s
 
     # Verify expiration
     exp = payload.get("exp")
-    if exp is not None and time.time() > exp:
-        return None
+    if exp is not None:
+        if isinstance(exp, bool) or not isinstance(exp, (int, float)) or math.isnan(exp) or math.isinf(exp) or exp <= 0:
+            return None
+        if time.time() > exp:
+            return None
 
     # Single-purpose media streaming tickets cannot be used as master API bearer tokens
-    if payload.get("scope") == "media_stream":
+    if payload.get("scope") == "media_stream" or (isinstance(header, dict) and header.get("typ") == "TICKET"):
         return None
 
     # Check server-side revocation if db session provided
@@ -223,11 +233,20 @@ def create_stream_ticket(user_id: str, session_id: str, expires_in_seconds: int 
     return f"{header_b64}.{payload_b64}.{signature_b64}"
 
 
-def verify_stream_ticket(ticket: str, session_id: str) -> Optional[str]:
+def verify_stream_ticket(ticket: str, session_id: str, db: Optional[Any] = None) -> Optional[str]:
     """
-    Verifies a short-lived stream ticket.
-    Guarantees signature validity, non-expired status, scope == 'media_stream', and sid == session_id.
-    Returns authenticated user_id or None.
+    Verifies and atomically consumes a short-lived stream ticket.
+    Guarantees:
+    - 3-part format: header.payload.signature
+    - Valid HMAC-SHA256 signature
+    - Safe JSON decoding without unhandled exceptions
+    - scope strictly equals 'media_stream'
+    - sid strictly equals session_id
+    - sub (user_id) is non-empty string
+    - exp claim exists, is numeric, and has not elapsed
+    - iat claim is numeric and not in future (> now + 60)
+    - Single-use replay protection: atomically logged in consumed_stream_tickets table if db is provided.
+    Returns authenticated user_id if valid and successfully consumed, else None.
     """
     if not ticket or not isinstance(ticket, str):
         return None
@@ -247,22 +266,182 @@ def verify_stream_ticket(ticket: str, session_id: str) -> Optional[str]:
         return None
 
     try:
+        header_bytes = _b64url_decode(header_b64)
+        header = json.loads(header_bytes.decode("utf-8"))
+        if not isinstance(header, dict) or header.get("alg") != ALGORITHM:
+            return None
+    except Exception:
+        return None
+
+    try:
         payload_bytes = _b64url_decode(payload_b64)
         payload = json.loads(payload_bytes.decode("utf-8"))
     except Exception:
         return None
 
+    if not isinstance(payload, dict):
+        return None
+
+    # Scope validation
     if payload.get("scope") != "media_stream":
         return None
 
-    if payload.get("sid") != session_id:
+    # Session ID validation
+    sid = payload.get("sid")
+    if not sid or not isinstance(sid, str) or sid != session_id:
+        return None
+
+    # Candidate ID validation
+    sub = payload.get("sub")
+    if not sub or not isinstance(sub, str) or not sub.strip():
+        return None
+
+    # Expiration validation (must be present, numeric, finite, non-boolean, positive, and not expired)
+    exp = payload.get("exp")
+    if exp is None or isinstance(exp, bool) or not isinstance(exp, (int, float)):
+        return None
+    if math.isnan(exp) or math.isinf(exp) or exp <= 0:
+        return None
+    if time.time() > exp:
+        return None
+
+    # Issued-at validation (must be present, numeric, finite, non-boolean, positive, and not in future)
+    iat = payload.get("iat")
+    if iat is None or isinstance(iat, bool) or not isinstance(iat, (int, float)):
+        return None
+    if math.isnan(iat) or math.isinf(iat) or iat <= 0:
+        return None
+    if iat > time.time() + 60:
+        return None
+
+    # Server-side atomic consumption
+    if db is not None:
+        from ..db.models import ConsumedStreamTicket
+        ticket_hash = hashlib.sha256(ticket.encode("utf-8")).hexdigest()
+
+        # Check if already consumed
+        already_consumed = (
+            db.query(ConsumedStreamTicket)
+            .filter(ConsumedStreamTicket.ticket_hash == ticket_hash)
+            .first()
+        )
+        if already_consumed:
+            return None
+
+        consumed_record = ConsumedStreamTicket(
+            ticket_hash=ticket_hash,
+            user_id=sub,
+            session_id=session_id,
+            consumed_at=datetime.now(timezone.utc),
+            expires_at=int(exp)
+        )
+        try:
+            db.add(consumed_record)
+            db.commit()
+        except Exception:
+            db.rollback()
+            return None
+
+    return sub
+
+
+def verify_consumed_ticket_for_range(ticket: str, session_id: str, db: Optional[Any] = None) -> Optional[str]:
+    """
+    Validates an already-consumed stream ticket for subsequent HTTP Range requests (seeking/scrubbing)
+    originating from an active HTML5 video playback session.
+    Guarantees:
+    - Ticket has valid HMAC-SHA256 signature
+    - Safe JSON decoding without unhandled exceptions
+    - scope strictly equals 'media_stream'
+    - sid strictly equals session_id
+    - sub (user_id) is non-empty string
+    - Ticket has not expired (now <= exp)
+    - Ticket was previously verified and atomically consumed in consumed_stream_tickets
+    Returns authenticated user_id if valid active streaming session, else None.
+    """
+    if not ticket or not isinstance(ticket, str) or db is None:
+        return None
+
+    parts = ticket.split(".")
+    if len(parts) != 3:
+        return None
+
+    header_b64, payload_b64, signature_b64 = parts
+    expected_sig = hmac.new(
+        get_secret_key().encode("utf-8"),
+        f"{header_b64}.{payload_b64}".encode("utf-8"),
+        hashlib.sha256
+    ).digest()
+    expected_sig_b64 = _b64url_encode(expected_sig)
+
+    if not hmac.compare_digest(signature_b64, expected_sig_b64):
+        return None
+
+    try:
+        payload = json.loads(_b64url_decode(payload_b64).decode("utf-8"))
+    except Exception:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    if payload.get("scope") != "media_stream":
+        return None
+
+    sid = payload.get("sid")
+    if not sid or sid != session_id:
+        return None
+
+    sub = payload.get("sub")
+    if not sub or not isinstance(sub, str) or not sub.strip():
         return None
 
     exp = payload.get("exp")
-    if exp is not None and time.time() > exp:
+    if exp is None or isinstance(exp, bool) or not isinstance(exp, (int, float)):
+        return None
+    if math.isnan(exp) or math.isinf(exp) or exp <= 0 or time.time() > exp:
         return None
 
-    return payload.get("sub")
+    from ..db.models import ConsumedStreamTicket
+    ticket_hash = hashlib.sha256(ticket.encode("utf-8")).hexdigest()
+    consumed_record = (
+        db.query(ConsumedStreamTicket)
+        .filter(
+            ConsumedStreamTicket.ticket_hash == ticket_hash,
+            ConsumedStreamTicket.session_id == session_id,
+            ConsumedStreamTicket.user_id == sub
+        )
+        .first()
+    )
+    if not consumed_record:
+        return None
+
+    if time.time() > consumed_record.expires_at:
+        return None
+
+    return sub
+
+
+def cleanup_expired_consumed_tickets(db: Any) -> int:
+    """
+    Removes expired consumed-ticket records from database.
+    Safe maintenance utility to prevent table bloat.
+    """
+    if db is None:
+        return 0
+    from ..db.models import ConsumedStreamTicket
+    now = int(time.time())
+    try:
+        deleted = (
+            db.query(ConsumedStreamTicket)
+            .filter(ConsumedStreamTicket.expires_at < now)
+            .delete(synchronize_session=False)
+        )
+        db.commit()
+        return deleted
+    except Exception:
+        db.rollback()
+        return 0
 
 
 def create_password_reset_token(user_id: str, email: str, expires_minutes: int = 30) -> str:
