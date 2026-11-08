@@ -918,6 +918,48 @@ class ProductFeedback(Base):
     user = relationship("User", back_populates="product_feedbacks")
 
 
+class PeerRoomSession(Base):
+    """
+    Persisted peer-to-peer collaborative mock interview rooms and 360 evaluations.
+    Preserves interview transcripts, interviewer notes, shared code, questions,
+    and final evaluation reports across server restarts and worker lifecycles.
+    """
+    __tablename__ = "peer_room_sessions"
+
+    id = Column(String(64), primary_key=True, index=True)
+    role = Column(String(64), nullable=False, default="Software Engineer")
+    difficulty = Column(String(32), nullable=False, default="Intermediate")
+    topic = Column(String(256), nullable=True)
+    status = Column(String(32), nullable=False, default="waiting")
+
+    interviewer_id = Column(String(64), nullable=True, index=True)
+    candidate_id = Column(String(64), nullable=True, index=True)
+    interviewer_name = Column(String(128), nullable=True)
+    candidate_name = Column(String(128), nullable=True)
+
+    questions_json = Column(Text, default="[]")
+    current_question_json = Column(Text, nullable=True)
+    transcript_json = Column(Text, default="[]")
+    interviewer_notes_json = Column(Text, default="[]")
+    final_report_json = Column(Text, nullable=True)
+
+    shared_code = Column(
+        Text,
+        default="# Collaborative Sandbox\n"
+                "# Both participants can type and review code here in real-time.\n"
+                "\ndef solution():\n"
+                "    pass\n"
+    )
+
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=utc_now,
+        onupdate=utc_now,
+        nullable=False
+    )
+
+
 def seed_initial_data(db):
     """
     Seeds default candidate account with honest starting defaults (0 XP, 0 streak)
