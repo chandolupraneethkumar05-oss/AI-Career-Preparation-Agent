@@ -37,10 +37,12 @@ def test_role_aliases_resolve_without_fallback():
 
 
 def test_unmapped_roles_trigger_honest_fallback_disclosure(caplog):
+    from unittest.mock import patch
     import backend.app.services.skill_taxonomy as st
     st.logger.propagate = True
+    st.logger.setLevel(logging.WARNING)
+    logging.getLogger().setLevel(logging.WARNING)
     caplog.set_level(logging.WARNING)
-    caplog.set_level(logging.WARNING, logger=st.logger.name)
     unknown_role = "Quantum Cryogenic Architect"
 
     canonical, is_fallback, reason = resolve_canonical_role_with_disclosure(unknown_role)
@@ -50,9 +52,13 @@ def test_unmapped_roles_trigger_honest_fallback_disclosure(caplog):
     assert is_canonical_role_fallback(unknown_role) is True
 
     # Test that get_canonical_role logs a warning
-    res = get_canonical_role(unknown_role)
-    assert res == "Machine Learning Engineer"
-    assert any("Taxonomy fallback triggered" in record.message for record in caplog.records)
+    with patch.object(st.logger, "warning", wraps=st.logger.warning) as mock_warn:
+        res = get_canonical_role(unknown_role)
+        assert res == "Machine Learning Engineer"
+        assert mock_warn.called
+        assert "Taxonomy fallback triggered" in mock_warn.call_args[0][0]
+        if caplog.records:
+            assert any("Taxonomy fallback triggered" in record.message for record in caplog.records)
 
 
 def test_empty_role_triggers_honest_fallback_disclosure():

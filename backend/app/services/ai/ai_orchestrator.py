@@ -56,14 +56,41 @@ class AIOrchestrator:
 
         retrieved_chunks = retrieval_result.get("chunks", [])
 
-        # 3. Grounded LLM Response Generation (Google AI Studio / Gemini)
-        self.llm_service = get_general_llm_service()
-        raw_output = self.llm_service.generate_grounded_response(
-            query=query_text,
-            user_context=user_context,
-            retrieved_chunks=retrieved_chunks,
-            language=lang
-        )
+        # 3. Hallucination Guard & Grounded LLM Response Generation
+        if retrieval_result.get("insufficient_knowledge") or not retrieved_chunks:
+            answer = (
+                f"I searched our career preparation curriculum for \"{query_text}\", "
+                f"but found no verified grounded documentation matching this specific topic. "
+                f"To maintain academic integrity and prevent inaccurate answers, I do not generate ungrounded explanations. "
+                f"Consider checking the curriculum for Machine Learning, System Design, or Cloud Architecture."
+            )
+            raw_output = {
+                "answer": answer,
+                "key_points": [
+                    "Hallucination guard activated: Query is out of domain or lacks verified curriculum documentation.",
+                    "No verified grounded documentation available for this topic in the active career curriculum."
+                ],
+                "recommended_action": {
+                    "title": "Explore Verified Knowledge",
+                    "action": "Browse Curriculum",
+                    "route": "/knowledge",
+                    "action_type": "read",
+                    "reason": "Review supported technical domains and syllabus topics."
+                },
+                "sources": [],
+                "career_context_applied": "Candidate Profile & Target Role",
+                "grounded": False,
+                "model_provider": "hallucination-guard",
+                "latency_ms": 10
+            }
+        else:
+            self.llm_service = get_general_llm_service()
+            raw_output = self.llm_service.generate_grounded_response(
+                query=query_text,
+                user_context=user_context,
+                retrieved_chunks=retrieved_chunks,
+                language=lang
+            )
 
 
         # 4. Format Pydantic schemas

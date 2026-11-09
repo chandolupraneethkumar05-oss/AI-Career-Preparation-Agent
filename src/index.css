@@ -282,6 +282,24 @@
   background-color: var(--theme-surface) !important;
 }
 
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  .bg-\[\#FDFCFC\],
+  .bg-\[\#fdfcfc\]
+):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  background-color: var(--theme-bg) !important;
+}
+
+:where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
+  [class*="from-white"],
+  [class*="via-white"],
+  [class*="to-white"]
+):not(#resume-print-area, #resume-print-area *, .printable-resume-container, .printable-resume-container *, .print-document, .print-document *, .resume-page, .resume-page *, [data-resume-preview], [data-resume-preview] *) {
+  --tw-gradient-from: var(--theme-surface) var(--tw-gradient-from-position, ) !important;
+  --tw-gradient-via: var(--theme-surface-subtle) var(--tw-gradient-via-position, ) !important;
+  --tw-gradient-to: var(--theme-surface) var(--tw-gradient-to-position, ) !important;
+  --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-from) var(--tw-gradient-from-position, 0%), var(--tw-gradient-to) var(--tw-gradient-to-position, 100%)) !important;
+}
+
 /* Transform light box/card/tile backgrounds into elevated dark surfaces across the entire site */
 :where(.dark, [data-theme="dark"], [data-theme="black"]) :where(
   [class*="bg-white/"],

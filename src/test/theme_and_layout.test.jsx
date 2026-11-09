@@ -169,4 +169,32 @@ describe('Theme System & Postman Palette Suite', () => {
     expect(cardBox.className).toContain('dark:bg-[var(--theme-surface-subtle)]');
     expect(cardBox.className).toContain('dark:border-[var(--theme-border)]');
   });
+
+  it('renders PerformanceChart with decimated labels and single score badge on 50 points', async () => {
+    const { default: PerformanceChart } = await import('../components/PerformanceChart');
+    const mockFiftyRounds = Array.from({ length: 50 }, (_, i) => ({
+      label: `Round ${i + 1}`,
+      score: 70 + (i % 10)
+    }));
+
+    const { container } = render(
+      <ThemeProvider>
+        <PerformanceChart data={mockFiftyRounds} height={210} />
+      </ThemeProvider>
+    );
+
+    // X-axis text elements should not be 50! Should be decimated to <= 7 labels to avoid overlapping
+    const allTexts = container.querySelectorAll('text');
+    const roundTexts = Array.from(allTexts).filter(t => t.textContent.includes('Round'));
+    expect(roundTexts.length).toBeLessThanOrEqual(7);
+    expect(roundTexts.length).toBeGreaterThanOrEqual(4);
+
+    // Verify first and last rounds are always displayed
+    expect(screen.getByText('Round 1')).toBeInTheDocument();
+    expect(screen.getByText('Round 50')).toBeInTheDocument();
+
+    // Only one score value pill should be rendered by default (not 50)
+    const scoreRects = container.querySelectorAll('rect');
+    expect(scoreRects.length).toBe(1);
+  });
 });
